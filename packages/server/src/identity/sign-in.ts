@@ -74,6 +74,12 @@ const STARTS_PER_CLIENT = 300;
 const CONNECTION_CHECKS_PER_CLIENT = 20;
 const FAILED_LOGOUTS_PER_CLIENT = 60;
 const FAILED_SAML_RESPONSES_PER_CLIENT = 20;
+
+interface FailurePlace {
+  key: string;
+  windowStart: string | undefined;
+  kept: boolean;
+}
 const REFERENCE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 export type ProviderFlowPurpose = "signIn" | "reauthentication" | "test" | "linkConfirmation";
@@ -437,6 +443,7 @@ export class ProviderSignInService {
         samlResponse: flow.samlResponse,
       });
       if (result.assertion) await this.#consumeAssertion(provider.id, result.assertion);
+      if (provider.type === "saml") await this.#returnSamlPlace(flow.id);
     } catch (error) {
       if (!(error instanceof ProviderPolicyError) && !(error instanceof ProviderResponseError)) throw error;
       await this.#forgetResponse(flow.id);
@@ -1311,18 +1318,32 @@ export class ProviderSignInService {
     kind: string,
     clientIp: string | undefined,
     perMinute: number,
-    run: () => Promise<T>,
+    run: (place: FailurePlace | null) => Promise<T>,
   ): Promise<T> {
-    if (clientIp === undefined) return run();
+    if (clientIp === undefined) return run(null);
     const key = `${kind}:failed:${clientSubject(clientIp)}`;
     const limit = await this.#rateLimiter.consume(key, perMinute, 60);
     if (!limit.allowed) {
       await this.#rateLimiter.refund(key, limit.windowStart);
       throw new RateLimitedError(limit.retryAfterSeconds);
     }
-    const result = await run();
-    await this.#rateLimiter.refund(key, limit.windowStart);
+    const place: FailurePlace = { key, windowStart: limit.windowStart, kept: false };
+    const result = await run(place);
+    if (!place.kept) await this.#rateLimiter.refund(key, limit.windowStart);
     return result;
+  }
+
+  async #returnSamlPlace(flowId: string): Promise<void> {
+    const taken = await this.#database.execute<{ key: string; window: string | null }>(sql`
+      with held as (
+        select id, saml_place_key, saml_place_window from ${providerFlows}
+        where id = ${flowId} and saml_place_key is not null for update
+      )
+      update ${providerFlows} f set saml_place_key = null, saml_place_window = null
+      from held where f.id = held.id
+      returning held.saml_place_key as key, held.saml_place_window as window`);
+    const place = taken.rows[0];
+    if (place) await this.#rateLimiter.refund(place.key, place.window ?? undefined);
   }
 
   async backchannelLogout(providerId: string, logoutToken: string, clientIp?: string): Promise<number> {
@@ -1392,24 +1413,31 @@ export class ProviderSignInService {
     relayState: string | null;
     clientIp?: string | undefined;
   }): Promise<SamlReceipt> {
-    return this.#countingFailures("samlResponse", input.clientIp, FAILED_SAML_RESPONSES_PER_CLIENT, () =>
-      this.#receiveSamlResponse(input),
+    return this.#countingFailures("samlResponse", input.clientIp, FAILED_SAML_RESPONSES_PER_CLIENT, (place) =>
+      this.#receiveSamlResponse(input, place),
     );
   }
 
-  async #receiveSamlResponse(input: {
-    providerId: string;
-    samlResponse: string;
-    relayState: string | null;
-    clientIp?: string | undefined;
-  }): Promise<SamlReceipt> {
+  async #receiveSamlResponse(
+    input: {
+      providerId: string;
+      samlResponse: string;
+      relayState: string | null;
+      clientIp?: string | undefined;
+    },
+    place: FailurePlace | null,
+  ): Promise<SamlReceipt> {
     const { provider, credentials } = await this.#load(input.providerId, "signIn");
     if (provider.type !== "saml")
       throw new OrganizationError("notFound", "The identity provider does not exist");
     if (input.relayState) {
       const [flow] = await this.#database
         .update(providerFlows)
-        .set({ samlResponse: input.samlResponse })
+        .set({
+          samlResponse: input.samlResponse,
+          samlPlaceKey: place?.key ?? null,
+          samlPlaceWindow: place?.windowStart ?? null,
+        })
         .where(
           and(
             eq(providerFlows.stateHash, hashState(input.relayState)),
@@ -1420,7 +1448,10 @@ export class ProviderSignInService {
           ),
         )
         .returning({ id: providerFlows.id });
-      if (flow) return { state: input.relayState, browserToken: null };
+      if (flow) {
+        if (place) place.kept = true;
+        return { state: input.relayState, browserToken: null };
+      }
     }
     if (!provider.config.idpInitiated) {
       throw new OrganizationError(

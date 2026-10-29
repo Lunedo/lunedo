@@ -204,6 +204,13 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
         clientIp: office,
       });
       expect(receipt.state).toBeTruthy();
+      const result = await test.services.providerSignIn.callback({
+        providerId: id,
+        query: new URLSearchParams({ state: receipt.state }),
+        browserToken: started.browserToken,
+        client: { ip: office },
+      });
+      expect(result.kind).toBe("signedIn");
     }
     const attacker = "198.51.100.121";
     for (let attempt = 0; attempt < 20; attempt++) {
@@ -224,6 +231,133 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
         clientIp: attacker,
       }),
     ).rejects.toThrow(RateLimitedError);
+  });
+
+  it("counts a response that stays unchecked or fails in the callback as a failure of the address", async () => {
+    const { id } = await provider();
+    const attacker = "198.51.100.130";
+    const startFlow = () =>
+      test.services.providerSignIn.start({ providerId: id, purpose: "signIn", baseUrl: BASE });
+    const receive = (started: Awaited<ReturnType<typeof startFlow>>) =>
+      test.services.providerSignIn.receiveSamlResponse({
+        providerId: id,
+        samlResponse: "not a response",
+        relayState: new URL(started.url).searchParams.get("RelayState"),
+        clientIp: attacker,
+      });
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const started = await startFlow();
+      const receipt = await receive(started);
+      const result = await test.services.providerSignIn.callback({
+        providerId: id,
+        query: new URLSearchParams({ state: receipt.state }),
+        browserToken: started.browserToken,
+        client: { ip: attacker },
+      });
+      expect(result.kind).toBe("refused");
+    }
+    for (let attempt = 0; attempt < 10; attempt++) await receive(await startFlow());
+    await expect(receive(await startFlow())).rejects.toThrow(RateLimitedError);
+  });
+
+  it("counts parallel invalid responses of one address without letting more than the limit through", async () => {
+    const { id } = await provider();
+    const attacker = "198.51.100.131";
+    const outcomes = await Promise.allSettled(
+      Array.from({ length: 60 }, () =>
+        test.services.providerSignIn.receiveSamlResponse({
+          providerId: id,
+          samlResponse: "not a response",
+          relayState: null,
+          clientIp: attacker,
+        }),
+      ),
+    );
+    const refused = outcomes.filter(
+      (outcome) => outcome.status === "rejected" && outcome.reason instanceof RateLimitedError,
+    );
+    expect(refused).toHaveLength(40);
+  });
+
+  async function failedCount(clientIp: string): Promise<number> {
+    const result = await test.pool.query<{ count: number }>("select count from rate_limits where key = $1", [
+      `samlResponse:failed:${clientIp}`,
+    ]);
+    return Number(result.rows[0]?.count ?? 0);
+  }
+
+  it("gives a place back once only, not again in the callback of a response the provider started", async () => {
+    const { id, domain } = await provider({ idpInitiated: true });
+    const client = "198.51.100.140";
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await expect(
+        test.services.providerSignIn.receiveSamlResponse({
+          providerId: id,
+          samlResponse: "not a response",
+          relayState: null,
+          clientIp: client,
+        }),
+      ).rejects.toThrow();
+    }
+    expect(await failedCount(client)).toBe(5);
+    for (let person = 0; person < 5; person++) {
+      const receipt = await test.services.providerSignIn.receiveSamlResponse({
+        providerId: id,
+        samlResponse: await idp.response({
+          ...target(id),
+          nameId: randomUUID(),
+          attributes: { email: [`provider${person}@${domain}`] },
+          requestId: null,
+        }),
+        relayState: null,
+        clientIp: client,
+      });
+      const result = await test.services.providerSignIn.callback({
+        providerId: id,
+        query: new URLSearchParams({ state: receipt.state }),
+        browserToken: receipt.browserToken ?? "",
+        client: { ip: client },
+      });
+      expect(result.kind).toBe("signedIn");
+    }
+    expect(await failedCount(client)).toBe(5);
+  });
+
+  it("gives the place back to the address that was charged, once, however the callback arrives", async () => {
+    const { id, domain } = await provider();
+    const charged = "198.51.100.141";
+    const other = "198.51.100.142";
+    const started = await test.services.providerSignIn.start({
+      providerId: id,
+      purpose: "signIn",
+      baseUrl: BASE,
+    });
+    const receipt = await test.services.providerSignIn.receiveSamlResponse({
+      providerId: id,
+      samlResponse: await idp.response({
+        ...target(id),
+        nameId: randomUUID(),
+        attributes: { email: [`bound@${domain}`] },
+        requestId: requestIdOf(started.url),
+      }),
+      relayState: new URL(started.url).searchParams.get("RelayState"),
+      clientIp: charged,
+    });
+    expect(await failedCount(charged)).toBe(1);
+    const result = await test.services.providerSignIn.callback({
+      providerId: id,
+      query: new URLSearchParams({ state: receipt.state }),
+      browserToken: started.browserToken,
+      client: { ip: other },
+    });
+    expect(result.kind).toBe("signedIn");
+    expect(await failedCount(charged)).toBe(0);
+    expect(await failedCount(other)).toBe(0);
+    const stored = await test.pool.query(
+      "select 1 from provider_flows where saml_place_key is not null and provider_id = $1",
+      [id],
+    );
+    expect(stored.rowCount).toBe(0);
   });
 
   it("refuses sign-in started at the identity provider unless the provider allows it", async () => {

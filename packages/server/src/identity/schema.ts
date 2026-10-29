@@ -183,6 +183,8 @@ export const providerFlows = pgTable(
     codeVerifier: text(),
     requestId: text(),
     samlResponse: text(),
+    samlPlaceKey: text(),
+    samlPlaceWindow: text(),
     redirectUri: text().notNull(),
     consumedAt: timestampColumn(),
     sessionId: uuid(),

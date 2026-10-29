@@ -59,7 +59,7 @@ The instance owner is the exception for the password step: attempts and wrong pa
 
 Wrong second factors and failed re-authentications count as failures. A successful sign-in clears the failures of the address, not those of the client. Sign-ins with a directory password are counted in the same way, per directory and sign-in name.
 
-Other steps of the sign-in have fixed limits per client. Choosing the provider by the e-mail address, starting a sign-in through an identity provider and passkey options allow 300 requests per minute each, which only stops floods. Answers of a SAML provider and logout requests from a provider count only when they are invalid: 20 invalid SAML answers and 60 invalid logout requests per minute.
+Other steps of the sign-in have fixed limits per client. Choosing the provider by the e-mail address, starting a sign-in through an identity provider and passkey options allow 300 requests per minute each, which only stops floods. Answers of a SAML provider and logout requests from a provider count only when they are invalid: 20 invalid SAML answers and 60 invalid logout requests per minute. A SAML answer that belongs to a sign-in you started is checked when the browser returns to Lunedo: it counts as invalid if that check fails or the browser never returns, and it stops counting once the answer has passed the check.
 
 A lockout ends on its own. Every lockout is recorded in the audit log as `auth.lockedOut`, with the number of failures and the end of the lockout. Administrators find it in the [audit log](audit-log.md) with the filter, and for one account on the tab **Activity** of the account in **Settings › Instance › People and sign-in › Accounts**. A password reset clears the failures of the address.
 
