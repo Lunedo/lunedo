@@ -6,6 +6,7 @@ import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { AuditLog } from "../audit/audit-log.js";
 import { InvalidCredentialsError, LockedError, RateLimitedError } from "../auth/errors.js";
+import { clientAttemptLimitSetting } from "../auth/settings.js";
 import { runWithRequestContext } from "../observability/request-context.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeOidcProvider, startFakeOidcProvider } from "../testing/fake-oidc.js";
@@ -589,6 +590,33 @@ describe.skipIf(!baseUrl)("signing in through an LDAP directory", () => {
     ).rejects.toSatisfy((error) => error instanceof LockedError || error instanceof RateLimitedError);
     expect(directory.binds.filter((bind) => bind.dn === locked.entry.dn).length).toBe(binds);
     await test.pool.query("update instance set owner_account_id = null");
+  });
+
+  it("lets no more wrong directory passwords of one address run than the failure limit, even all at once", async () => {
+    const { id, domain } = await provider();
+    const address = "10.251.0.1";
+    await test.settings.set(clientAttemptLimitSetting, {}, "instance", 5);
+    try {
+      const outcomes = await Promise.all(
+        Array.from({ length: 16 }, (_, index) =>
+          test.services.providerSignIn
+            .signInWithDirectory({
+              providerId: id,
+              signInName: `nobody-${index}-${randomUUID().slice(0, 6)}@${domain}`,
+              password: "wrong password",
+              client: { ip: address },
+            })
+            .then(
+              () => null,
+              (error: unknown) => error,
+            ),
+        ),
+      );
+      expect(outcomes.filter((error) => error instanceof InvalidCredentialsError)).toHaveLength(5);
+      expect(outcomes.filter((error) => error instanceof RateLimitedError)).toHaveLength(11);
+    } finally {
+      await test.settings.clear(clientAttemptLimitSetting, {}, "instance");
+    }
   });
 
   it("links an existing local account at its first directory sign-in and keeps its second factor", async () => {

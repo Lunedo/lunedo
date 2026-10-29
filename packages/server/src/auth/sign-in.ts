@@ -40,6 +40,7 @@ import {
 import { twoFactorRequiredSetting } from "./settings.js";
 import {
   clientSubject,
+  type FailureReservation,
   type Lockout,
   type RateLimiter,
   type SignInThrottle,
@@ -239,30 +240,41 @@ export class SignInService {
     return { email, clientIp };
   }
 
-  async #checkAttempt(subjects: ThrottleSubjects, accountId: string | null, method: SignInMethod) {
+  async #attempting<T>(
+    subjects: ThrottleSubjects,
+    accountId: string | null,
+    method: SignInMethod,
+    run: (reservation: FailureReservation) => Promise<T>,
+  ): Promise<T> {
     if (!(await this.#setupComplete())) throw new SetupIncompleteError();
-    const rate = await this.#throttle.attempt(subjects);
-    if (!rate.allowed) throw new RateLimitedError(rate.retryAfterSeconds);
-    const lockout = await this.#throttle.lockout(subjects);
-    if (lockout) {
-      await this.#audit.recordAlone({
-        name: "auth.signInFailed",
-        actor: ANONYMOUS,
-        targetId: accountId,
-        fields: { reason: lockout.subject === "account" ? "accountLocked" : "clientLocked", method },
-      });
-      throw new LockedError(secondsUntil(lockout.lockedUntil));
-    }
+    return this.#throttle.attempting(
+      subjects,
+      async (blocked) => {
+        if (blocked.kind === "rateLimited") return new RateLimitedError(blocked.retryAfterSeconds);
+        await this.#audit.recordAlone({
+          name: "auth.signInFailed",
+          actor: ANONYMOUS,
+          targetId: accountId,
+          fields: {
+            reason: blocked.lockout.subject === "account" ? "accountLocked" : "clientLocked",
+            method,
+          },
+        });
+        return new LockedError(secondsUntil(blocked.lockout.lockedUntil));
+      },
+      run,
+    );
   }
 
   async #recordFailure(
     subjects: ThrottleSubjects,
+    reservation: FailureReservation,
     accountId: string | null,
     method: SignInMethod,
     reason: "invalidCredentials" | "invalidSecondFactor",
   ): Promise<Lockout[]> {
     return this.#database.transaction(async (tx) => {
-      const lockouts = await this.#throttle.recordFailure(subjects, tx);
+      const lockouts = await this.#throttle.recordFailure(subjects, reservation, tx);
       await this.#audit.record(tx, {
         name: "auth.signInFailed",
         actor: ANONYMOUS,
@@ -483,49 +495,55 @@ export class SignInService {
     const found = await this.#accounts.findByEmail(input.email);
     const account = canSignIn(found) && found.passwordHash ? found : null;
     const subjects = await this.#subjects(found?.id ?? null, input.email, input.client.ip);
-    await this.#checkAttempt(subjects, account?.id ?? null, "password");
-
-    let valid = false;
-    if (account?.passwordHash) {
-      const verification = await this.#hasher.verify(account.passwordHash, input.password);
-      valid = verification.valid;
-      if (valid && verification.needsRehash) {
-        await this.#accounts.setPasswordHash(
-          this.#database,
-          account.id,
-          await this.#hasher.hash(input.password),
-        );
+    return this.#attempting(subjects, account?.id ?? null, "password", async (reservation) => {
+      let valid = false;
+      if (account?.passwordHash) {
+        const verification = await this.#hasher.verify(account.passwordHash, input.password);
+        valid = verification.valid;
+        if (valid && verification.needsRehash) {
+          await this.#accounts.setPasswordHash(
+            this.#database,
+            account.id,
+            await this.#hasher.hash(input.password),
+          );
+        }
+      } else {
+        await this.#hasher.verifyNothing(input.password);
       }
-    } else {
-      await this.#hasher.verifyNothing(input.password);
-    }
-    if (!account || !valid) {
-      await this.#recordFailure(subjects, account?.id ?? null, "password", "invalidCredentials");
-      throw new InvalidCredentialsError();
-    }
-    await refuseManaged(this.#database, account.id, "any");
+      if (!account || !valid) {
+        await this.#recordFailure(
+          subjects,
+          reservation,
+          account?.id ?? null,
+          "password",
+          "invalidCredentials",
+        );
+        throw new InvalidCredentialsError();
+      }
+      await refuseManaged(this.#database, account.id, "any");
 
-    const factors = await secondFactorsOf(this.#database, account.id);
-    if (hasSecondFactor(factors)) {
-      await this.#beforeSession?.(this.#database, account.id);
-      const pending = await this.#challenges.create(this.#database, {
-        purpose: "secondFactor",
-        accountId: account.id,
-        methods: ["password"],
-        deviceHash: input.client.deviceToken ? hashToken(input.client.deviceToken) : null,
-        withToken: true,
-      });
-      return {
-        status: "secondFactorRequired",
-        pendingToken: pending.token ?? "",
-        factors: availableFactors(factors),
-      };
-    }
-    const kind = (await this.secondFactorRequired(account.id)) ? "secondFactorSetup" : "full";
-    await this.#throttle.recordSuccess(account.email);
-    return this.#signedIn((tx, mailIds) =>
-      this.#createSession(tx, account, ["password"], kind, input.client, mailIds, started),
-    );
+      const factors = await secondFactorsOf(this.#database, account.id);
+      if (hasSecondFactor(factors)) {
+        await this.#beforeSession?.(this.#database, account.id);
+        const pending = await this.#challenges.create(this.#database, {
+          purpose: "secondFactor",
+          accountId: account.id,
+          methods: ["password"],
+          deviceHash: input.client.deviceToken ? hashToken(input.client.deviceToken) : null,
+          withToken: true,
+        });
+        return {
+          status: "secondFactorRequired",
+          pendingToken: pending.token ?? "",
+          factors: availableFactors(factors),
+        };
+      }
+      const kind = (await this.secondFactorRequired(account.id)) ? "secondFactorSetup" : "full";
+      await this.#throttle.recordSuccess(account.email);
+      return this.#signedIn((tx, mailIds) =>
+        this.#createSession(tx, account, ["password"], kind, input.client, mailIds, started),
+      );
+    });
   }
 
   async signInOwnerAfterSetup(
@@ -573,77 +591,77 @@ export class SignInService {
     if (!providerOfPending(pending.payload)) await refuseManaged(this.#database, account.id, "any");
     const method: SignInMethod = input.factor.type;
     const subjects = { email: account.email, clientIp: input.client.ip };
-    await this.#checkAttempt(subjects, account.id, method);
+    return this.#attempting(subjects, account.id, method, async (reservation) => {
+      let valid = false;
+      if (input.factor.type === "totp") {
+        valid = await this.#totp.verify(this.#database, account.id, input.factor.code);
+      } else if (input.factor.type === "passkey") {
+        const expectedChallenge = pending.challenge;
+        await this.#challenges.setChallenge(pending.id, "");
+        valid =
+          !!expectedChallenge &&
+          (await this.#webauthn.verify({
+            response: input.factor.response,
+            expectedChallenge,
+            accountId: account.id,
+            requireUserVerification: false,
+          })) !== null;
+      }
 
-    let valid = false;
-    if (input.factor.type === "totp") {
-      valid = await this.#totp.verify(this.#database, account.id, input.factor.code);
-    } else if (input.factor.type === "passkey") {
-      const expectedChallenge = pending.challenge;
-      await this.#challenges.setChallenge(pending.id, "");
-      valid =
-        !!expectedChallenge &&
-        (await this.#webauthn.verify({
-          response: input.factor.response,
-          expectedChallenge,
-          accountId: account.id,
-          requireUserVerification: false,
-        })) !== null;
-    }
+      const failed = async () => {
+        await this.#challenges.recordFailure(pending.id);
+        await this.#recordFailure(subjects, reservation, account.id, method, "invalidSecondFactor");
+        return new InvalidSecondFactorError();
+      };
+      if (input.factor.type !== "recoveryCode" && !valid) throw await failed();
 
-    const failed = async () => {
-      await this.#challenges.recordFailure(pending.id);
-      await this.#recordFailure(subjects, account.id, method, "invalidSecondFactor");
-      return new InvalidSecondFactorError();
-    };
-    if (input.factor.type !== "recoveryCode" && !valid) throw await failed();
-
-    const mailIds: string[] = [];
-    let result: SignedIn;
-    try {
-      result = await this.#database.transaction(async (tx) => {
-        if (!(await this.#challenges.consume(tx, pending.id))) throw new ChallengeExpiredError();
-        const remaining =
-          input.factor.type === "recoveryCode"
-            ? await this.#recoveryCodes.use(tx, account.id, input.factor.code)
-            : null;
-        if (input.factor.type === "recoveryCode" && remaining === null) throw new RecoveryCodeRejected();
-        const signedIn = await this.#createSession(
-          tx,
-          account,
-          [...pending.methods, method],
-          "full",
-          input.client,
-          mailIds,
-          started,
-          providerOfPending(pending.payload),
-        );
-        if (remaining !== null) {
-          await this.#audit.record(tx, {
-            name: "twoFactor.recoveryCodeUsed",
-            actor: ANONYMOUS,
-            targetId: account.id,
-            fields: { remaining },
-          });
-          mailIds.push(
-            await this.#mail.queue(tx, {
-              to: account.email,
-              template: "recoveryCodeUsed",
-              security: true,
-              language: await this.#mail.languageOf(account.id),
-              params: { remaining },
-            }),
+      const mailIds: string[] = [];
+      let result: SignedIn;
+      try {
+        result = await this.#database.transaction(async (tx) => {
+          if (!(await this.#challenges.consume(tx, pending.id))) throw new ChallengeExpiredError();
+          const remaining =
+            input.factor.type === "recoveryCode"
+              ? await this.#recoveryCodes.use(tx, account.id, input.factor.code)
+              : null;
+          if (input.factor.type === "recoveryCode" && remaining === null) throw new RecoveryCodeRejected();
+          const signedIn = await this.#createSession(
+            tx,
+            account,
+            [...pending.methods, method],
+            "full",
+            input.client,
+            mailIds,
+            started,
+            providerOfPending(pending.payload),
           );
-        }
-        return signedIn;
-      });
-    } catch (error) {
-      if (error instanceof RecoveryCodeRejected) throw await failed();
-      throw error;
-    }
-    await this.#throttle.recordSuccess(account.email);
-    await this.#mail.dispatch(mailIds);
-    return result;
+          if (remaining !== null) {
+            await this.#audit.record(tx, {
+              name: "twoFactor.recoveryCodeUsed",
+              actor: ANONYMOUS,
+              targetId: account.id,
+              fields: { remaining },
+            });
+            mailIds.push(
+              await this.#mail.queue(tx, {
+                to: account.email,
+                template: "recoveryCodeUsed",
+                security: true,
+                language: await this.#mail.languageOf(account.id),
+                params: { remaining },
+              }),
+            );
+          }
+          return signedIn;
+        });
+      } catch (error) {
+        if (error instanceof RecoveryCodeRejected) throw await failed();
+        throw error;
+      }
+      await this.#throttle.recordSuccess(account.email);
+      await this.#mail.dispatch(mailIds);
+      return result;
+    });
   }
 
   async #pendingLink(pendingToken: string) {
@@ -678,92 +696,97 @@ export class SignInService {
     const { pending, account } = await this.#pendingLink(input.pendingToken);
     const subjects = await this.#subjects(account.id, account.email, input.client.ip);
     const factors = await secondFactorsOf(this.#database, account.id);
-    let methods: SignInMethod[];
-    let factorNeeded: boolean;
-    if (input.passkey) {
-      await this.#checkAttempt(subjects, account.id, "passkey");
-      const expectedChallenge = pending.challenge;
-      await this.#challenges.setChallenge(pending.id, "");
-      const assertion = expectedChallenge
-        ? await this.#webauthn.verify({
-            response: input.passkey,
-            expectedChallenge,
-            accountId: account.id,
-            requireUserVerification: true,
-          })
-        : null;
-      if (!assertion?.userVerified) {
-        await this.#challenges.recordFailure(pending.id);
-        await this.#recordFailure(subjects, account.id, "passkey", "invalidCredentials");
-        throw new InvalidCredentialsError();
-      }
-      methods = ["passkey"];
-      factorNeeded = false;
-    } else if (typeof input.password === "string") {
-      await this.#checkAttempt(subjects, account.id, "password");
-      let passwordValid = false;
-      if (account.passwordHash) {
-        passwordValid = (await this.#hasher.verify(account.passwordHash, input.password)).valid;
-      } else {
-        await this.#hasher.verifyNothing(input.password);
-      }
-      if (!passwordValid) {
-        await this.#challenges.recordFailure(pending.id);
-        await this.#recordFailure(subjects, account.id, "password", "invalidCredentials");
-        throw new InvalidCredentialsError();
-      }
-      methods = ["password"];
-      factorNeeded = hasSecondFactor(factors);
-    } else if (pending.methods.includes("identityProvider")) {
-      await this.#checkAttempt(subjects, account.id, "identityProvider");
-      methods = ["identityProvider"];
-      factorNeeded = true;
-    } else {
-      throw new InvalidCredentialsError();
-    }
-    const factor = input.factor;
-    const failedFactor = async (method: SignInMethod) => {
-      await this.#challenges.recordFailure(pending.id);
-      await this.#recordFailure(subjects, account.id, method, "invalidSecondFactor");
-      return new InvalidSecondFactorError();
-    };
-    if (factorNeeded) {
-      if (!factor || !hasSecondFactor(factors)) throw await failedFactor("totp");
-      if (factor.type === "totp" && !(await this.#totp.verify(this.#database, account.id, factor.code))) {
-        throw await failedFactor("totp");
-      }
-      if (factor.type === "passkey") {
+    const confirming: SignInMethod | null = input.passkey
+      ? "passkey"
+      : typeof input.password === "string"
+        ? "password"
+        : pending.methods.includes("identityProvider")
+          ? "identityProvider"
+          : null;
+    if (!confirming) throw new InvalidCredentialsError();
+    return this.#attempting(subjects, account.id, confirming, async (reservation) => {
+      let methods: SignInMethod[];
+      let factorNeeded: boolean;
+      if (input.passkey) {
         const expectedChallenge = pending.challenge;
         await this.#challenges.setChallenge(pending.id, "");
-        const verified =
-          !!expectedChallenge &&
-          (await this.#webauthn.verify({
-            response: factor.response,
-            expectedChallenge,
-            accountId: account.id,
-            requireUserVerification: false,
-          })) !== null;
-        if (!verified) throw await failedFactor("passkey");
+        const assertion = expectedChallenge
+          ? await this.#webauthn.verify({
+              response: input.passkey,
+              expectedChallenge,
+              accountId: account.id,
+              requireUserVerification: true,
+            })
+          : null;
+        if (!assertion?.userVerified) {
+          await this.#challenges.recordFailure(pending.id);
+          await this.#recordFailure(subjects, reservation, account.id, "passkey", "invalidCredentials");
+          throw new InvalidCredentialsError();
+        }
+        methods = ["passkey"];
+        factorNeeded = false;
+      } else if (typeof input.password === "string") {
+        let passwordValid = false;
+        if (account.passwordHash) {
+          passwordValid = (await this.#hasher.verify(account.passwordHash, input.password)).valid;
+        } else {
+          await this.#hasher.verifyNothing(input.password);
+        }
+        if (!passwordValid) {
+          await this.#challenges.recordFailure(pending.id);
+          await this.#recordFailure(subjects, reservation, account.id, "password", "invalidCredentials");
+          throw new InvalidCredentialsError();
+        }
+        methods = ["password"];
+        factorNeeded = hasSecondFactor(factors);
+      } else {
+        methods = ["identityProvider"];
+        factorNeeded = true;
       }
-      methods.push(factor.type);
-    }
-    const kind =
-      factorNeeded || methods.includes("passkey") || !(await this.secondFactorRequired(account.id))
-        ? "full"
-        : "secondFactorSetup";
-    try {
-      return await this.completeIdentityLink(pending.id, methods, kind, input.client, started, {
-        beforeLink: async (tx) => {
-          if (factorNeeded && factor?.type === "recoveryCode") {
-            const remaining = await this.#recoveryCodes.use(tx, account.id, factor.code);
-            if (remaining === null) throw new RecoveryCodeRejected();
-          }
-        },
-      });
-    } catch (error) {
-      if (error instanceof RecoveryCodeRejected) throw await failedFactor("recoveryCode");
-      throw error;
-    }
+      const factor = input.factor;
+      const failedFactor = async (method: SignInMethod) => {
+        await this.#challenges.recordFailure(pending.id);
+        await this.#recordFailure(subjects, reservation, account.id, method, "invalidSecondFactor");
+        return new InvalidSecondFactorError();
+      };
+      if (factorNeeded) {
+        if (!factor || !hasSecondFactor(factors)) throw await failedFactor("totp");
+        if (factor.type === "totp" && !(await this.#totp.verify(this.#database, account.id, factor.code))) {
+          throw await failedFactor("totp");
+        }
+        if (factor.type === "passkey") {
+          const expectedChallenge = pending.challenge;
+          await this.#challenges.setChallenge(pending.id, "");
+          const verified =
+            !!expectedChallenge &&
+            (await this.#webauthn.verify({
+              response: factor.response,
+              expectedChallenge,
+              accountId: account.id,
+              requireUserVerification: false,
+            })) !== null;
+          if (!verified) throw await failedFactor("passkey");
+        }
+        methods.push(factor.type);
+      }
+      const kind =
+        factorNeeded || methods.includes("passkey") || !(await this.secondFactorRequired(account.id))
+          ? "full"
+          : "secondFactorSetup";
+      try {
+        return await this.completeIdentityLink(pending.id, methods, kind, input.client, started, {
+          beforeLink: async (tx) => {
+            if (factorNeeded && factor?.type === "recoveryCode") {
+              const remaining = await this.#recoveryCodes.use(tx, account.id, factor.code);
+              if (remaining === null) throw new RecoveryCodeRejected();
+            }
+          },
+        });
+      } catch (error) {
+        if (error instanceof RecoveryCodeRejected) throw await failedFactor("recoveryCode");
+        throw error;
+      }
+    });
   }
 
   async #pendingLinkById(pendingId: string) {
@@ -867,36 +890,45 @@ export class SignInService {
   }): Promise<SignedIn> {
     const clientSubjects = { clientIp: input.client.ip };
     const started = await this.#databaseNow();
-    await this.#checkAttempt(clientSubjects, null, "passkey");
-    const found = await this.#challenges.findByToken(input.token, "passkeySignIn");
-    const challenge = found ? await this.#challenges.consume(this.#database, found.id) : null;
-    if (!challenge?.challenge) throw new ChallengeExpiredError();
+    return this.#attempting(clientSubjects, null, "passkey", async (reservation) => {
+      const found = await this.#challenges.findByToken(input.token, "passkeySignIn");
+      const challenge = found ? await this.#challenges.consume(this.#database, found.id) : null;
+      if (!challenge?.challenge) throw new ChallengeExpiredError();
 
-    const assertion = await this.#webauthn.verify({
-      response: input.response,
-      expectedChallenge: challenge.challenge,
-      requireUserVerification: true,
-    });
-    const account = assertion ? await this.#accounts.get(assertion.accountId) : null;
-    if (!assertion?.userVerified || !canSignIn(account)) {
-      await this.#recordFailure(clientSubjects, account?.id ?? null, "passkey", "invalidCredentials");
-      throw new InvalidCredentialsError();
-    }
-    const lockout = await this.#throttle.lockout(await this.#subjects(account.id, account.email, undefined));
-    if (lockout) {
-      await this.#audit.recordAlone({
-        name: "auth.signInFailed",
-        actor: ANONYMOUS,
-        targetId: account.id,
-        fields: { reason: "accountLocked", method: "passkey" },
+      const assertion = await this.#webauthn.verify({
+        response: input.response,
+        expectedChallenge: challenge.challenge,
+        requireUserVerification: true,
       });
-      throw new LockedError(secondsUntil(lockout.lockedUntil));
-    }
-    await refuseManaged(this.#database, account.id, "any");
-    await this.#throttle.recordSuccess(account.email);
-    return this.#signedIn((tx, mailIds) =>
-      this.#createSession(tx, account, ["passkey"], "full", input.client, mailIds, started),
-    );
+      const account = assertion ? await this.#accounts.get(assertion.accountId) : null;
+      if (!assertion?.userVerified || !canSignIn(account)) {
+        await this.#recordFailure(
+          clientSubjects,
+          reservation,
+          account?.id ?? null,
+          "passkey",
+          "invalidCredentials",
+        );
+        throw new InvalidCredentialsError();
+      }
+      const lockout = await this.#throttle.lockout(
+        await this.#subjects(account.id, account.email, undefined),
+      );
+      if (lockout) {
+        await this.#audit.recordAlone({
+          name: "auth.signInFailed",
+          actor: ANONYMOUS,
+          targetId: account.id,
+          fields: { reason: "accountLocked", method: "passkey" },
+        });
+        throw new LockedError(secondsUntil(lockout.lockedUntil));
+      }
+      await refuseManaged(this.#database, account.id, "any");
+      await this.#throttle.recordSuccess(account.email);
+      return this.#signedIn((tx, mailIds) =>
+        this.#createSession(tx, account, ["passkey"], "full", input.client, mailIds, started),
+      );
+    });
   }
 
   async reauthenticationPasskeyOptions(session: Session) {
@@ -918,63 +950,67 @@ export class SignInService {
     if (!canSignIn(account)) throw new InvalidCredentialsError();
     await refuseManaged(this.#database, account.id, input.method === "password" ? "any" : "providerOnly");
     const subjects = { email: account.email, clientIp: client.ip };
-    const rate = await this.#throttle.attempt(subjects);
-    if (!rate.allowed) throw new RateLimitedError(rate.retryAfterSeconds);
-    const lockout = await this.#throttle.lockout(subjects);
-    if (lockout) throw new LockedError(secondsUntil(lockout.lockedUntil));
-
-    let valid = false;
-    if (input.method === "password") {
-      valid = account.passwordHash
-        ? (await this.#hasher.verify(account.passwordHash, input.password)).valid
-        : false;
-    } else if (input.method === "totp") {
-      valid = await this.#totp.verify(this.#database, account.id, input.code);
-    } else {
-      const challenge = await this.#challenges.consumeForSession(session.id, "reauthentication");
-      valid =
-        !!challenge?.challenge &&
-        (await this.#webauthn.verify({
-          response: input.response,
-          expectedChallenge: challenge.challenge,
-          accountId: account.id,
-          requireUserVerification: false,
-        })) !== null;
-    }
-
-    if (!valid) {
-      await this.#database.transaction(async (tx) => {
-        const lockouts = await this.#throttle.recordFailure(subjects, tx);
-        await this.#audit.record(tx, {
-          name: "auth.reauthenticationFailed",
-          actor: accountPrincipal(account.id),
-          targetId: account.id,
-          fields: { sessionId: session.id, method: input.method },
-        });
-        for (const lockout of lockouts) {
-          await this.#audit.record(tx, {
-            name: "auth.lockedOut",
-            actor: ANONYMOUS,
-            targetId: lockout.subject === "account" ? account.id : null,
-            fields: {
-              subject: lockout.subject,
-              failures: lockout.failures,
-              lockedUntil: lockout.lockedUntil.toISOString(),
-            },
-          });
+    return this.#throttle.attempting(
+      subjects,
+      async (blocked) =>
+        blocked.kind === "rateLimited"
+          ? new RateLimitedError(blocked.retryAfterSeconds)
+          : new LockedError(secondsUntil(blocked.lockout.lockedUntil)),
+      async (reservation) => {
+        let valid = false;
+        if (input.method === "password") {
+          valid = account.passwordHash
+            ? (await this.#hasher.verify(account.passwordHash, input.password)).valid
+            : false;
+        } else if (input.method === "totp") {
+          valid = await this.#totp.verify(this.#database, account.id, input.code);
+        } else {
+          const challenge = await this.#challenges.consumeForSession(session.id, "reauthentication");
+          valid =
+            !!challenge?.challenge &&
+            (await this.#webauthn.verify({
+              response: input.response,
+              expectedChallenge: challenge.challenge,
+              accountId: account.id,
+              requireUserVerification: false,
+            })) !== null;
         }
-      });
-      throw new InvalidCredentialsError();
-    }
-    return this.#database.transaction(async (tx) => {
-      const token = await this.#sessions.rotate(tx, session.id, { reauthenticated: true });
-      await this.#audit.record(tx, {
-        name: "auth.reauthenticated",
-        actor: accountPrincipal(account.id),
-        targetId: account.id,
-        fields: { sessionId: session.id, method: input.method },
-      });
-      return token;
-    });
+
+        if (!valid) {
+          await this.#database.transaction(async (tx) => {
+            const lockouts = await this.#throttle.recordFailure(subjects, reservation, tx);
+            await this.#audit.record(tx, {
+              name: "auth.reauthenticationFailed",
+              actor: accountPrincipal(account.id),
+              targetId: account.id,
+              fields: { sessionId: session.id, method: input.method },
+            });
+            for (const lockout of lockouts) {
+              await this.#audit.record(tx, {
+                name: "auth.lockedOut",
+                actor: ANONYMOUS,
+                targetId: lockout.subject === "account" ? account.id : null,
+                fields: {
+                  subject: lockout.subject,
+                  failures: lockout.failures,
+                  lockedUntil: lockout.lockedUntil.toISOString(),
+                },
+              });
+            }
+          });
+          throw new InvalidCredentialsError();
+        }
+        return this.#database.transaction(async (tx) => {
+          const token = await this.#sessions.rotate(tx, session.id, { reauthenticated: true });
+          await this.#audit.record(tx, {
+            name: "auth.reauthenticated",
+            actor: accountPrincipal(account.id),
+            targetId: account.id,
+            fields: { sessionId: session.id, method: input.method },
+          });
+          return token;
+        });
+      },
+    );
   }
 }

@@ -44,6 +44,7 @@ export const CLIENT_ATTEMPTS_PER_MINUTE = 300;
 export interface RateLimitResult {
   allowed: boolean;
   retryAfterSeconds: number;
+  windowStart?: string;
 }
 
 export class RateLimiter {
@@ -56,15 +57,24 @@ export class RateLimiter {
   async consume(key: string, limit: number, windowSeconds: number): Promise<RateLimitResult> {
     const window = sql`make_interval(secs => ${windowSeconds})`;
     const expired = sql`${rateLimits.windowStart} <= now() - ${window}`;
-    const result = await this.#database.execute<{ count: number; retry_after: string }>(sql`
+    const result = await this.#database.execute<{
+      count: number;
+      retry_after: string;
+      window_start: string;
+    }>(sql`
       insert into ${rateLimits} (key, window_start, count) values (${key}, now(), 1)
       on conflict (key) do update set
         window_start = case when ${expired} then now() else ${rateLimits.windowStart} end,
         count = case when ${expired} then 1 else ${rateLimits.count} + 1 end
-      returning count, ceil(extract(epoch from (window_start + ${window} - now()))) as retry_after`);
+      returning count, ceil(extract(epoch from (window_start + ${window} - now()))) as retry_after,
+        window_start::text as window_start`);
     const row = result.rows[0];
     const count = Number(row?.count ?? 0);
-    return { allowed: count <= limit, retryAfterSeconds: Math.max(1, Number(row?.retry_after ?? 1)) };
+    return {
+      allowed: count <= limit,
+      retryAfterSeconds: Math.max(1, Number(row?.retry_after ?? 1)),
+      ...(row?.window_start ? { windowStart: row.window_start } : {}),
+    };
   }
 
   async peek(key: string, limit: number, windowSeconds: number): Promise<RateLimitResult> {
@@ -79,9 +89,10 @@ export class RateLimiter {
     };
   }
 
-  async refund(key: string): Promise<void> {
+  async refund(key: string, windowStart?: string): Promise<void> {
+    const sameWindow = windowStart ? sql`and ${rateLimits.windowStart} = ${windowStart}::timestamptz` : sql``;
     await this.#database.execute(
-      sql`update ${rateLimits} set count = greatest(${rateLimits.count} - 1, 0) where key = ${key}`,
+      sql`update ${rateLimits} set count = greatest(${rateLimits.count} - 1, 0) where key = ${key} ${sameWindow}`,
     );
   }
 
@@ -106,6 +117,30 @@ export interface Lockout {
 
 type SubjectKey = { subject: Lockout["subject"]; key: string };
 
+export class FailureReservation {
+  readonly #release: (() => Promise<void>) | null;
+  #failed = false;
+  #settled = false;
+
+  constructor(release: (() => Promise<void>) | null) {
+    this.#release = release;
+  }
+
+  markFailed(): void {
+    this.#failed = true;
+  }
+
+  async settle(): Promise<void> {
+    if (this.#settled) return;
+    this.#settled = true;
+    if (!this.#failed) await this.#release?.();
+  }
+}
+
+export type BlockedAttempt =
+  | { kind: "rateLimited"; retryAfterSeconds: number }
+  | { kind: "locked"; lockout: { subject: Lockout["subject"]; lockedUntil: Date } };
+
 export class SignInThrottle {
   readonly #database: Database;
   readonly #settings: SettingsService;
@@ -126,25 +161,51 @@ export class SignInThrottle {
     return keys;
   }
 
-  async attempt(subjects: ThrottleSubjects): Promise<RateLimitResult> {
+  async reserve(
+    subjects: ThrottleSubjects,
+  ): Promise<{ rate: RateLimitResult; reservation: FailureReservation }> {
     const limits = {
       account: await this.#settings.get(accountAttemptLimitSetting, {}),
       clientIp: await this.#settings.get(clientAttemptLimitSetting, {}),
     };
     let retryAfterSeconds = 0;
+    let reserved: { key: string; windowStart: string | undefined } | null = null;
+    const block = (result: RateLimitResult) => {
+      if (!result.allowed) retryAfterSeconds = Math.max(retryAfterSeconds, result.retryAfterSeconds);
+    };
     for (const { subject, key } of this.#keys(subjects)) {
-      const results =
-        subject === "account"
-          ? [await this.#rateLimiter.consume(`signIn:${key}`, limits.account, 60)]
-          : [
-              await this.#rateLimiter.consume(`signIn:${key}`, CLIENT_ATTEMPTS_PER_MINUTE, 60),
-              await this.#rateLimiter.peek(`signIn:failed:${key}`, limits.clientIp, 60),
-            ];
-      for (const result of results) {
-        if (!result.allowed) retryAfterSeconds = Math.max(retryAfterSeconds, result.retryAfterSeconds);
+      if (subject === "account") {
+        block(await this.#rateLimiter.consume(`signIn:${key}`, limits.account, 60));
+        continue;
       }
+      block(await this.#rateLimiter.consume(`signIn:${key}`, CLIENT_ATTEMPTS_PER_MINUTE, 60));
+      const failedKey = `signIn:failed:${key}`;
+      const place = await this.#rateLimiter.consume(failedKey, limits.clientIp, 60);
+      reserved = { key: failedKey, windowStart: place.windowStart };
+      block(place);
     }
-    return { allowed: retryAfterSeconds === 0, retryAfterSeconds };
+    const release = reserved ? () => this.#rateLimiter.refund(reserved.key, reserved.windowStart) : null;
+    const reservation = new FailureReservation(release);
+    if (retryAfterSeconds > 0) await reservation.settle();
+    return { rate: { allowed: retryAfterSeconds === 0, retryAfterSeconds }, reservation };
+  }
+
+  async attempting<T>(
+    subjects: ThrottleSubjects,
+    refuse: (blocked: BlockedAttempt) => Promise<Error>,
+    run: (reservation: FailureReservation) => Promise<T>,
+  ): Promise<T> {
+    const { rate, reservation } = await this.reserve(subjects);
+    if (!rate.allowed) {
+      throw await refuse({ kind: "rateLimited", retryAfterSeconds: rate.retryAfterSeconds });
+    }
+    try {
+      const lockout = await this.lockout(subjects);
+      if (lockout) throw await refuse({ kind: "locked", lockout });
+      return await run(reservation);
+    } finally {
+      await reservation.settle();
+    }
   }
 
   async lockout(
@@ -170,7 +231,12 @@ export class SignInThrottle {
     return { subject, lockedUntil: row.lockedUntil };
   }
 
-  async recordFailure(subjects: ThrottleSubjects, executor: Executor = this.#database): Promise<Lockout[]> {
+  async recordFailure(
+    subjects: ThrottleSubjects,
+    reservation: FailureReservation,
+    executor: Executor = this.#database,
+  ): Promise<Lockout[]> {
+    reservation.markFailed();
     const thresholds = {
       account: await this.#settings.get(accountLockoutFailuresSetting, {}),
       clientIp: await this.#settings.get(clientLockoutFailuresSetting, {}),
@@ -181,9 +247,6 @@ export class SignInThrottle {
     const lockouts: Lockout[] = [];
 
     for (const { subject, key } of this.#keys(subjects)) {
-      if (subject === "clientIp") {
-        await this.#rateLimiter.consume(`signIn:failed:${key}`, Number.MAX_SAFE_INTEGER, 60);
-      }
       const threshold = thresholds[subject];
       const lockout = await executor.transaction(async (tx) => {
         await tx.insert(signInFailures).values({ key }).onConflictDoNothing();
