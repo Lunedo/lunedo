@@ -1,8 +1,9 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { availableParallelism, tmpdir } from "node:os";
 import path from "node:path";
 import { inspect } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
+import { defaultPoolSize } from "../database/pool-size.js";
 import { ConfigError, loadConfig } from "./load.js";
 
 const databaseUrl = "postgres://lunedo:s3cret@localhost:5432/lunedo";
@@ -29,7 +30,7 @@ describe("loadConfig", () => {
     expect(config.host).toBe("0.0.0.0");
     expect(config.ports).toEqual({ api: 3000, collab: 3001, worker: 3002 });
     expect(config.logLevel).toBe("info");
-    expect(config.database.poolSize).toBe(10);
+    expect(config.database.poolSize).toBe(defaultPoolSize(availableParallelism()));
     expect(config.database.url.reveal()).toBe(databaseUrl);
     expect(config.keys.provider).toBe("file");
     expect(config.keys.masterKeysPath).toBe(path.join("/var/lib/lunedo/secrets", "master-keys"));

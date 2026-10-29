@@ -26,6 +26,12 @@ What Lunedo needs to run. The [setup script](installation/script.md) checks the 
 | Optional right | `CREATEDB` for the monthly test restore of backups, which restores into a temporary database on the same server, for example `ALTER ROLE "lunedo" CREATEDB;`. Without it, a test restore only verifies the backup. See [Backups](backups.md). |
 | Free space | Room for one more copy of the database while a test restore runs. |
 
+### Database connections
+
+Each Lunedo process (the API, the worker and the collaboration server) has its own pool of database connections, set by `LUNEDO_DATABASE_POOL_SIZE`. Without it, a process uses twice the number of CPUs of its container plus 2, at least 6 and at most 24. Every process also holds one connection for notifications and up to four for the job queue.
+
+Add up `pool size + 5` for every process, in every container, that uses the same database. The sum, plus a few connections for backups and `psql`, must stay below `max_connections` of PostgreSQL. The PostgreSQL container of the setup script keeps the default of 100, which the three processes of one container stay below with any pool size up to 24. Raise `max_connections` before you raise the pool size or run more containers.
+
 Migrations only go forward. When several processes start at the same time, a PostgreSQL advisory lock lets one of them migrate while the others wait. Readiness (`/health/ready`) answers `503` while the schema is behind the code. When migrations are pending, the first process takes a backup before it migrates; see [Backups before updates](updates.md#backups-before-updates).
 
 ## Optional services
