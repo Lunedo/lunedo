@@ -131,7 +131,7 @@ export const configSettings: readonly ConfigSetting[] = [
       "Maximum database connections in the pool of each process. The worker, the collaboration server and every API process each have a pool; each process also holds one connection for notifications, and the worker up to four and every API process one for the job queue.",
       {
         defaultText:
-          "twice the number of CPUs plus 2, at least 6 and at most 24; with several API processes each of them gets this number divided by their count, at least 2",
+          "twice the number of CPUs plus 2, at least 6 and at most 24; with several API processes each of them gets this number divided by their count, at least 4",
       },
     ),
     setting(

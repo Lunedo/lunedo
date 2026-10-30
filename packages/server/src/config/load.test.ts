@@ -52,7 +52,7 @@ describe("loadConfig", () => {
   it("splits the default pool among the API processes and keeps a pool size that is set", () => {
     const split = loadConfig({ LUNEDO_DATABASE_URL: databaseUrl, LUNEDO_API_PROCESSES: "4" });
     expect(split.apiProcesses).toBe(4);
-    expect(split.database.apiPoolSize).toBe(Math.max(2, Math.floor(split.database.poolSize / 4)));
+    expect(split.database.apiPoolSize).toBe(Math.max(4, Math.ceil(split.database.poolSize / 4)));
     const set = loadConfig({
       LUNEDO_DATABASE_URL: databaseUrl,
       LUNEDO_API_PROCESSES: "4",

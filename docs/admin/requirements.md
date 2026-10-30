@@ -30,7 +30,7 @@ What Lunedo needs to run. The [setup script](installation/script.md) checks the 
 
 A container runs the worker, the collaboration server and one API process per CPU, at most 8 (`LUNEDO_API_PROCESSES` sets another number). Requests are spread over the API processes, so the API uses more than one CPU without a proxy in front of several containers.
 
-Each process has its own pool of database connections. Without `LUNEDO_DATABASE_POOL_SIZE`, the worker and the collaboration server use twice the number of CPUs of the container plus 2, at least 6 and at most 24, and this number is divided among the API processes, at least 2 each. With `LUNEDO_DATABASE_POOL_SIZE`, every process, each API process included, uses that number. Every process also holds one connection for notifications; the worker holds up to four more for the job queue and every API process one.
+Each process has its own pool of database connections. Without `LUNEDO_DATABASE_POOL_SIZE`, the worker and the collaboration server use twice the number of CPUs of the container plus 2, at least 6 and at most 24, and this number is divided among the API processes, at least 4 each. With `LUNEDO_DATABASE_POOL_SIZE`, every process, each API process included, uses that number. Every process also holds one connection for notifications; the worker holds up to four more for the job queue and every API process one.
 
 Add up for every container that uses the same database:
 
@@ -38,7 +38,7 @@ Add up for every container that uses the same database:
 - collaboration server: pool size + 1
 - every API process: pool size + 2 + search slots
 
-The sum, plus a few connections for backups and `psql`, must stay below `max_connections` of PostgreSQL. With the defaults, one container on up to 8 CPUs stays below the PostgreSQL default of 100, for example 46 connections on 4 CPUs and 90 on 8 CPUs. The PostgreSQL container of the setup script sets `max_connections` to 200. Raise `max_connections` before you raise the pool size or the number of API processes, or run more containers.
+The sum, plus a few connections for backups and `psql`, must stay below `max_connections` of PostgreSQL. With the defaults, one container on up to 7 CPUs stays below the PostgreSQL default of 100, for example 54 connections on 4 CPUs; on 8 CPUs it needs 106. The PostgreSQL container of the setup script sets `max_connections` to 200. Raise `max_connections` before you raise the pool size or the number of API processes, or run more containers.
 
 ### Searches at once
 

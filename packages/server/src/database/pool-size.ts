@@ -1,6 +1,6 @@
 export const MIN_POOL_SIZE = 6;
 export const MAX_POOL_SIZE = 24;
-export const MIN_API_POOL_SIZE = 2;
+export const MIN_API_POOL_SIZE = 4;
 export const MAX_API_PROCESSES = 8;
 export const MAX_SEARCH_SLOTS = 4;
 export const JOB_QUEUE_CONNECTIONS = 4;
@@ -20,7 +20,7 @@ export function defaultSearchSlots(cpus: number): number {
 }
 
 export function apiPoolSize(poolSize: number, processes: number): number {
-  return processes <= 1 ? poolSize : Math.max(MIN_API_POOL_SIZE, Math.floor(poolSize / processes));
+  return processes <= 1 ? poolSize : Math.max(MIN_API_POOL_SIZE, Math.ceil(poolSize / processes));
 }
 
 export interface ProcessPools {
