@@ -10311,6 +10311,7 @@
     "placeholder": "Search pages, blog posts, comments, attachments and meetings",
     "results": "Results",
     "total": "{count, plural, one {# result} other {# results}}",
+    "totalCapped": "{count}+ results, showing the most recently changed",
     "failed": "Search failed",
     "moreFailed": "More results could not be loaded",
     "loadMore": "Load more results",

@@ -10311,6 +10311,7 @@
     "placeholder": "Seiten, Blogbeiträge, Kommentare, Anhänge und Besprechungen durchsuchen",
     "results": "Ergebnisse",
     "total": "{count, plural, one {# Ergebnis} other {# Ergebnisse}}",
+    "totalCapped": "Mehr als {count} Ergebnisse, die zuletzt geänderten werden gezeigt",
     "failed": "Die Suche ist fehlgeschlagen",
     "moreFailed": "Weitere Ergebnisse konnten nicht geladen werden",
     "loadMore": "Weitere Ergebnisse laden",

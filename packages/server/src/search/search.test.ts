@@ -294,7 +294,10 @@ describe.skipIf(!baseUrl)("search", () => {
     const authorId = await member(org.id, "member", "Typo Author");
     const author = accountPrincipal(authorId);
     const created = await space(org.id, authorId, { visibility: "organization" });
-    const stem = `cartridg${Math.random().toString(36).slice(2, 8).replace(/[^a-z]/g, "")}`;
+    const stem = `cartridg${Math.random()
+      .toString(36)
+      .slice(2, 8)
+      .replace(/[^a-z]/g, "")}`;
     const add = (title: string, text: string) =>
       test.services.tree.create(author, created.id, {
         kind: "page",
@@ -447,24 +450,24 @@ describe.skipIf(!baseUrl)("search", () => {
     return { service, requests };
   }
 
-  it("counts filter values over the best matches only while total and hits stay complete", async () => {
+  it("lists and counts only the most recently changed matches above the limit", async () => {
     const w = await world();
     const bounded = new SearchService({
       database: test.database,
       authorization: test.services.authorization,
       people: test.services.people,
-      adapter: new PostgresSearchAdapter({ facetSample: 2 }),
+      adapter: new PostgresSearchAdapter({ matchCap: 2 }),
       indexer: test.services.search.indexer,
     });
     const full = await find(w.other, w.org.id, w.word);
     const limited = await bounded.search(w.other, w.org.id, searchRequest(w.word));
-    expect(limited.total).toBe(3);
-    expect(limited.results.map((hit) => hit.itemId)).toEqual(full.results.map((hit) => hit.itemId));
-    expect(full.facets?.contentTypes).toEqual([{ value: "page", count: 3 }]);
+    expect(full).toMatchObject({ total: 3, totalCapped: false });
+    expect(limited).toMatchObject({ total: 2, totalCapped: true });
+    expect(limited.results.map((hit) => hit.itemId).sort()).toEqual([w.beta, w.gamma].sort());
     expect(limited.facets?.contentTypes).toEqual([{ value: "page", count: 2 }]);
-    const spaceIds = (limited.facets?.spaces ?? []).map((facet) => facet.value);
-    expect(spaceIds).not.toContain(w.hidden.id);
-    expect((limited.facets?.spaces ?? []).reduce((sum, facet) => sum + facet.count, 0)).toBe(2);
+    const spaces = limited.facets?.spaces ?? [];
+    expect(spaces.map((facet) => facet.value)).not.toContain(w.hidden.id);
+    expect(spaces.reduce((sum, facet) => sum + facet.count, 0)).toBe(2);
   });
 
   it("keeps the counts of the other filters complete when a filter picks few of many matches", async () => {
@@ -476,13 +479,14 @@ describe.skipIf(!baseUrl)("search", () => {
         database: test.database,
         authorization: test.services.authorization,
         people: test.services.people,
-        adapter: new PostgresSearchAdapter({ facetSample: full.total }),
+        adapter: new PostgresSearchAdapter({ matchCap: full.total }),
         indexer: test.services.search.indexer,
       });
       const limited = await bounded.search(w.other, w.org.id, filtered);
       expect(full.total).toBeGreaterThan(0);
       expect(limited.facets?.contentTypes).toEqual(full.facets?.contentTypes);
       expect(limited.facets?.authors).toEqual(full.facets?.authors);
+      expect(limited.totalCapped).toBe(false);
     }
   });
 

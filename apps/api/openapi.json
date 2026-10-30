@@ -189978,7 +189978,11 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "Number of results the caller can read, on all pages."
+                      "description": "Number of results the caller can read, on all pages, up to the 1,000 best matches."
+                    },
+                    "totalCapped": {
+                      "type": "boolean",
+                      "description": "True when the search has more matches than `total` counts. Show the number as \"1,000+\"; the results and counts cover the 1,000 most recently changed matches."
                     },
                     "nextCursor": {
                       "description": "Cursor for the next page, or null on the last page.",
@@ -190286,7 +190290,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts. For a search with more than 5,000 matches the counts cover the 5,000 best matches; `total` always counts all matches."
+                      "description": "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts. For a search with more than 1,000 matches the counts cover the 1,000 most recently changed matches, like `total`."
                     },
                     "suggestion": {
                       "description": "The search text with misspelled words replaced by similar words from content the caller can read, or null when there is nothing to correct. Always null in quick search.",
@@ -190313,6 +190317,7 @@
                   "required": [
                     "results",
                     "total",
+                    "totalCapped",
                     "nextCursor",
                     "facets",
                     "suggestion",
@@ -190379,6 +190384,7 @@
                     }
                   ],
                   "total": 1,
+                  "totalCapped": false,
                   "nextCursor": null,
                   "facets": {
                     "types": [

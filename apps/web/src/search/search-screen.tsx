@@ -202,7 +202,11 @@ export function SearchScreen() {
         </div>
         <div className="flex flex-wrap items-center gap-3 border-b border-border pb-2 text-sm">
           <p aria-live="polite" className="text-text-muted">
-            {searchable && first ? t("search.total", { count: first.total }) : null}
+            {searchable && first
+              ? first.totalCapped
+                ? t("search.totalCapped", { count: first.total })
+                : t("search.total", { count: first.total })
+              : null}
           </p>
           {count > 0 ? (
             <Button

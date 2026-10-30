@@ -29,7 +29,7 @@ const TYPO_ALTERNATIVES = 3;
 const TYPO_CANDIDATES = 40;
 const TYPO_FEW_RESULTS = 5;
 const FACET_LIMIT = 20;
-const FACET_SAMPLE = 5000;
+const MATCH_CAP = 1000;
 const RECENT_USE_DAYS = 30;
 const MAX_RECENT_BOOST = 0.15;
 const MAX_FREQUENT_BOOST = 0.1;
@@ -75,10 +75,10 @@ function weighted(chunk: IndexedChunk): { first: string; second: string; labels:
 }
 
 export class PostgresSearchAdapter implements SearchAdapter {
-  readonly #facetSample: number;
+  readonly #matchCap: number;
 
-  constructor(options: { facetSample?: number } = {}) {
-    this.#facetSample = options.facetSample ?? FACET_SAMPLE;
+  constructor(options: { matchCap?: number } = {}) {
+    this.#matchCap = options.matchCap ?? MATCH_CAP;
   }
 
   async replaceItem(executor: Executor, item: IndexedItem): Promise<void> {
@@ -253,6 +253,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
       return {
         hits: [],
         total: 0,
+        capped: false,
         hasMore: false,
         facets: request.facets ? emptyFacets() : null,
         corrections: new Map(),
@@ -288,6 +289,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
         sql` and `,
       );
     const failing = sql`(${sql.join([sql`0`, ...flags.map(([group]) => sql`(not ${sql.raw(`f_${group}`)})::int`)], sql` + `)})`;
+    const poolOrder = sql`${flags.length > 0 ? sql`${failing}, ` : sql``}content_updated_at desc, id desc`;
     const deduplicated = sql`select distinct on (source, source_id) * from matched order by source, source_id, score desc, position`;
     const candidates = languages
       ? sql`select distinct on (article_id) * from (${deduplicated}) d order by article_id, (${passing()}) desc, score desc, position`
@@ -329,20 +331,36 @@ export class PostgresSearchAdapter implements SearchAdapter {
 
     const result = await executor.execute<{
       total: string;
+      pooled: string;
       hits: (Omit<AdapterHit, "score"> & { score: number | string })[] | null;
       facets: AdapterFacets | null;
     }>(sql`
-      with matched as (
-        select c.id, c.source, c.source_id, t.space_id, c.content_updated_at, c.position,
-          coalesce(t.translation_of, t.id) as article_id,
-          (${score})::float8 as score
-          ${sql.join(flagColumns, sql``)}
+      with pooled as (
+        select c.id, c.content_updated_at${sql.join(flagColumns, sql``)}
         from search_chunks c
         join tree_items t on t.id = c.item_id
         join spaces s on s.id = t.space_id
         left join search_pending_spaces p on p.space_id = c.space_id
-        ${request.usageBoost && viewer.accountId ? sql`left join recent_views rv on rv.account_id = ${viewer.accountId}::uuid and rv.item_id = c.item_id` : sql``}
         where ${sql.join(conditions, sql` and `)}
+      ),
+      pool as (
+        select * from pooled${flags.length > 0 ? sql` where ${failing} <= 1` : sql``}
+        order by ${poolOrder} limit ${this.#matchCap + 1}
+      ),
+      kept as (
+        select * from pool order by ${poolOrder} limit ${this.#matchCap}
+      ),
+      matched as (
+        select c.id, c.source, c.source_id, t.space_id, c.content_updated_at, c.position,
+          coalesce(t.translation_of, t.id) as article_id,
+          (${score})::float8 as score${sql.join(
+            flags.map(([group]) => sql`, pl.f_${sql.raw(group)}`),
+            sql``,
+          )}
+        from kept pl
+        join search_chunks c on c.id = pl.id
+        join tree_items t on t.id = c.item_id
+        ${request.usageBoost && viewer.accountId ? sql`left join recent_views rv on rv.account_id = ${viewer.accountId}::uuid and rv.item_id = c.item_id` : sql``}
       ),
       candidates as (${candidates}),
       best as (
@@ -353,20 +371,17 @@ export class PostgresSearchAdapter implements SearchAdapter {
       )${
         request.facets
           ? sql`,
-      sampled as (
-        select * from candidates where ${failing} <= 1 order by ${flags.length > 0 ? sql`${failing},` : sql``} score desc, source_id limit ${this.#facetSample}
-      ),
       facet_rows as (
         select b.*, fc.content_type, fc.labels, fc.status, fc.author_id, fc.language,
           case when cardinality(ft.path) > 1 then ft.path[1] end as top_category,
           coalesce(ft.article_type::text, 'none') as article_type
-        from sampled b
+        from candidates b
         join search_chunks fc on fc.id = b.id
         join tree_items ft on ft.id = fc.item_id
       )`
           : sql``
       }
-      select (select count(*) from best) as total, ${facets} as facets,
+      select (select count(*) from best) as total, (select count(*) from pool where ${failing} = 0) as pooled, ${facets} as facets,
         (select jsonb_agg(jsonb_build_object(
           'source', bc.source, 'sourceId', bc.source_id, 'itemId', bc.item_id, 'spaceId', b.space_id,
           'contentType', bc.content_type, 'title', bc.title, 'heading', bc.heading, 'anchor', bc.anchor,
@@ -378,6 +393,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
     return {
       hits: hits.slice(0, request.limit),
       total: Number(row?.total ?? 0),
+      capped: Number(row?.pooled ?? 0) > this.#matchCap,
       hasMore: hits.length > request.limit,
       facets: row?.facets
         ? { ...row.facets, updated: row.facets.updated.filter((facet) => facet.count > 0) }
