@@ -307,7 +307,7 @@ export class AuthorizationService {
     const known = [...new Set(ids.filter((id): id is string => id !== null))];
     const spaceIds =
       known.length > 0 && action.resourceType.spaceOf
-        ? await action.resourceType.spaceOf(executor, known)
+        ? await action.resourceType.spaceOf(executor, known, { fresh })
         : new Map<string, string>();
     const spaces = new Map<string, SpaceFacts>();
     for (const spaceId of new Set(spaceIds.values())) {
@@ -323,7 +323,7 @@ export class AuthorizationService {
     });
     const itemIds =
       open.length > 0 && action.resourceType.itemOf
-        ? await action.resourceType.itemOf(executor, open)
+        ? await action.resourceType.itemOf(executor, open, { fresh })
         : new Map<string, string>();
     const items = await itemFactsMany(executor, accountId, [...new Set(itemIds.values())], { fresh });
 
@@ -395,7 +395,9 @@ export class AuthorizationService {
       ),
     ];
     const restrictions =
-      restricting && checked.length > 0 ? await restricting(executor, checked) : new Map<string, never>();
+      restricting && checked.length > 0
+        ? await restricting(executor, checked, { fresh })
+        : new Map<string, never>();
     return decided.map((entry) => {
       if (!("spaceId" in entry)) return entry;
       const restriction = restrictions.get(entry.id);
