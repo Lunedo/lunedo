@@ -651,7 +651,7 @@ function PageArticle({
             </div>
           </div>
           {overview && !editing && space.organizationId ? (
-            <SpaceNews organizationId={space.organizationId} spaceId={space.id} overviewId={page.id} />
+            <SpaceNews spaceId={space.id} overviewId={page.id} />
           ) : null}
           {editing ? null : (
             <>

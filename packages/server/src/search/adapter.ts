@@ -138,6 +138,7 @@ export interface AdapterFacets {
 export interface AdapterResult {
   hits: AdapterHit[];
   total: number;
+  capped: boolean;
   hasMore: boolean;
   facets: AdapterFacets | null;
   corrections: Map<string, string>;

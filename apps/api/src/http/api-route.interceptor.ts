@@ -6,7 +6,7 @@ import {
   type NestInterceptor,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import type { FastifyRequest } from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { from, type Observable, switchMap } from "rxjs";
 import { z } from "zod";
 import { API_CONTEXT, type ApiContext } from "../context.js";
@@ -57,6 +57,7 @@ export class ApiRouteInterceptor implements NestInterceptor {
     result: unknown,
   ): Promise<unknown> {
     if (definition.raw) return result;
+    if (execution.switchToHttp().getResponse<FastifyReply>().statusCode === 304) return undefined;
     if (!definition.response) return undefined;
     const parsed = definition.response.schema.safeParse(toJson(result));
     if (parsed.success) return parsed.data;

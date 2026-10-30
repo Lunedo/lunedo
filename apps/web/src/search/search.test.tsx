@@ -53,6 +53,7 @@ function response(results: ReturnType<typeof hit>[], extra: Record<string, unkno
   return {
     results,
     total: results.length,
+    totalCapped: false,
     nextCursor: null,
     facets: {
       types: [{ value: "page", count: results.length }],
@@ -539,6 +540,13 @@ describe("the search page", () => {
     await userEvent.click(screen.getByRole("button", { name: "More" }));
     await userEvent.click(await screen.findByRole("button", { name: /^English/ }));
     await waitFor(() => expect(new URL(window.location.href).searchParams.get("languages")).toBe("en"));
+  });
+
+  it("says that a search found more results than it counts", async () => {
+    await renderApp("/search?q=gateway", () => ({
+      body: response([hit(5, "Gateway restart")], { total: 1000, totalCapped: true }),
+    }));
+    expect(await screen.findByText("1000+ results, showing the most recently changed")).toBeTruthy();
   });
 
   it("explains the first use and offers ways out when nothing is found", async () => {

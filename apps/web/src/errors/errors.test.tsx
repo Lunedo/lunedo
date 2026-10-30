@@ -78,6 +78,7 @@ function checks(patch: Record<string, unknown> = {}) {
       url: "https://wiki.example.org",
     },
     https: { status: "ok", ...help, instanceUrl: true, request: true },
+    clientAddress: { status: "ok", ...help },
     ...patch,
   };
 }

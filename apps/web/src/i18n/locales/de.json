@@ -2050,7 +2050,8 @@
         "fileStorage": "Dateispeicher",
         "clock": "Uhrzeit",
         "https": "HTTPS",
-        "reachability": "Adresse"
+        "reachability": "Adresse",
+        "clientAddress": "Client-Adresse"
       },
       "status": {
         "ok": "OK",
@@ -2062,6 +2063,7 @@
       "storageFree": "Beschreibbar, {free} frei",
       "clockOk": "Stimmt mit der Datenbank überein",
       "httpsOk": "Aktiv",
+      "clientAddressOk": "Client-Adressen werden richtig gelesen",
       "checkAgain": "Erneut prüfen",
       "acknowledgeFailed": "Die Systemprüfung konnte nicht bestätigt werden",
       "unknownId": "unbekannt",
@@ -2108,6 +2110,12 @@
           "requestNotHttps": {
             "cause": "Diese Seite kam ohne HTTPS an. Lunedo selbst spricht kein TLS, das übernimmt ein Reverse Proxy davor.",
             "action": "Richte einen Reverse Proxy mit TLS ein, bevor du Personen einlädst. Gibt es schon einen, trage seine Adresse in LUNEDO_TRUSTED_PROXIES ein, damit Lunedo das Protokoll sieht."
+          }
+        },
+        "clientAddress": {
+          "untrustedProxy": {
+            "cause": "Diese Anfrage enthielt einen X-Forwarded-For-Header, kam aber von einer Adresse, die nicht in LUNEDO_TRUSTED_PROXIES steht. Lunedo ignoriert den Header, deshalb scheinen alle Personen von der Adresse des Proxys zu kommen und teilen sich ein gemeinsames Anmeldelimit.",
+            "action": "Trage die Adresse deines Reverse Proxys in LUNEDO_TRUSTED_PROXIES ein, starte Lunedo neu und prüfe dann erneut."
           }
         },
         "reachability": {
@@ -10303,6 +10311,7 @@
     "placeholder": "Seiten, Blogbeiträge, Kommentare, Anhänge und Besprechungen durchsuchen",
     "results": "Ergebnisse",
     "total": "{count, plural, one {# Ergebnis} other {# Ergebnisse}}",
+    "totalCapped": "Mehr als {count} Ergebnisse, die zuletzt geänderten werden gezeigt",
     "failed": "Die Suche ist fehlgeschlagen",
     "moreFailed": "Weitere Ergebnisse konnten nicht geladen werden",
     "loadMore": "Weitere Ergebnisse laden",

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { type Clock, type Job, type JobResult, PgBoss, type QueueResult } from "pg-boss";
 import type { Database } from "../database/database.js";
+import { JOB_QUEUE_CONNECTIONS } from "../database/pool-size.js";
 import type { Logger } from "../logging/logger.js";
 import { currentRequestContext, runWithRequestContext } from "../observability/request-context.js";
 import type {
@@ -83,7 +84,7 @@ export class PgBossQueue implements JobQueue {
       connectionString: options.connectionString,
       schema: SCHEMA,
       application_name: `lunedo-jobs-${options.role}`,
-      max: 4,
+      max: JOB_QUEUE_CONNECTIONS,
       supervise: worker,
       schedule: worker,
       useListenNotify: worker,

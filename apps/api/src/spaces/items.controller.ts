@@ -1,11 +1,25 @@
 import { containsBlock, MAX_TREE_PAGE, renderPageMarkdown, treeItemKinds } from "@lunedo/server";
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
-import type { FastifyRequest } from "fastify";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Req,
+  Res,
+} from "@nestjs/common";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
+import { answerConditionally } from "../http/conditional.js";
 import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
@@ -205,8 +219,9 @@ export class ItemsController {
   @ApiRoute({
     summary: "List items of the page tree",
     description:
-      "Lists the root items of a space or the children of an item, in tree order. Children load per level, so large spaces stay fast.",
+      "Lists the root items of a space or the children of an item, in tree order. Children load per level, so large spaces stay fast. The response carries an `ETag`; a request with the same value in `If-None-Match` answers `304` without a body while the list is unchanged.",
     tags: [TAG],
+    conditional: true,
     params: spaceParams,
     query: childrenQuery,
     response: {
@@ -224,13 +239,17 @@ export class ItemsController {
     @Param("spaceId") spaceId: string,
     @Query() query: z.output<typeof childrenQuery>,
     @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
   ) {
     const after = decodeCursor(query.cursor, positionCursor);
     const result = await this.#services.tree.children(actorOf(request), spaceId, query.parentId ?? null, {
       after: after?.[0],
       limit: query.limit,
     });
-    return { items: result.items, nextCursor: result.next ? encodeCursor([result.next]) : null };
+    return answerConditionally(request, reply, {
+      items: result.items,
+      nextCursor: result.next ? encodeCursor([result.next]) : null,
+    });
   }
 
   @Post("spaces/:spaceId/items")

@@ -35,6 +35,22 @@ import type { PeopleService } from "./people.js";
 import { spaceNameFor, visibleItem, visiblePages, visibleParents } from "./visibility.js";
 
 export const MAX_DECISION_REPORT_PAGE = 100;
+export const MAX_NEWEST_CONTENT = 50;
+
+export interface NewestContentRequest {
+  spaceId: string;
+  limit: number;
+}
+
+export interface NewestContent {
+  id: string;
+  number: number;
+  kind: LabeledContentKind;
+  title: string;
+  path: string;
+  author: { id: string; name: string } | null;
+  contentUpdatedAt: Date;
+}
 
 const pageReportDefaults = { spaceId: null, labels: [], sort: "modified", reverse: false, limit: 20 };
 const decisionReportDefaults = { spaceId: null, labels: [], parentId: null, order: "newest" };
@@ -403,6 +419,39 @@ export class ReportService {
       labels: labels.get(row.id) ?? [],
       excerpt: row.excerpt,
       parents: row.parents ?? [],
+      contentUpdatedAt: new Date(row.content_updated_at),
+    }));
+  }
+
+  async newestContent(viewer: Principal, request: NewestContentRequest): Promise<NewestContent[]> {
+    const result = await this.#database.execute<{
+      id: string;
+      number: string;
+      title: string;
+      kind: LabeledContentKind;
+      key: string;
+      creator_id: string | null;
+      creator: string | null;
+      content_updated_at: Date | string;
+    }>(sql`
+      select t.id, t.number, t.title, t.kind::text as kind, s.key, t.creator_id, t.content_updated_at,
+        ${this.#people.visibleName(viewer, sql`a`)} as creator
+      from tree_items t
+      join spaces s on s.id = t.space_id
+      left join accounts a on a.id = t.creator_id
+      where t.space_id = ${request.spaceId}::uuid and t.kind in ('page', 'blogPost')
+        and t.trash_entry_id is null and t.archived_root_id is null
+        and s.archived_at is null and not s.quarantined
+        and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
+      order by t.content_updated_at desc, t.id desc
+      limit ${Math.min(Math.max(request.limit, 1), MAX_NEWEST_CONTENT)}`);
+    return result.rows.map((row) => ({
+      id: row.id,
+      number: Number(row.number),
+      kind: row.kind,
+      title: row.title,
+      path: itemAddress(row.kind, row.key, row.number, row.title) ?? "",
+      author: row.creator_id && row.creator ? { id: row.creator_id, name: row.creator } : null,
       contentUpdatedAt: new Date(row.content_updated_at),
     }));
   }

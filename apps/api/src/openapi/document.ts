@@ -359,6 +359,9 @@ function operation(
             "304": { description: "Not modified: the file matches the `If-None-Match` header." },
           }
         : {}),
+      ...(definition.conditional
+        ? { "304": { description: "Not modified: the response matches the `If-None-Match` header." } }
+        : {}),
       ...errorResponses([...automaticErrors(route, definition), ...(definition.errors ?? [])]),
     },
   };

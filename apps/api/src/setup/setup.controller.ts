@@ -24,8 +24,13 @@ const stepsSchema = z.object({
   ready: z.boolean(),
 });
 
-function requestInfo(request: FastifyRequest) {
-  return { protocol: request.protocol, host: request.host };
+export function requestInfo(request: FastifyRequest) {
+  return {
+    protocol: request.protocol,
+    host: request.host,
+    forwardedFromUntrusted:
+      request.headers["x-forwarded-for"] !== undefined && request.ip === request.socket.remoteAddress,
+  };
 }
 
 @Controller("api/v1/setup")

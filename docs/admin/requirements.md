@@ -20,10 +20,17 @@ What Lunedo needs to run. The [setup script](installation/script.md) checks the 
 |---|---|
 | Server | PostgreSQL 16, 17 or 18. The image contains `pg_dump`, `pg_restore` and `psql` for these three major versions and picks the one that matches the server for backups. The Compose file of the setup script uses `postgres:17-alpine`. |
 | Shared memory | 1 GB of `/dev/shm` for the PostgreSQL container (`shm_size: 1gb` in the Compose file of the setup script). Parallel queries on large databases fail without it, because Docker gives a container only 64 MB. It is used only while queries need it and counts towards the memory of PostgreSQL. |
+| Connection settings | Lunedo turns off just-in-time compilation (`jit`) for its own connections by sending `-c jit=off` as a startup option. Nothing changes on the server. |
 | Extension | `pg_trgm`, for search. A migration creates it with `CREATE EXTENSION IF NOT EXISTS "pg_trgm"`. It is a trusted extension, so a database user with the `CREATE` privilege on the database can create it. On a managed server that does not allow this, create it beforehand as an administrator of the server. |
 | Rights | The user in `LUNEDO_DATABASE_URL` owns the database or may create tables, types and indexes in it. Lunedo applies its migrations at every start. |
 | Optional right | `CREATEDB` for the monthly test restore of backups, which restores into a temporary database on the same server, for example `ALTER ROLE "lunedo" CREATEDB;`. Without it, a test restore only verifies the backup. See [Backups](backups.md). |
 | Free space | Room for one more copy of the database while a test restore runs. |
+
+### Database connections
+
+Each Lunedo process (the API, the worker and the collaboration server) has its own pool of database connections, set by `LUNEDO_DATABASE_POOL_SIZE`. Without it, a process uses twice the number of CPUs of its container plus 2, at least 6 and at most 24. Every process also holds one connection for notifications and up to four for the job queue.
+
+Add up `pool size + 5` for every process, in every container, that uses the same database. The sum, plus a few connections for backups and `psql`, must stay below `max_connections` of PostgreSQL. The PostgreSQL container of the setup script keeps the default of 100, which the three processes of one container stay below with any pool size up to 24. Raise `max_connections` before you raise the pool size or run more containers.
 
 Migrations only go forward. When several processes start at the same time, a PostgreSQL advisory lock lets one of them migrate while the others wait. Readiness (`/health/ready`) answers `503` while the schema is behind the code. When migrations are pending, the first process takes a backup before it migrates; see [Backups before updates](updates.md#backups-before-updates).
 

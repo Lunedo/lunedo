@@ -118,7 +118,7 @@ describe.skipIf(!baseUrl)("SetupService", () => {
 
   it("takes the configured instance URL in the instance step", async () => {
     test = await createTestServices(baseUrl ?? "", { configuredInstanceUrl: "https://docs.example.org" });
-    const request = { protocol: "http", host: "10.0.0.5:3000" };
+    const request = { protocol: "http", host: "10.0.0.5:3000", forwardedFromUntrusted: false };
     const status = await test.services.setup.status(request);
     expect(status.steps.find((step) => step.id === "instance")?.details).toMatchObject({
       url: "",
@@ -140,7 +140,7 @@ describe.skipIf(!baseUrl)("SetupService", () => {
       pool,
     } = await services();
     const log = capturingLogger();
-    const request = { protocol: "https", host: "wiki.example.org" };
+    const request = { protocol: "https", host: "wiki.example.org", forwardedFromUntrusted: false };
     await setup.issueCode(log.logger);
     await setup.exchangeCode(log.code(), "203.0.113.30", "https://wiki.example.org");
     await setup.runAction("instance", "save", { url: "https://wiki.example.org", name: "Docs" }, request);

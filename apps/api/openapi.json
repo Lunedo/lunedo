@@ -189978,7 +189978,11 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "Number of results the caller can read, on all pages."
+                      "description": "Number of results the caller can read, on all pages, up to the 1,000 best matches."
+                    },
+                    "totalCapped": {
+                      "type": "boolean",
+                      "description": "True when the search has more matches than `total` counts. Show the number as \"1,000+\"; the results and counts cover the 1,000 most recently changed matches."
                     },
                     "nextCursor": {
                       "description": "Cursor for the next page, or null on the last page.",
@@ -190286,7 +190290,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts."
+                      "description": "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts. For a search with more than 1,000 matches the counts cover the 1,000 most recently changed matches, like `total`."
                     },
                     "suggestion": {
                       "description": "The search text with misspelled words replaced by similar words from content the caller can read, or null when there is nothing to correct. Always null in quick search.",
@@ -190313,6 +190317,7 @@
                   "required": [
                     "results",
                     "total",
+                    "totalCapped",
                     "nextCursor",
                     "facets",
                     "suggestion",
@@ -190379,6 +190384,7 @@
                     }
                   ],
                   "total": 1,
+                  "totalCapped": false,
                   "nextCursor": null,
                   "facets": {
                     "types": [
@@ -232804,6 +232810,50 @@
                                           "request"
                                         ],
                                         "additionalProperties": false
+                                      },
+                                      "clientAddress": {
+                                        "type": "object",
+                                        "properties": {
+                                          "status": {
+                                            "type": "string",
+                                            "enum": [
+                                              "ok",
+                                              "warning",
+                                              "error"
+                                            ]
+                                          },
+                                          "cause": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "enum": [
+                                                  "untrustedProxy"
+                                                ]
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          },
+                                          "fixCommand": {
+                                            "description": "A shell command that fixes the cause, when one exists.",
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "docs": {
+                                            "type": "string",
+                                            "description": "Documentation page and anchor that explains the check, relative to docs/."
+                                          }
+                                        },
+                                        "required": [
+                                          "status",
+                                          "cause",
+                                          "fixCommand",
+                                          "docs"
+                                        ],
+                                        "additionalProperties": false
                                       }
                                     },
                                     "required": [
@@ -232812,7 +232862,8 @@
                                       "fileStorage",
                                       "instanceUrl",
                                       "reachability",
-                                      "https"
+                                      "https",
+                                      "clientAddress"
                                     ],
                                     "additionalProperties": false
                                   }
@@ -247340,7 +247391,7 @@
       "get": {
         "operationId": "items.children",
         "summary": "List items of the page tree",
-        "description": "Lists the root items of a space or the children of an item, in tree order. Children load per level, so large spaces stay fast.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "description": "Lists the root items of a space or the children of an item, in tree order. Children load per level, so large spaces stay fast. The response carries an `ETag`; a request with the same value in `If-None-Match` answers `304` without a body while the list is unchanged.\n\nRequires the permission `space.view` on the space in `spaceId`.",
         "tags": [
           "Pages"
         ],
@@ -247910,6 +247961,9 @@
                 }
               }
             }
+          },
+          "304": {
+            "description": "Not modified: the response matches the `If-None-Match` header."
           },
           "400": {
             "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
@@ -257936,6 +257990,271 @@
                       "title": "The instance is in maintenance mode",
                       "status": 503,
                       "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/newest-content": {
+      "get": {
+        "operationId": "reports.newestContent",
+        "summary": "List the newest pages and blog posts of a space",
+        "description": "Lists the pages and blog posts of a space that the caller can read, most recently changed first, as the news on the space overview shows them. Archived and deleted content is left out.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "tags": [
+          "Reports"
+        ],
+        "x-lunedo-permission": {
+          "action": "space.view",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of entries, 1 to 50. The default is 5.",
+            "schema": {
+              "default": 5,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The pages and blog posts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the page or blog post."
+                      },
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the content in the addresses of the app."
+                      },
+                      "kind": {
+                        "type": "string",
+                        "description": "`page` or `blogPost`. New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "page",
+                          "blogPost"
+                        ]
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "Title."
+                      },
+                      "path": {
+                        "type": "string",
+                        "description": "Path in the web interface."
+                      },
+                      "author": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the person."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the person."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Who created it, or null when unknown or not visible to the caller."
+                      },
+                      "contentUpdatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When its content last changed. ISO 8601 timestamp in UTC."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "number",
+                      "kind",
+                      "title",
+                      "path",
+                      "author",
+                      "contentUpdatedAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A recently changed page or blog post."
+                  },
+                  "description": "Content, most recently changed first."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
+                    "number": 1051,
+                    "kind": "page",
+                    "title": "VPN access for remote staff",
+                    "path": "/spaces/ITOPS/pages/1042/vpn-access-for-remote-staff",
+                    "author": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Anna Berger"
+                    },
+                    "contentUpdatedAt": "2026-10-05T08:10:00.000Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }

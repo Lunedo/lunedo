@@ -255,6 +255,9 @@ export const treeItems = pgTable(
       .where(sql`${table.trashEntryId} is null and ${table.archivedRootId} is distinct from ${table.id}`),
     uniqueIndex("tree_items_number_unique").on(table.number),
     index("tree_items_title_index").on(table.spaceId, sql`lower(${table.title})`),
+    index("tree_items_newest_index")
+      .on(table.spaceId, sql`${table.contentUpdatedAt} desc`, sql`${table.id} desc`)
+      .where(sql`${table.trashEntryId} is null and ${table.archivedRootId} is null`),
     index().on(table.parentId),
     index().on(table.linkItemId),
     index().on(table.creatorId),

@@ -66,7 +66,7 @@ describe.skipIf(!baseUrl)("the system check", () => {
     await test?.close();
   });
 
-  function check(configuredInstanceUrl: string | undefined) {
+  function check(configuredInstanceUrl: string | undefined, forwardedFromUntrusted = false) {
     const step = systemCheckStep({
       pool: test.pool,
       database: test.database,
@@ -81,7 +81,7 @@ describe.skipIf(!baseUrl)("the system check", () => {
       configuredInstanceUrl,
     } as unknown as SetupStepDependencies);
     return step.describe({
-      request: { protocol: "http", host: "10.0.0.5:3000" },
+      request: { protocol: "http", host: "10.0.0.5:3000", forwardedFromUntrusted },
       state: {},
       completed: false,
     }) as Promise<{
@@ -103,6 +103,20 @@ describe.skipIf(!baseUrl)("the system check", () => {
       cause: "unreachable",
       url: "https://wiki.example.org",
     });
+  });
+
+  it("warns when requests carry a forwarded client address from a proxy that is not trusted", async () => {
+    const { checks } = await check("https://wiki.example.org", true);
+    expect(checks.clientAddress).toMatchObject({
+      status: "warning",
+      cause: "untrustedProxy",
+      docs: "admin/reverse-proxy.md#forwarded-headers-and-lunedo_trusted_proxies",
+    });
+  });
+
+  it("passes the client address check when no untrusted forwarding is seen", async () => {
+    const { checks } = await check("https://wiki.example.org");
+    expect(checks.clientAddress).toMatchObject({ status: "ok", cause: null });
   });
 
   it("warns when the configured instance URL does not use HTTPS", async () => {

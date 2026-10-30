@@ -23,6 +23,7 @@ import type { ClientInfo, SessionService } from "../auth/sessions.js";
 import type { PendingIdentity, SecondFactorType, SignedIn, SignInService } from "../auth/sign-in.js";
 import {
   clientSubject,
+  FailureReservation,
   type RateLimiter,
   type SignInThrottle,
   type ThrottleSubjects,
@@ -73,6 +74,12 @@ const STARTS_PER_CLIENT = 300;
 const CONNECTION_CHECKS_PER_CLIENT = 20;
 const FAILED_LOGOUTS_PER_CLIENT = 60;
 const FAILED_SAML_RESPONSES_PER_CLIENT = 20;
+
+interface FailurePlace {
+  key: string;
+  windowStart: string | undefined;
+  kept: boolean;
+}
 const REFERENCE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 export type ProviderFlowPurpose = "signIn" | "reauthentication" | "test" | "linkConfirmation";
@@ -436,6 +443,7 @@ export class ProviderSignInService {
         samlResponse: flow.samlResponse,
       });
       if (result.assertion) await this.#consumeAssertion(provider.id, result.assertion);
+      if (provider.type === "saml") await this.#returnSamlPlace(flow.id);
     } catch (error) {
       if (!(error instanceof ProviderPolicyError) && !(error instanceof ProviderResponseError)) throw error;
       await this.#forgetResponse(flow.id);
@@ -1152,29 +1160,32 @@ export class ProviderSignInService {
     const { pending, account } = await this.#pendingLink(input.pendingToken);
     const { provider, credentials } = await this.#load(input.providerId, "signIn");
     const adapter = this.#adapter(provider.type);
-    if (provider.type !== "ldap" || !adapter.verifyPassword) {
+    const verifyPassword = adapter.verifyPassword?.bind(adapter);
+    if (provider.type !== "ldap" || !verifyPassword) {
       throw new OrganizationError("invalidInput", "This provider confirms the identity through its own page");
     }
     const { subject, signInName } = await this.#linkedIdentity(account.id, provider.id);
     const subjects = this.#directorySubjects(provider.id, signInName ?? subject, input.client.ip);
-    await this.#checkDirectoryAttempt(subjects);
-    let valid = false;
-    if (directoryPasswordSchema.safeParse(input.password).success) {
-      try {
-        valid = await adapter.verifyPassword(provider, credentials, subject, input.password);
-      } catch (error) {
-        if (!(error instanceof DirectorySignInError)) throw error;
+    return this.#attemptingDirectory(subjects, async (reservation) => {
+      let valid = false;
+      if (directoryPasswordSchema.safeParse(input.password).success) {
+        try {
+          valid = await verifyPassword(provider, credentials, subject, input.password);
+        } catch (error) {
+          if (!(error instanceof DirectorySignInError)) throw error;
+        }
       }
-    }
-    if (!valid) {
-      await this.#challenges.recordFailure(pending.id);
-      await this.#directoryFailure(subjects, "invalidCredentials");
-      throw new InvalidCredentialsError();
-    }
-    await this.#throttle?.recordSuccess(subjects.email ?? "");
-    const factorRequired =
-      provider.config.secondFactor.mode === "lunedo" || (await this.#signIn.secondFactorRequired(account.id));
-    return this.#finishLink(pending.id, account, factorRequired, input.client, started);
+      if (!valid) {
+        await this.#challenges.recordFailure(pending.id);
+        await this.#directoryFailure(subjects, reservation, "invalidCredentials");
+        throw new InvalidCredentialsError();
+      }
+      await this.#throttle?.recordSuccess(subjects.email ?? "");
+      const factorRequired =
+        provider.config.secondFactor.mode === "lunedo" ||
+        (await this.#signIn.secondFactorRequired(account.id));
+      return this.#finishLink(pending.id, account, factorRequired, input.client, started);
+    });
   }
 
   async linkInfo(pendingToken: string): Promise<LinkInfo> {
@@ -1307,15 +1318,32 @@ export class ProviderSignInService {
     kind: string,
     clientIp: string | undefined,
     perMinute: number,
-    run: () => Promise<T>,
+    run: (place: FailurePlace | null) => Promise<T>,
   ): Promise<T> {
-    if (clientIp === undefined) return run();
+    if (clientIp === undefined) return run(null);
     const key = `${kind}:failed:${clientSubject(clientIp)}`;
     const limit = await this.#rateLimiter.consume(key, perMinute, 60);
-    if (!limit.allowed) throw new RateLimitedError(limit.retryAfterSeconds);
-    const result = await run();
-    await this.#rateLimiter.refund(key);
+    if (!limit.allowed) {
+      await this.#rateLimiter.refund(key, limit.windowStart);
+      throw new RateLimitedError(limit.retryAfterSeconds);
+    }
+    const place: FailurePlace = { key, windowStart: limit.windowStart, kept: false };
+    const result = await run(place);
+    if (!place.kept) await this.#rateLimiter.refund(key, limit.windowStart);
     return result;
+  }
+
+  async #returnSamlPlace(flowId: string): Promise<void> {
+    const taken = await this.#database.execute<{ key: string; window: string | null }>(sql`
+      with held as (
+        select id, saml_place_key, saml_place_window from ${providerFlows}
+        where id = ${flowId} and saml_place_key is not null for update
+      )
+      update ${providerFlows} f set saml_place_key = null, saml_place_window = null
+      from held where f.id = held.id
+      returning held.saml_place_key as key, held.saml_place_window as window`);
+    const place = taken.rows[0];
+    if (place) await this.#rateLimiter.refund(place.key, place.window ?? undefined);
   }
 
   async backchannelLogout(providerId: string, logoutToken: string, clientIp?: string): Promise<number> {
@@ -1385,24 +1413,31 @@ export class ProviderSignInService {
     relayState: string | null;
     clientIp?: string | undefined;
   }): Promise<SamlReceipt> {
-    return this.#countingFailures("samlResponse", input.clientIp, FAILED_SAML_RESPONSES_PER_CLIENT, () =>
-      this.#receiveSamlResponse(input),
+    return this.#countingFailures("samlResponse", input.clientIp, FAILED_SAML_RESPONSES_PER_CLIENT, (place) =>
+      this.#receiveSamlResponse(input, place),
     );
   }
 
-  async #receiveSamlResponse(input: {
-    providerId: string;
-    samlResponse: string;
-    relayState: string | null;
-    clientIp?: string | undefined;
-  }): Promise<SamlReceipt> {
+  async #receiveSamlResponse(
+    input: {
+      providerId: string;
+      samlResponse: string;
+      relayState: string | null;
+      clientIp?: string | undefined;
+    },
+    place: FailurePlace | null,
+  ): Promise<SamlReceipt> {
     const { provider, credentials } = await this.#load(input.providerId, "signIn");
     if (provider.type !== "saml")
       throw new OrganizationError("notFound", "The identity provider does not exist");
     if (input.relayState) {
       const [flow] = await this.#database
         .update(providerFlows)
-        .set({ samlResponse: input.samlResponse })
+        .set({
+          samlResponse: input.samlResponse,
+          samlPlaceKey: place?.key ?? null,
+          samlPlaceWindow: place?.windowStart ?? null,
+        })
         .where(
           and(
             eq(providerFlows.stateHash, hashState(input.relayState)),
@@ -1413,7 +1448,10 @@ export class ProviderSignInService {
           ),
         )
         .returning({ id: providerFlows.id });
-      if (flow) return { state: input.relayState, browserToken: null };
+      if (flow) {
+        if (place) place.kept = true;
+        return { state: input.relayState, browserToken: null };
+      }
     }
     if (!provider.config.idpInitiated) {
       throw new OrganizationError(
@@ -1490,32 +1528,42 @@ export class ProviderSignInService {
     return { email: `directory:${providerId}:${signInName.trim().toLowerCase()}`, clientIp };
   }
 
-  async #checkDirectoryAttempt(subjects: ThrottleSubjects): Promise<void> {
-    if (!this.#throttle) return;
-    const rate = await this.#throttle.attempt(subjects);
-    if (!rate.allowed) throw new RateLimitedError(rate.retryAfterSeconds);
-    const lockout = await this.#throttle.lockout(subjects);
-    if (lockout) {
-      await this.#audit.recordAlone({
-        name: "auth.signInFailed",
-        actor: ANONYMOUS,
-        targetId: null,
-        fields: {
-          reason: lockout.subject === "account" ? "accountLocked" : "clientLocked",
-          method: "identityProvider",
-        },
-      });
-      throw new LockedError(Math.max(1, Math.ceil((lockout.lockedUntil.getTime() - Date.now()) / 1000)));
-    }
+  async #attemptingDirectory<T>(
+    subjects: ThrottleSubjects,
+    run: (reservation: FailureReservation) => Promise<T>,
+  ): Promise<T> {
+    if (!this.#throttle) return run(new FailureReservation(null));
+    return this.#throttle.attempting(
+      subjects,
+      async (blocked) => {
+        if (blocked.kind === "rateLimited") return new RateLimitedError(blocked.retryAfterSeconds);
+        await this.#audit.recordAlone({
+          name: "auth.signInFailed",
+          actor: ANONYMOUS,
+          targetId: null,
+          fields: {
+            reason: blocked.lockout.subject === "account" ? "accountLocked" : "clientLocked",
+            method: "identityProvider",
+          },
+        });
+        return new LockedError(
+          Math.max(1, Math.ceil((blocked.lockout.lockedUntil.getTime() - Date.now()) / 1000)),
+        );
+      },
+      run,
+    );
   }
 
   async #directoryFailure(
     subjects: ThrottleSubjects,
+    reservation: FailureReservation,
     reason: "invalidCredentials" | (typeof DIRECTORY_AUDIT_REASONS)[keyof typeof DIRECTORY_AUDIT_REASONS],
   ): Promise<void> {
     await this.#database.transaction(async (tx) => {
       const lockouts =
-        reason === "invalidCredentials" ? ((await this.#throttle?.recordFailure(subjects, tx)) ?? []) : [];
+        reason === "invalidCredentials"
+          ? ((await this.#throttle?.recordFailure(subjects, reservation, tx)) ?? [])
+          : [];
       await this.#audit.record(tx, {
         name: "auth.signInFailed",
         actor: ANONYMOUS,
@@ -1545,59 +1593,60 @@ export class ProviderSignInService {
   }): Promise<CallbackResult> {
     const started = await this.#databaseNow();
     const subjects = this.#directorySubjects(input.providerId, input.signInName, input.client.ip);
-    await this.#checkDirectoryAttempt(subjects);
-    const { provider, credentials } = await this.#load(input.providerId, "signIn");
-    const adapter = this.#adapter(provider.type);
-    if (provider.type !== "ldap" || !adapter.authenticate) {
-      throw new OrganizationError("invalidInput", "This provider signs in through its own page");
-    }
-    if (!directoryPasswordSchema.safeParse(input.password).success || input.signInName.trim() === "") {
-      await this.#directoryFailure(subjects, "invalidCredentials");
-      throw new InvalidCredentialsError();
-    }
-    let result: Awaited<ReturnType<NonNullable<IdentityProviderAdapter["authenticate"]>>>;
-    try {
-      result = await adapter.authenticate(provider, credentials, {
-        signInName: input.signInName,
-        password: input.password,
-      });
-    } catch (error) {
-      if (!(error instanceof DirectorySignInError)) throw error;
-      if (error.reason === "invalidCredentials") {
-        await this.#directoryFailure(subjects, "invalidCredentials");
+    return this.#attemptingDirectory(subjects, async (reservation) => {
+      const { provider, credentials } = await this.#load(input.providerId, "signIn");
+      const adapter = this.#adapter(provider.type);
+      if (provider.type !== "ldap" || !adapter.authenticate) {
+        throw new OrganizationError("invalidInput", "This provider signs in through its own page");
+      }
+      if (!directoryPasswordSchema.safeParse(input.password).success || input.signInName.trim() === "") {
+        await this.#directoryFailure(subjects, reservation, "invalidCredentials");
         throw new InvalidCredentialsError();
       }
-      await this.#directoryFailure(subjects, DIRECTORY_AUDIT_REASONS[error.reason]);
-      throw new DirectorySignInRefusedError(error.reason);
-    }
-    await this.#throttle?.recordSuccess(subjects.email ?? "");
-    const profile = result.profile;
-    const emailVerified = this.#emailVerified(provider.config.domains, profile);
-    for (let attempt = 0; ; attempt++) {
+      let result: Awaited<ReturnType<NonNullable<IdentityProviderAdapter["authenticate"]>>>;
       try {
-        return await this.#signInWith({
-          provider,
-          profile,
-          groups: profile.groups,
-          groupsFailed: result.groupsFailed,
-          emailVerified,
-          secondFactor: provider.config.secondFactor.mode === "lunedo" ? true : "policy",
-          providerSessionId: null,
-          client: input.client,
-          returnTo: null,
-          started,
+        result = await adapter.authenticate(provider, credentials, {
+          signInName: input.signInName,
+          password: input.password,
         });
       } catch (error) {
-        if (error instanceof Refused) {
-          return this.#refuse({ providerId: provider.id, reason: error.reason, profile });
+        if (!(error instanceof DirectorySignInError)) throw error;
+        if (error.reason === "invalidCredentials") {
+          await this.#directoryFailure(subjects, reservation, "invalidCredentials");
+          throw new InvalidCredentialsError();
         }
-        if (attempt === 0 && isUniqueViolation(error)) continue;
-        if (error instanceof ZodError) {
-          return this.#refuse({ providerId: provider.id, reason: "invalidResponse", profile });
-        }
-        throw error;
+        await this.#directoryFailure(subjects, reservation, DIRECTORY_AUDIT_REASONS[error.reason]);
+        throw new DirectorySignInRefusedError(error.reason);
       }
-    }
+      await this.#throttle?.recordSuccess(subjects.email ?? "");
+      const profile = result.profile;
+      const emailVerified = this.#emailVerified(provider.config.domains, profile);
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return await this.#signInWith({
+            provider,
+            profile,
+            groups: profile.groups,
+            groupsFailed: result.groupsFailed,
+            emailVerified,
+            secondFactor: provider.config.secondFactor.mode === "lunedo" ? true : "policy",
+            providerSessionId: null,
+            client: input.client,
+            returnTo: null,
+            started,
+          });
+        } catch (error) {
+          if (error instanceof Refused) {
+            return this.#refuse({ providerId: provider.id, reason: error.reason, profile });
+          }
+          if (attempt === 0 && isUniqueViolation(error)) continue;
+          if (error instanceof ZodError) {
+            return this.#refuse({ providerId: provider.id, reason: "invalidResponse", profile });
+          }
+          throw error;
+        }
+      }
+    });
   }
 
   async reauthenticateWithDirectory(input: {
@@ -1608,47 +1657,51 @@ export class ProviderSignInService {
     client: ClientInfo;
   }): Promise<string> {
     const subjects = { email: `reauthentication:${input.accountId}`, clientIp: input.client.ip };
-    await this.#checkDirectoryAttempt(subjects);
-    const { provider, credentials } = await this.#load(input.providerId, "reauthentication");
-    const adapter = this.#adapter(provider.type);
-    if (provider.type !== "ldap" || !adapter.verifyPassword) {
-      throw new OrganizationError("invalidInput", "This provider confirms the identity through its own page");
-    }
-    const [identity] = await this.#database
-      .select({ subject: identities.subject })
-      .from(identities)
-      .where(and(eq(identities.providerId, provider.id), eq(identities.accountId, input.accountId)));
-    if (!identity) throw new OrganizationError("notFound", "The account is not linked to this provider");
-    let valid = false;
-    if (directoryPasswordSchema.safeParse(input.password).success) {
-      try {
-        valid = await adapter.verifyPassword(provider, credentials, identity.subject, input.password);
-      } catch (error) {
-        if (!(error instanceof DirectorySignInError)) throw error;
+    return this.#attemptingDirectory(subjects, async (reservation) => {
+      const { provider, credentials } = await this.#load(input.providerId, "reauthentication");
+      const adapter = this.#adapter(provider.type);
+      if (provider.type !== "ldap" || !adapter.verifyPassword) {
+        throw new OrganizationError(
+          "invalidInput",
+          "This provider confirms the identity through its own page",
+        );
       }
-    }
-    if (!valid) {
-      await this.#database.transaction(async (tx) => {
-        await this.#throttle?.recordFailure(subjects, tx);
+      const [identity] = await this.#database
+        .select({ subject: identities.subject })
+        .from(identities)
+        .where(and(eq(identities.providerId, provider.id), eq(identities.accountId, input.accountId)));
+      if (!identity) throw new OrganizationError("notFound", "The account is not linked to this provider");
+      let valid = false;
+      if (directoryPasswordSchema.safeParse(input.password).success) {
+        try {
+          valid = await adapter.verifyPassword(provider, credentials, identity.subject, input.password);
+        } catch (error) {
+          if (!(error instanceof DirectorySignInError)) throw error;
+        }
+      }
+      if (!valid) {
+        await this.#database.transaction(async (tx) => {
+          await this.#throttle?.recordFailure(subjects, reservation, tx);
+          await this.#audit.record(tx, {
+            name: "auth.reauthenticationFailed",
+            actor: accountPrincipal(input.accountId),
+            targetId: input.accountId,
+            fields: { sessionId: input.sessionId, method: "identityProvider" },
+          });
+        });
+        throw new InvalidCredentialsError();
+      }
+      await this.#throttle?.recordSuccess(subjects.email);
+      return this.#database.transaction(async (tx) => {
+        const token = await this.#sessions.rotate(tx, input.sessionId, { reauthenticated: true });
         await this.#audit.record(tx, {
-          name: "auth.reauthenticationFailed",
+          name: "auth.reauthenticated",
           actor: accountPrincipal(input.accountId),
           targetId: input.accountId,
           fields: { sessionId: input.sessionId, method: "identityProvider" },
         });
+        return token;
       });
-      throw new InvalidCredentialsError();
-    }
-    await this.#throttle?.recordSuccess(subjects.email);
-    return this.#database.transaction(async (tx) => {
-      const token = await this.#sessions.rotate(tx, input.sessionId, { reauthenticated: true });
-      await this.#audit.record(tx, {
-        name: "auth.reauthenticated",
-        actor: accountPrincipal(input.accountId),
-        targetId: input.accountId,
-        fields: { sessionId: input.sessionId, method: "identityProvider" },
-      });
-      return token;
     });
   }
 

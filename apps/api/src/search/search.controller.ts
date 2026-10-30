@@ -238,7 +238,15 @@ function facetSchema<T extends z.ZodType>(value: T, description: string) {
 const responseSchema = z
   .object({
     results: z.array(resultSchema).describe("Results, in the requested order."),
-    total: z.number().int().describe("Number of results the caller can read, on all pages."),
+    total: z
+      .number()
+      .int()
+      .describe("Number of results the caller can read, on all pages, up to the 1,000 best matches."),
+    totalCapped: z
+      .boolean()
+      .describe(
+        'True when the search has more matches than `total` counts. Show the number as "1,000+"; the results and counts cover the 1,000 most recently changed matches.',
+      ),
     nextCursor: z.string().nullable().describe("Cursor for the next page, or null on the last page."),
     facets: z
       .object({
@@ -293,7 +301,7 @@ const responseSchema = z
       })
       .nullable()
       .describe(
-        "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts.",
+        "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts. For a search with more than 1,000 matches the counts cover the 1,000 most recently changed matches, like `total`.",
       ),
     suggestion: z
       .string()
@@ -350,6 +358,7 @@ const exampleResponse = {
     },
   ],
   total: 1,
+  totalCapped: false,
   nextCursor: null,
   facets: {
     types: [{ value: "page", count: 1 }],
@@ -382,6 +391,7 @@ function toApi(response: SearchResponse): z.output<typeof responseSchema> {
   return {
     results: response.results.map(({ cursor: _cursor, ...hit }) => hit),
     total: response.total,
+    totalCapped: response.totalCapped,
     nextCursor: response.nextCursor
       ? encodeCursor([response.nextCursor.score, response.nextCursor.updatedAt, response.nextCursor.sourceId])
       : null,

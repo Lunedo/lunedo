@@ -134,6 +134,7 @@ export interface SearchFacets {
 export interface SearchResponse {
   results: SearchHit[];
   total: number;
+  totalCapped: boolean;
   nextCursor: SearchCursor | null;
   facets: SearchFacets | null;
   suggestion: string | null;
@@ -266,6 +267,7 @@ export class SearchService {
     const empty: SearchResponse = {
       results: [],
       total: 0,
+      totalCapped: false,
       nextCursor: null,
       facets: quick ? null : emptyFacets(),
       suggestion: null,
@@ -298,6 +300,7 @@ export class SearchService {
     return {
       results: hits,
       total: result.total,
+      totalCapped: result.capped,
       nextCursor: result.hasMore && last && !quick ? last.cursor : null,
       facets: result.facets ? await this.#facets(principal, result.facets, spaces) : null,
       suggestion: correctedQuery(request.query, result.corrections),

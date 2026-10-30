@@ -26,7 +26,10 @@ import { lastTerm, type ParsedQuery, type QueryAtom } from "./query.js";
 const MIN_TYPO_LENGTH = 4;
 const TYPO_SIMILARITY = 0.5;
 const TYPO_ALTERNATIVES = 3;
+const TYPO_CANDIDATES = 40;
+const TYPO_FEW_RESULTS = 5;
 const FACET_LIMIT = 20;
+const MATCH_CAP = 1000;
 const RECENT_USE_DAYS = 30;
 const MAX_RECENT_BOOST = 0.15;
 const MAX_FREQUENT_BOOST = 0.1;
@@ -42,6 +45,7 @@ function usageBoost(view: SQL): SQL {
 }
 
 interface QueryParts {
+  expanded: boolean;
   match: SQL;
   score: SQL;
   excerpt: SQL;
@@ -71,6 +75,12 @@ function weighted(chunk: IndexedChunk): { first: string; second: string; labels:
 }
 
 export class PostgresSearchAdapter implements SearchAdapter {
+  readonly #matchCap: number;
+
+  constructor(options: { matchCap?: number } = {}) {
+    this.#matchCap = options.matchCap ?? MATCH_CAP;
+  }
+
   async replaceItem(executor: Executor, item: IndexedItem): Promise<void> {
     await executor.execute(sql`delete from search_chunks where item_id = ${item.itemId}`);
     if (item.chunks.length > 0) await this.#insertChunks(executor, item);
@@ -238,16 +248,25 @@ export class PostgresSearchAdapter implements SearchAdapter {
   }
 
   async search(executor: Executor, request: AdapterSearch): Promise<AdapterResult> {
-    const { viewer } = request;
-    const parts = await this.#queryParts(executor, request);
-    if (parts === "nothing")
+    const exact = await this.#queryParts(executor, request, false);
+    if (exact === "nothing")
       return {
         hits: [],
         total: 0,
+        capped: false,
         hasMore: false,
         facets: request.facets ? emptyFacets() : null,
         corrections: new Map(),
       };
+    const result = await this.#execute(executor, request, exact);
+    if (result.total >= TYPO_FEW_RESULTS) return result;
+    const tolerant = await this.#queryParts(executor, request, true);
+    if (tolerant === "nothing" || !tolerant.expanded) return result;
+    return this.#execute(executor, request, tolerant);
+  }
+
+  async #execute(executor: Executor, request: AdapterSearch, parts: QueryParts): Promise<AdapterResult> {
+    const { viewer } = request;
 
     const conditions = [...visibleChunkConditions(request.viewer), parts.match];
     if (!request.filters.includeArchived) conditions.push(sql`not c.archived`);
@@ -269,6 +288,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
         [sql`true`, ...flags.filter(([group]) => group !== except).map(([group]) => sql.raw(`f_${group}`))],
         sql` and `,
       );
+    const failing = sql`(${sql.join([sql`0`, ...flags.map(([group]) => sql`(not ${sql.raw(`f_${group}`)})::int`)], sql` + `)})`;
     const deduplicated = sql`select distinct on (source, source_id) * from matched order by source, source_id, score desc, position`;
     const candidates = languages
       ? sql`select distinct on (article_id) * from (${deduplicated}) d order by article_id, (${passing()}) desc, score desc, position`
@@ -285,7 +305,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
         ? sql`and (b.content_updated_at, b.source_id) < (${request.after.updatedAt}::timestamptz, ${request.after.sourceId}::uuid)`
         : sql`and (b.score, b.source_id) < (${request.after.score}::float8, ${request.after.sourceId}::uuid)`
       : sql``;
-    const counted = (group: FacetGroup, select: SQL, extra: SQL, from: SQL = sql`candidates`) =>
+    const counted = (group: FacetGroup, select: SQL, extra: SQL, from: SQL = sql`facet_rows`) =>
       sql`coalesce((select jsonb_agg(jsonb_build_object('value', value, 'count', n) order by n desc, value)
         from (${select} from ${from} where ${passing(group)} ${extra}) f), '[]'::jsonb)`;
     const updatedCounts = sql.join(
@@ -299,33 +319,56 @@ export class PostgresSearchAdapter implements SearchAdapter {
       ? sql`jsonb_build_object(
           'contentTypes', ${counted("contentTypes", sql`select content_type as value, count(*) as n`, sql`group by 1`)},
           'spaces', ${counted("spaces", sql`select case when space_id = any(${visible}) then space_id end as value, count(*) as n`, sql`group by 1`)},
-          'labels', ${counted("labels", sql`select label as value, count(*) as n`, sql`group by 1 order by 2 desc, 1 limit ${FACET_LIMIT}`, sql`candidates, unnest(labels) as label`)},
+          'labels', ${counted("labels", sql`select label as value, count(*) as n`, sql`group by 1 order by 2 desc, 1 limit ${FACET_LIMIT}`, sql`facet_rows, unnest(labels) as label`)},
           'authors', ${counted("authors", sql`select author_id as value, count(*) as n`, sql`and author_id is not null group by 1 order by 2 desc, 1 limit ${FACET_LIMIT}`)},
           'statuses', ${counted("statuses", sql`select status as value, count(*) as n`, sql`and status is not null group by 1`)},
           'languages', ${counted("languages", sql`select language as value, count(*) as n`, sql`group by 1`)},
-          'updated', (select jsonb_build_array(${updatedCounts}) from candidates where ${passing("updated")}),
+          'updated', (select jsonb_build_array(${updatedCounts}) from facet_rows where ${passing("updated")}),
           'categories', ${request.articleFacets ? counted("categories", sql`select top_category as value, count(*) as n`, sql`and top_category is not null group by 1`) : sql`'[]'::jsonb`},
           'articleTypes', ${request.articleFacets ? counted("articleTypes", sql`select article_type as value, count(*) as n`, sql`group by 1`) : sql`'[]'::jsonb`})`
       : sql`null::jsonb`;
 
     const result = await executor.execute<{
       total: string;
+      pooled: string;
       hits: (Omit<AdapterHit, "score"> & { score: number | string })[] | null;
       facets: AdapterFacets | null;
     }>(sql`
-      with matched as (
-        select c.id, c.source, c.source_id, c.item_id, t.space_id, c.content_type, c.title, c.heading, c.anchor,
-          c.labels, c.status, c.author_id, c.archived, c.attachment, c.content_updated_at, c.position, c.language,
-          case when cardinality(t.path) > 1 then t.path[1] end as top_category,
-          coalesce(t.article_type::text, 'none') as article_type, coalesce(t.translation_of, t.id) as article_id,
-          (${score})::float8 as score
-          ${sql.join(flagColumns, sql``)}
+      with pooled as (
+        select c.id, c.content_updated_at${sql.join(flagColumns, sql``)}
         from search_chunks c
         join tree_items t on t.id = c.item_id
         join spaces s on s.id = t.space_id
         left join search_pending_spaces p on p.space_id = c.space_id
-        ${request.usageBoost && viewer.accountId ? sql`left join recent_views rv on rv.account_id = ${viewer.accountId}::uuid and rv.item_id = c.item_id` : sql``}
         where ${sql.join(conditions, sql` and `)}
+      ),
+      pool as (
+        (select * from pooled${flags.length > 0 ? sql` where ${failing} = 0` : sql``}
+          order by content_updated_at desc, id desc limit ${this.#matchCap + 1})${
+            flags.length > 0
+              ? sql`
+        union all
+        (select * from pooled where ${failing} = 1 order by content_updated_at desc, id desc limit ${this.#matchCap})`
+              : sql``
+          }
+      ),
+      kept as (
+        select r.* from (
+          select pool.*, row_number() over (partition by (${failing} = 0) order by content_updated_at desc, id desc) as place
+          from pool
+        ) r where r.place <= ${this.#matchCap} or ${failing} > 0
+      ),
+      matched as (
+        select c.id, c.source, c.source_id, t.space_id, c.content_updated_at, c.position,
+          coalesce(t.translation_of, t.id) as article_id,
+          (${score})::float8 as score${sql.join(
+            flags.map(([group]) => sql`, pl.f_${sql.raw(group)}`),
+            sql``,
+          )}
+        from kept pl
+        join search_chunks c on c.id = pl.id
+        join tree_items t on t.id = c.item_id
+        ${request.usageBoost && viewer.accountId ? sql`left join recent_views rv on rv.account_id = ${viewer.accountId}::uuid and rv.item_id = c.item_id` : sql``}
       ),
       candidates as (${candidates}),
       best as (
@@ -333,19 +376,32 @@ export class PostgresSearchAdapter implements SearchAdapter {
       ),
       page as (
         select b.* from best b where true ${after} order by ${order} limit ${request.limit + 1}
-      )
-      select (select count(*) from best) as total, ${facets} as facets,
+      )${
+        request.facets
+          ? sql`,
+      facet_rows as (
+        select b.*, fc.content_type, fc.labels, fc.status, fc.author_id, fc.language,
+          case when cardinality(ft.path) > 1 then ft.path[1] end as top_category,
+          coalesce(ft.article_type::text, 'none') as article_type
+        from candidates b
+        join search_chunks fc on fc.id = b.id
+        join tree_items ft on ft.id = fc.item_id
+      )`
+          : sql``
+      }
+      select (select count(*) from best) as total, (select count(*) from pool where ${failing} = 0) as pooled, ${facets} as facets,
         (select jsonb_agg(jsonb_build_object(
-          'source', b.source, 'sourceId', b.source_id, 'itemId', b.item_id, 'spaceId', b.space_id,
-          'contentType', b.content_type, 'title', b.title, 'heading', b.heading, 'anchor', b.anchor,
-          'excerpt', ${parts.excerpt}, 'labels', b.labels, 'status', b.status, 'authorId', b.author_id,
-          'archived', b.archived, 'attachment', b.attachment, 'score', b.score, 'contentUpdatedAt', b.content_updated_at) order by ${order})
+          'source', bc.source, 'sourceId', bc.source_id, 'itemId', bc.item_id, 'spaceId', b.space_id,
+          'contentType', bc.content_type, 'title', bc.title, 'heading', bc.heading, 'anchor', bc.anchor,
+          'excerpt', ${parts.excerpt}, 'labels', bc.labels, 'status', bc.status, 'authorId', bc.author_id,
+          'archived', bc.archived, 'attachment', bc.attachment, 'score', b.score, 'contentUpdatedAt', b.content_updated_at) order by ${order})
           from page b join search_chunks bc on bc.id = b.id) as hits`);
     const row = result.rows[0];
     const hits = (row?.hits ?? []).map((hit) => ({ ...hit, score: Number(hit.score) }));
     return {
       hits: hits.slice(0, request.limit),
       total: Number(row?.total ?? 0),
+      capped: Number(row?.pooled ?? 0) > this.#matchCap,
       hasMore: hits.length > request.limit,
       facets: row?.facets
         ? { ...row.facets, updated: row.facets.updated.filter((facet) => facet.count > 0) }
@@ -461,16 +517,28 @@ export class PostgresSearchAdapter implements SearchAdapter {
     return new Map(result.rows.map((row) => [row.language, Number(row.n)]));
   }
 
-  async #queryParts(executor: Executor, request: AdapterSearch): Promise<QueryParts | "nothing"> {
+  async #queryParts(
+    executor: Executor,
+    request: AdapterSearch,
+    typos: boolean,
+  ): Promise<QueryParts | "nothing"> {
     const { query } = request;
     const plainExcerpt = sql`left(bc.body, 240)`;
     if (query.clauses.length === 0 && query.excluded.length === 0) {
-      return { match: sql`true`, score: sql`0`, excerpt: plainExcerpt, corrections: new Map() };
+      return {
+        expanded: false,
+        match: sql`true`,
+        score: sql`0`,
+        excerpt: plainExcerpt,
+        corrections: new Map(),
+      };
     }
     const configs = await this.#configs(executor, request.viewer);
     if (configs.length === 0) return "nothing";
     const prefix = request.prefixLastTerm ? lastTerm(query) : null;
-    const expansions = await this.#expansions(executor, request.viewer, configs, query, prefix);
+    const expansions = typos
+      ? await this.#expansions(executor, request.viewer, configs, query, prefix)
+      : { alternatives: new Map<string, string[]>(), corrections: new Map<string, string>() };
     const perConfig = configs.map((config) => ({
       config,
       full: tsquery(sql`${config}::regconfig`, query, expansions.alternatives, prefix),
@@ -482,6 +550,9 @@ export class PostgresSearchAdapter implements SearchAdapter {
         sql` `,
       )} end)`;
     return {
+      expanded:
+        [...expansions.alternatives.values()].some((words) => words.length > 0) ||
+        expansions.corrections.size > 0,
       match: sql`(${sql.join(
         perConfig.map((entry) => sql`(c.config = ${entry.config} and c.document @@ ${entry.full})`),
         sql` or `,
@@ -535,29 +606,63 @@ export class PostgresSearchAdapter implements SearchAdapter {
       ),
     ];
     if (terms.length === 0) return { alternatives: new Map(), corrections: new Map() };
-    const visibleWord = (word: SQL, exact: boolean) => sql`exists (select 1 from search_chunks c
+    const matching = (
+      word: SQL,
+      extra: SQL[] = [],
+      source: SQL = sql`search_chunks c`,
+    ) => sql`exists (select 1 from ${source}
       join tree_items t on t.id = c.item_id
       join spaces s on s.id = t.space_id
       left join search_pending_spaces p on p.space_id = c.space_id
-      where ${sql.join(visibleChunkConditions(viewer), sql` and `)} and (${sql.join(
-        configs.map(
-          (config) =>
-            sql`(c.config = ${config} and c.document @@ plainto_tsquery(${config}::regconfig, ${word}))`,
-        ),
-        sql` or `,
-      )}) ${exact ? sql`and ${termsOf(sql`c`)} @@ plainto_tsquery('simple', ${word})` : sql``})`;
-    const result = await executor.execute<{ term: string; known: boolean; words: string[] }>(sql`
-      select q.term, ${visibleWord(sql`q.term`, false)} as known,
+      where ${sql.join(
+        [
+          ...visibleChunkConditions(viewer),
+          sql`(${sql.join(
+            configs.map(
+              (config) =>
+                sql`(c.config = ${config} and c.document @@ plainto_tsquery(${config}::regconfig, ${word}))`,
+            ),
+            sql` or `,
+          )})`,
+          ...extra,
+        ],
+        sql` and `,
+      )})`;
+    const exactly = (word: SQL) => sql`${termsOf(sql`c`)} @@ plainto_tsquery('simple', ${word})`;
+    const confirmed = (word: string) => {
+      const value = sql`${word}::text`;
+      const inOrganization = matching(
+        value,
+        [sql`i.organization_id = ${viewer.organizationId}::uuid`, sql`i.word = ${value}`, exactly(value)],
+        sql`search_item_terms i join search_chunks c on c.item_id = i.item_id`,
+      );
+      if (viewer.personalTokens.length === 0) return inOrganization;
+      return sql`(${inOrganization} or ${matching(value, [sql`c.organization_id is null`, exactly(value)])})`;
+    };
+    const candidates = await executor.execute<{ term: string; known: boolean; words: string[] }>(
+      sql.join(
+        terms.map(
+          (term) => sql`
+      select ${term}::text as term, ${matching(sql`${term}::text`)} as known,
         array(select w.word from search_terms w
-          where w.organization_id = ${viewer.organizationId} and w.word % q.term and w.word <> q.term
-            and similarity(w.word, q.term) >= ${TYPO_SIMILARITY} and ${visibleWord(sql`w.word`, true)}
-          order by similarity(w.word, q.term) desc, w.word limit ${TYPO_ALTERNATIVES}) as words
-      from unnest(${sql.param(terms)}::text[]) as q(term)`);
+          where w.organization_id = ${viewer.organizationId} and w.word % ${term}::text and w.word <> ${term}::text
+            and similarity(w.word, ${term}::text) >= ${TYPO_SIMILARITY}
+          order by similarity(w.word, ${term}::text) desc, w.word limit ${TYPO_CANDIDATES}) as words`,
+        ),
+        sql` union all `,
+      ),
+    );
     const alternatives = new Map<string, string[]>();
     const corrections = new Map<string, string>();
-    for (const row of result.rows) {
-      alternatives.set(row.term, row.words);
-      const best = row.words[0];
+    for (const row of candidates.rows) {
+      const found: string[] = [];
+      for (const word of row.words) {
+        if (found.length >= TYPO_ALTERNATIVES) break;
+        const check = await executor.execute<{ visible: boolean }>(sql`select ${confirmed(word)} as visible`);
+        if (check.rows[0]?.visible) found.push(word);
+      }
+      alternatives.set(row.term, found);
+      const best = found[0];
       if (!row.known && best) corrections.set(row.term, best);
     }
     return { alternatives, corrections };

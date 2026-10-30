@@ -694,29 +694,15 @@ describe("spaces", () => {
     ).toBeTruthy();
   });
 
-  it("lists what changed last in the space on its overview page, once per page and without the overview", async () => {
-    const hit = (itemId: string, number: number, title: string, type: string, heading = "") => ({
-      type,
-      id: heading ? `${itemId}:${heading}` : itemId,
-      itemId,
+  it("lists what changed last in the space on its overview page, without the overview and after the page content", async () => {
+    const entry = (id: string, number: number, title: string, kind: "page" | "blogPost", path: string) => ({
+      id,
       number,
-      itemType: type,
+      kind,
       title,
-      heading,
-      anchor: heading ? heading.toLowerCase() : null,
-      excerpt: [],
-      space: { id: SPACE_ID, key: "ITOPS", name: "IT Operations", personal: false },
-      sharedWithYou: false,
-      otherCategory: false,
-      path: [],
-      labels: [],
-      status: null,
+      path,
       author: { id: "01929b1e-0000-7000-8000-0000000000c1", name: "Anna Berger" },
-      archived: false,
-      attachment: null,
-      topic: null,
-      series: null,
-      updatedAt: "2026-10-05T08:00:00.000Z",
+      contentUpdatedAt: "2026-10-05T08:00:00.000Z",
     });
     const { requests } = mockApi({
       ...baseRoutes(),
@@ -739,16 +725,12 @@ describe("spaces", () => {
       }),
       [`GET /api/v1/pages/${OVERVIEW}/labels`]: () => ({ body: [] }),
       [`GET /api/v1/pages/${OVERVIEW}/backlinks`]: () => ({ body: [] }),
-      [`GET /api/v1/organizations/${ORGANIZATION.id}/search`]: () => ({
-        body: {
-          results: [
-            hit(NETWORK, 1004, "Network", "page", "Firewall"),
-            hit(OVERVIEW, 1001, "IT Operations", "page"),
-            hit(NETWORK, 1004, "Network", "page"),
-            hit(VPN, 1003, "Winter maintenance", "blogPost"),
-          ],
-          nextCursor: null,
-        },
+      [`GET /api/v1/spaces/${SPACE_ID}/newest-content`]: () => ({
+        body: [
+          entry(NETWORK, 1004, "Network", "page", "/spaces/ITOPS/pages/1004/network"),
+          entry(OVERVIEW, 1001, "IT Operations", "page", "/spaces/ITOPS/pages/1001/it-operations"),
+          entry(VPN, 1003, "Winter maintenance", "blogPost", "/spaces/ITOPS/blog/1003/winter-maintenance"),
+        ],
       }),
     });
     await renderAt(`/spaces/ITOPS/pages/1001/it-operations`);
@@ -764,12 +746,11 @@ describe("spaces", () => {
         "/spaces/ITOPS/blog/1003/winter-maintenance",
       ],
     ]);
-    const search = new URL(
-      requests.find((request) => request.path.includes("/search"))?.path ?? "",
-      "http://localhost",
-    ).searchParams;
-    expect(Object.fromEntries(search)).toMatchObject({ spaceIds: SPACE_ID, sort: "newest" });
-    expect(search.has("q")).toBe(false);
+    const paths = requests.map((request) => request.path);
+    expect(paths.some((path) => path.includes("/search"))).toBe(false);
+    expect(paths.findIndex((path) => path.includes("/newest-content?limit=6"))).toBeGreaterThan(
+      paths.findIndex((path) => path.endsWith(`/pages/${OVERVIEW}/content`)),
+    );
     expect(screen.queryByRole("heading", { name: /^Comments/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /comment/i })).toBeNull();
   });

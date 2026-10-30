@@ -210,6 +210,12 @@ export function systemCheckStep(deps: SetupStepDependencies): SetupStep {
             source,
           },
           reachability,
+          clientAddress: {
+            status: request.forwardedFromUntrusted ? "warning" : "ok",
+            cause: request.forwardedFromUntrusted ? "untrustedProxy" : null,
+            fixCommand: null,
+            docs: documentationTargets.forwardedHeaders,
+          },
           https: {
             status: httpsOk ? "ok" : "warning",
             cause: httpsOk ? null : url ? "instanceUrlNotHttps" : "requestNotHttps",

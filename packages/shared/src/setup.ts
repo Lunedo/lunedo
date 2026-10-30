@@ -113,6 +113,11 @@ export const setupStepSchemas = {
           instanceUrl: z.boolean(),
           request: z.boolean(),
         }),
+        clientAddress: z.object({
+          status: checkStatus,
+          ...checkHelp,
+          cause: z.enum(["untrustedProxy"]).nullable(),
+        }),
       }),
     }),
     actions: { acknowledge: { input: empty, result: empty } },

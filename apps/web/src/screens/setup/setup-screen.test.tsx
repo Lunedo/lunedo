@@ -257,6 +257,7 @@ const SYSTEM_CHECK = {
         instanceUrl: false,
         request: false,
       },
+      clientAddress: { ...CHECK },
     },
   },
 };

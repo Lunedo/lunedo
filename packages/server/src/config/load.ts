@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import path from "node:path";
 import { z } from "zod";
 import { instanceUrlSchema } from "../accounts/instance-settings.js";
+import { defaultPoolSize } from "../database/pool-size.js";
 import type { LogLevel } from "../logging/logger.js";
 import { resourcePath } from "../resources.js";
 
@@ -261,7 +263,8 @@ export function loadConfig(env: Env): ServerConfig {
     logLevel: values.LUNEDO_LOG_LEVEL as LogLevel,
     database: {
       url: secret("LUNEDO_DATABASE_URL") as Secret,
-      poolSize: values.LUNEDO_DATABASE_POOL_SIZE as number,
+      poolSize:
+        (values.LUNEDO_DATABASE_POOL_SIZE as number | undefined) ?? defaultPoolSize(availableParallelism()),
     },
     fileStorage:
       values.LUNEDO_FILE_STORAGE === "s3"

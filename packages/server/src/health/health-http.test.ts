@@ -102,6 +102,15 @@ describe("Metrics", () => {
     expect(output).toContain('lunedo_db_pool_connections{state="idle",service="worker"} 3');
     expect(output).toContain('lunedo_jobs{queue="test.job",state="failed",service="worker"} 2');
   });
+
+  it("reports how long queries waited for a database connection and how many gave up", async () => {
+    const metrics = new Metrics("api");
+    metrics.observeDatabaseAcquire({ seconds: 0.2, timedOut: false });
+    metrics.observeDatabaseAcquire({ seconds: 5, timedOut: true });
+    const output = await metrics.render();
+    expect(output).toContain('lunedo_db_pool_acquire_seconds_count{service="api"} 2');
+    expect(output).toContain('lunedo_db_pool_acquire_timeouts_total{service="api"} 1');
+  });
 });
 
 describe("Lunedo metrics", () => {

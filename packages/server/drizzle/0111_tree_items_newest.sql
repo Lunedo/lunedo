@@ -1,0 +1,1 @@
+CREATE INDEX "tree_items_newest_index" ON "tree_items" USING btree ("space_id","content_updated_at" desc,"id" desc) WHERE "tree_items"."trash_entry_id" is null and "tree_items"."archived_root_id" is null;

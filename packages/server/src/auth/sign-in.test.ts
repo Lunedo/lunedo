@@ -6,7 +6,12 @@ import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { SYSTEM } from "../accounts/principal.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
-import { InvalidCredentialsError, LockedError, RateLimitedError } from "./errors.js";
+import {
+  InvalidCredentialsError,
+  InvalidSecondFactorError,
+  LockedError,
+  RateLimitedError,
+} from "./errors.js";
 import { TotpService } from "./two-factor.js";
 
 const baseUrl = testDatabaseBaseUrl();
@@ -237,5 +242,120 @@ describe.skipIf(!baseUrl)("SignInService", () => {
         (error: unknown) => error,
       );
     expect(blocked instanceof RateLimitedError || blocked instanceof LockedError).toBe(true);
+  }, 120_000);
+
+  async function people(count: number, password: string) {
+    const { services, database } = test;
+    const run = randomUUID().slice(0, 8);
+    const emails = Array.from({ length: count }, (_, index) => `parallel-${run}-${index}@example.org`);
+    for (let start = 0; start < emails.length; start += 5) {
+      await Promise.all(
+        emails.slice(start, start + 5).map((email) =>
+          database.transaction((tx) =>
+            services.accounts.createStandard(tx, {
+              email,
+              name: "Parallel",
+              password,
+              homeOrganizationId: null,
+            }),
+          ),
+        ),
+      );
+    }
+    return emails;
+  }
+
+  const settled = (promise: Promise<unknown>) =>
+    promise.then(
+      () => null,
+      (error: unknown) => error,
+    );
+
+  it("never lets more wrong passwords of one address run than the failure limit, even all at once", async () => {
+    const { services } = test;
+    const address = "198.51.100.50";
+    const emails = await people(80, "a long parallel passphrase");
+    const outcomes = await Promise.all(
+      emails.map((email) =>
+        settled(
+          services.signIn.signInWithPassword({ email, password: "a wrong guess", client: { ip: address } }),
+        ),
+      ),
+    );
+    const wrong = outcomes.filter((error) => error instanceof InvalidCredentialsError);
+    expect(wrong.length).toBeLessThanOrEqual(30);
+    expect(
+      outcomes.filter((error) => error instanceof RateLimitedError || error instanceof LockedError).length,
+    ).toBeGreaterThanOrEqual(emails.length - 30 - 10);
+    const blocked = await settled(
+      services.signIn.signInWithPassword({
+        email: emails[0] ?? "",
+        password: "a long parallel passphrase",
+        client: { ip: address },
+      }),
+    );
+    expect(blocked instanceof RateLimitedError || blocked instanceof LockedError).toBe(true);
+  }, 120_000);
+
+  it("does not block correct passwords of one address that arrive at once, round after round", async () => {
+    const { services } = test;
+    const address = "198.51.100.51";
+    const emails = await people(60, "a long parallel passphrase");
+    for (let round = 0; round < 2; round++) {
+      const batch = emails.slice(round * 30, round * 30 + 30);
+      const outcomes = await Promise.all(
+        batch.map((email) =>
+          services.signIn.signInWithPassword({
+            email,
+            password: "a long parallel passphrase",
+            client: { ip: address },
+          }),
+        ),
+      );
+      expect(outcomes.every((outcome) => outcome.status === "signedIn")).toBe(true);
+    }
+    const wrong = await settled(
+      services.signIn.signInWithPassword({
+        email: emails[0] ?? "",
+        password: "a wrong guess",
+        client: { ip: address },
+      }),
+    );
+    expect(wrong).toBeInstanceOf(InvalidCredentialsError);
+  }, 120_000);
+
+  it("counts parallel wrong second factors against the address like wrong passwords", async () => {
+    const { services } = test;
+    const address = "198.51.100.52";
+    const email = `second-${randomUUID().slice(0, 8)}@example.org`;
+    const { account } = await accountWithRecoveryCodes(email);
+    const pending: string[] = [];
+    for (let index = 0; index < 40; index++) {
+      const created = await services.challenges.create(test.database, {
+        purpose: "secondFactor",
+        accountId: account.id,
+        methods: ["password"],
+        withToken: true,
+      });
+      pending.push(created.token ?? "");
+    }
+    const outcomes = await Promise.all(
+      pending.map((pendingToken) =>
+        settled(
+          services.signIn.completeSecondFactor({
+            pendingToken,
+            factor: { type: "totp", code: "000000" },
+            client: { ip: address },
+          }),
+        ),
+      ),
+    );
+    expect(account.id).toBeTruthy();
+    expect(outcomes.filter((error) => error instanceof InvalidSecondFactorError).length).toBeLessThanOrEqual(
+      30,
+    );
+    expect(outcomes.some((error) => error instanceof RateLimitedError || error instanceof LockedError)).toBe(
+      true,
+    );
   }, 120_000);
 });

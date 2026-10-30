@@ -289,6 +289,34 @@ describe.skipIf(!baseUrl)("search", () => {
     expect(await ids(w.other, w.org.id, `${w.word} cartrige`)).toEqual([w.gamma]);
   });
 
+  it("looks for similar words only when a search finds fewer than five results", async () => {
+    const org = await organization();
+    const authorId = await member(org.id, "member", "Typo Author");
+    const author = accountPrincipal(authorId);
+    const created = await space(org.id, authorId, { visibility: "organization" });
+    const stem = `cartridg${Math.random()
+      .toString(36)
+      .slice(2, 8)
+      .replace(/[^a-z]/g, "")}`;
+    const add = (title: string, text: string) =>
+      test.services.tree.create(author, created.id, {
+        kind: "page",
+        title,
+        mode: "live",
+        placement: { parentId: null },
+        document: doc(paragraph(text)),
+      });
+    const near = await add("Near", `${stem}x spare`);
+    const first = await add("One", `${stem}e spare`);
+    await drain();
+    expect((await ids(author, org.id, `${stem}e`)).sort()).toEqual([first.id, near.id].sort());
+    for (let index = 0; index < 5; index++) await add(`More ${index}`, `${stem}e spare`);
+    await drain();
+    const many = await ids(author, org.id, `${stem}e`);
+    expect(many).toHaveLength(6);
+    expect(many).not.toContain(near.id);
+  });
+
   it("keeps the words used to correct typos per organization", async () => {
     const w = await world();
     const unique = `zephyr${w.word.replace(/[^a-z]/g, "")}`;
@@ -421,6 +449,67 @@ describe.skipIf(!baseUrl)("search", () => {
     });
     return { service, requests };
   }
+
+  it("lists and counts only the most recently changed matches above the limit", async () => {
+    const w = await world();
+    const bounded = new SearchService({
+      database: test.database,
+      authorization: test.services.authorization,
+      people: test.services.people,
+      adapter: new PostgresSearchAdapter({ matchCap: 2 }),
+      indexer: test.services.search.indexer,
+    });
+    const full = await find(w.other, w.org.id, w.word);
+    const limited = await bounded.search(w.other, w.org.id, searchRequest(w.word));
+    expect(full).toMatchObject({ total: 3, totalCapped: false });
+    expect(limited).toMatchObject({ total: 2, totalCapped: true });
+    expect(limited.results.map((hit) => hit.itemId).sort()).toEqual([w.beta, w.gamma].sort());
+    expect(limited.facets?.contentTypes).toEqual([{ value: "page", count: 2 }]);
+    const spaces = limited.facets?.spaces ?? [];
+    expect(spaces.map((facet) => facet.value)).not.toContain(w.hidden.id);
+    expect(spaces.reduce((sum, facet) => sum + facet.count, 0)).toBe(2);
+  });
+
+  it("keeps the counts of the other filters complete when a filter picks few of many matches", async () => {
+    const w = await world();
+    for (const picked of [w.shared.id, w.second.id]) {
+      const filtered = searchRequest(w.word, { spaceIds: [picked] });
+      const full = await test.services.search.search(w.other, w.org.id, filtered);
+      const bounded = new SearchService({
+        database: test.database,
+        authorization: test.services.authorization,
+        people: test.services.people,
+        adapter: new PostgresSearchAdapter({ matchCap: full.total }),
+        indexer: test.services.search.indexer,
+      });
+      const limited = await bounded.search(w.other, w.org.id, filtered);
+      expect(full.total).toBeGreaterThan(0);
+      expect(limited.facets?.contentTypes).toEqual(full.facets?.contentTypes);
+      expect(limited.facets?.authors).toEqual(full.facets?.authors);
+      expect(limited.totalCapped).toBe(false);
+    }
+  });
+
+  it("keeps the other values of a used filter in the counts when more matches pass it than the limit", async () => {
+    const w = await world();
+    const bounded = new SearchService({
+      database: test.database,
+      authorization: test.services.authorization,
+      people: test.services.people,
+      adapter: new PostgresSearchAdapter({ matchCap: 1 }),
+      indexer: test.services.search.indexer,
+    });
+    const limited = await bounded.search(
+      w.other,
+      w.org.id,
+      searchRequest(w.word, { spaceIds: [w.shared.id] }),
+    );
+    expect(limited).toMatchObject({ total: 1, totalCapped: true });
+    const counted = new Map((limited.facets?.spaces ?? []).map((facet) => [facet.value, facet.count]));
+    expect(counted.get(w.shared.id)).toBeGreaterThan(0);
+    expect(counted.get(w.second.id)).toBe(1);
+    expect(counted.has(w.hidden.id)).toBe(false);
+  });
 
   it("looks up status names in spaces the person can see only", async () => {
     const w = await world();

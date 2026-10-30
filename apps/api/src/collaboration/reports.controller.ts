@@ -1,3 +1,4 @@
+import { labeledContentKinds, MAX_NEWEST_CONTENT } from "@lunedo/server";
 import { Controller, Get, Inject, Param, Query, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -8,7 +9,7 @@ import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
-import { uuid } from "../http/schemas.js";
+import { extensibleEnum, itemNumber, timestamp, uuid } from "../http/schemas.js";
 import { exampleDocument } from "../spaces/schemas.js";
 import {
   contentByLabelQuerySchema,
@@ -31,6 +32,34 @@ const TAG = "Reports";
 const decisionCursor = z.tuple([z.string().max(40), z.string().max(40)]);
 const page = { type: "item", param: "pageId" } as const;
 const pageParams = z.object({ pageId: uuid("ID of the page that shows the block.") }).strict();
+
+const space = { type: "space", param: "spaceId" } as const;
+const spaceParams = z.object({ spaceId: uuid("ID of the space.") }).strict();
+const newestContentQuerySchema = z
+  .object({
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_NEWEST_CONTENT)
+      .default(5)
+      .describe(`Maximum number of entries, 1 to ${MAX_NEWEST_CONTENT}. The default is 5.`),
+  })
+  .strict();
+const newestContentSchema = z
+  .object({
+    id: uuid("ID of the page or blog post."),
+    number: itemNumber("Number of the content in the addresses of the app."),
+    kind: extensibleEnum(labeledContentKinds, "`page` or `blogPost`."),
+    title: z.string().describe("Title."),
+    path: z.string().describe("Path in the web interface."),
+    author: z
+      .object({ id: uuid("ID of the person."), name: z.string().describe("Name of the person.") })
+      .nullable()
+      .describe("Who created it, or null when unknown or not visible to the caller."),
+    contentUpdatedAt: timestamp("When its content last changed."),
+  })
+  .describe("A recently changed page or blog post.");
 
 @Controller("api/v1")
 export class ReportsController {
@@ -143,6 +172,42 @@ export class ReportsController {
       ...result,
       references: await this.#services.documents.references(actor, { type: "doc", content: cells }),
     };
+  }
+
+  @Get("spaces/:spaceId/newest-content")
+  @Permission("space.view", space)
+  @ApiRoute({
+    summary: "List the newest pages and blog posts of a space",
+    description:
+      "Lists the pages and blog posts of a space that the caller can read, most recently changed first, as the news on the space overview shows them. Archived and deleted content is left out.",
+    tags: [TAG],
+    params: spaceParams,
+    query: newestContentQuerySchema,
+    response: {
+      description: "The pages and blog posts.",
+      schema: z.array(newestContentSchema).describe("Content, most recently changed first."),
+      example: [
+        {
+          id: exampleReportPage.id,
+          number: 1051,
+          kind: "page",
+          title: exampleReportPage.title,
+          path: exampleReportPage.path,
+          author: exampleReportPage.author,
+          contentUpdatedAt: "2026-10-05T08:10:00.000Z",
+        },
+      ],
+    },
+  })
+  async newestContent(
+    @Param() params: z.output<typeof spaceParams>,
+    @Query() query: z.output<typeof newestContentQuerySchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.reports.newestContent(actorOf(request), {
+      spaceId: params.spaceId,
+      limit: query.limit,
+    });
   }
 
   @Get("reports/content-by-label")

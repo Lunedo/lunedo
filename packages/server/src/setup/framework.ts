@@ -14,7 +14,7 @@ export interface SetupActionContext {
   reopen(): Promise<void>;
   state: Record<string, unknown>;
   setState(state: Record<string, unknown>): Promise<void>;
-  request: { protocol: string; host: string | undefined };
+  request: { protocol: string; host: string | undefined; forwardedFromUntrusted: boolean };
 }
 
 export interface SetupAction<TInput> {

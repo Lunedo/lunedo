@@ -364,6 +364,7 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
       `/api/v1/reports/pages?spaceId=${space.id}&labels=project-x&sort=title`,
       `/api/v1/reports/decisions?spaceId=${space.id}&labels=project-x&parentId=${project.id}`,
       `/api/v1/tasks?pageIds=${project.id}&labels=project-x&status=all`,
+      `/api/v1/spaces/${space.id}/newest-content`,
     ];
     for (const path of paths) {
       const ofReader = await reader.client.get(path);
@@ -380,6 +381,12 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
         spaceId: space.id,
       }),
     ]);
+    expect((await reader.client.get(`/api/v1/spaces/${space.id}/newest-content?limit=51`)).statusCode).toBe(
+      400,
+    );
+    expect((await reader.client.get(paths[3] as string)).json()).toContainEqual(
+      expect.objectContaining({ id: open.id, kind: "page", title: "Kick-off" }),
+    );
     expect((await reader.client.get(paths[1] as string)).json()).toEqual({
       items: [
         expect.objectContaining({ text: "Ship in May", page: expect.objectContaining({ id: open.id }) }),

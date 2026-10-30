@@ -70,6 +70,7 @@ export class SessionService {
   readonly #settings: SettingsService;
   readonly #audit: AuditLog;
   readonly #clock: () => Date;
+  readonly #touches = new Map<string, Promise<void>>();
 
   constructor(options: {
     database: Database;
@@ -182,22 +183,31 @@ export class SessionService {
       return null;
     }
     if (now.getTime() - session.lastUsedAt.getTime() >= TOUCH_INTERVAL) {
-      const touched = await this.#database
-        .update(sessions)
-        .set({ lastUsedAt: now })
-        .where(
-          and(eq(sessions.id, session.id), lt(sessions.lastUsedAt, new Date(now.getTime() - TOUCH_INTERVAL))),
-        )
-        .returning({ id: sessions.id });
-      if (touched.length > 0) {
-        await this.#database
-          .update(accounts)
-          .set({ lastActiveAt: now })
-          .where(eq(accounts.id, session.accountId));
+      let touch = this.#touches.get(session.id);
+      if (!touch) {
+        touch = this.#touch(session, now).finally(() => this.#touches.delete(session.id));
+        this.#touches.set(session.id, touch);
       }
+      await touch;
       session.lastUsedAt = now;
     }
     return session;
+  }
+
+  async #touch(session: Session, now: Date): Promise<void> {
+    const touched = await this.#database
+      .update(sessions)
+      .set({ lastUsedAt: now })
+      .where(
+        and(eq(sessions.id, session.id), lt(sessions.lastUsedAt, new Date(now.getTime() - TOUCH_INTERVAL))),
+      )
+      .returning({ id: sessions.id });
+    if (touched.length > 0) {
+      await this.#database
+        .update(accounts)
+        .set({ lastActiveAt: now })
+        .where(eq(accounts.id, session.accountId));
+    }
   }
 
   async #expired(session: Session, now: Date): Promise<boolean> {

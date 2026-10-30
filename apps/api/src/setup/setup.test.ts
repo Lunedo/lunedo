@@ -83,6 +83,7 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
       instanceUrl: { status: "warning", configured: false },
       reachability: { status: "warning", cause: "notSet", url: null },
       clock: { status: "ok" },
+      clientAddress: { status: "ok", cause: null },
     });
     expect((await post("/api/v1/setup/complete")).json()).toMatchObject({ code: "setupNotReady" });
 

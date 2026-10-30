@@ -139,6 +139,22 @@ describe.skipIf(!baseUrl)("notifications", () => {
     expect((await test.services.notifications.list(administrator.id, { limit: 10 })).items).toEqual([]);
   });
 
+  it("lists and filters by space when a stored item target is not a UUID", async () => {
+    const org = await organization();
+    const person = await standard(org.id);
+    await test.pool.query(
+      `insert into notifications (id, recipient_id, organization_id, type, target_type, target_id, params, group_key)
+       values ($1, $2, $3, 'content.changed', 'item', 'not-a-uuid', '{}', 'group')`,
+      [randomUUID(), person.id, org.id],
+    );
+    await expect(test.services.notifications.list(person.id, { limit: 10 })).resolves.toEqual(
+      expect.objectContaining({ items: [] }),
+    );
+    await expect(
+      test.services.notifications.list(person.id, { limit: 10, spaceId: randomUUID() }),
+    ).resolves.toEqual(expect.objectContaining({ items: [] }));
+  });
+
   it("treats hidden notifications like unknown ones when marking them as read", async () => {
     const org = await organization();
     const administrator = await standard(org.id);

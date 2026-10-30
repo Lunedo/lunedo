@@ -1,6 +1,6 @@
 import { Counter, collectDefaultMetrics, Gauge, Histogram, Registry } from "prom-client";
 import { secretsEqual } from "../crypto/constant-time.js";
-import type { DatabasePool } from "../database/pool.js";
+import type { DatabasePool, PoolAcquireEvent } from "../database/pool.js";
 import type { JobFinishedEvent, JobQueue } from "../jobs/job-queue.js";
 import type { LoggedError } from "../logging/logger.js";
 import type { InstanceMetricsSource } from "../operations/instance-metrics.js";
@@ -15,6 +15,8 @@ export class Metrics {
   readonly #httpDuration: Histogram<"method" | "route" | "status">;
   readonly #jobDuration: Histogram<"queue" | "state">;
   readonly #loggedErrors: Counter<"type">;
+  readonly #poolAcquire: Histogram;
+  readonly #poolTimeouts: Counter;
 
   constructor(service: string) {
     this.registry.setDefaultLabels({ service });
@@ -45,7 +47,23 @@ export class Metrics {
       labelNames: ["type"],
       registers: [this.registry],
     });
+    this.#poolAcquire = new Histogram({
+      name: "lunedo_db_pool_acquire_seconds",
+      help: "Time a database query waited for a free pooled connection.",
+      buckets: DURATION_BUCKETS,
+      registers: [this.registry],
+    });
+    this.#poolTimeouts = new Counter({
+      name: "lunedo_db_pool_acquire_timeouts_total",
+      help: "Database queries that gave up waiting for a pooled connection.",
+      registers: [this.registry],
+    });
   }
+
+  readonly observeDatabaseAcquire = (event: PoolAcquireEvent): void => {
+    this.#poolAcquire.observe(event.seconds);
+    if (event.timedOut) this.#poolTimeouts.inc();
+  };
 
   observeBuild(version: string): void {
     new Gauge({

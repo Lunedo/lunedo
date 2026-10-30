@@ -108,14 +108,17 @@ export interface NotificationPage {
   next: NotificationCursor | null;
 }
 
+const itemTargetId = sql`(case when ${notifications.targetType} = 'item'
+  and ${notifications.targetId} ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  then ${notifications.targetId}::uuid end)`;
+
 const listColumns = {
   id: notifications.id,
   type: notifications.type,
   organizationId: notifications.organizationId,
   targetType: notifications.targetType,
   targetId: notifications.targetId,
-  targetNumber: sql<string | null>`(select t.number::text from tree_items t
-    where ${notifications.targetType} = 'item' and t.id::text = ${notifications.targetId})`,
+  targetNumber: sql<string | null>`(select t.number::text from tree_items t where t.id = ${itemTargetId})`,
   actorType: notifications.actorType,
   actorId: notifications.actorId,
   actorName: accounts.name,
@@ -499,7 +502,7 @@ export class NotificationService {
             request.kind ? inArray(notifications.type, [...notificationKindTypes[request.kind]]) : undefined,
             request.spaceId
               ? sql`((${notifications.targetType} = 'item' and exists (select 1 from tree_items t
-                    where t.id::text = ${notifications.targetId} and t.space_id = ${request.spaceId}))
+                    where t.id = ${itemTargetId} and t.space_id = ${request.spaceId}))
                   or (${notifications.targetType} = 'accessRequest' and exists (select 1 from access_requests r
                     where r.id::text = ${notifications.targetId} and r.space_id = ${request.spaceId})))`
               : undefined,
@@ -594,7 +597,7 @@ export class NotificationService {
           eq(notifications.targetType, "item"),
           unreadOnly ? isNull(notifications.readAt) : undefined,
           sql`(${notifications.updatedAt} at time zone ${timeZone})::date = ${day}::date`,
-          sql`exists (select 1 from tree_items t where t.id::text = ${notifications.targetId}
+          sql`exists (select 1 from tree_items t where t.id = ${itemTargetId}
             and t.space_id = ${target.id})`,
         ),
       )
