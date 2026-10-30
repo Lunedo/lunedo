@@ -293,7 +293,7 @@ const responseSchema = z
       })
       .nullable()
       .describe(
-        "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts.",
+        "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts. For a search with more than 5,000 matches the counts cover the 5,000 best matches; `total` always counts all matches.",
       ),
     suggestion: z
       .string()

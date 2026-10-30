@@ -190286,7 +190286,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts."
+                      "description": "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts. For a search with more than 5,000 matches the counts cover the 5,000 best matches; `total` always counts all matches."
                     },
                     "suggestion": {
                       "description": "The search text with misspelled words replaced by similar words from content the caller can read, or null when there is nothing to correct. Always null in quick search.",

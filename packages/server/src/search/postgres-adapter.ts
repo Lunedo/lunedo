@@ -28,6 +28,7 @@ const TYPO_SIMILARITY = 0.5;
 const TYPO_ALTERNATIVES = 3;
 const TYPO_CANDIDATES = 40;
 const FACET_LIMIT = 20;
+const FACET_SAMPLE = 5000;
 const RECENT_USE_DAYS = 30;
 const MAX_RECENT_BOOST = 0.15;
 const MAX_FREQUENT_BOOST = 0.1;
@@ -72,6 +73,12 @@ function weighted(chunk: IndexedChunk): { first: string; second: string; labels:
 }
 
 export class PostgresSearchAdapter implements SearchAdapter {
+  readonly #facetSample: number;
+
+  constructor(options: { facetSample?: number } = {}) {
+    this.#facetSample = options.facetSample ?? FACET_SAMPLE;
+  }
+
   async replaceItem(executor: Executor, item: IndexedItem): Promise<void> {
     await executor.execute(sql`delete from search_chunks where item_id = ${item.itemId}`);
     if (item.chunks.length > 0) await this.#insertChunks(executor, item);
@@ -286,7 +293,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
         ? sql`and (b.content_updated_at, b.source_id) < (${request.after.updatedAt}::timestamptz, ${request.after.sourceId}::uuid)`
         : sql`and (b.score, b.source_id) < (${request.after.score}::float8, ${request.after.sourceId}::uuid)`
       : sql``;
-    const counted = (group: FacetGroup, select: SQL, extra: SQL, from: SQL = sql`candidates`) =>
+    const counted = (group: FacetGroup, select: SQL, extra: SQL, from: SQL = sql`facet_rows`) =>
       sql`coalesce((select jsonb_agg(jsonb_build_object('value', value, 'count', n) order by n desc, value)
         from (${select} from ${from} where ${passing(group)} ${extra}) f), '[]'::jsonb)`;
     const updatedCounts = sql.join(
@@ -300,11 +307,11 @@ export class PostgresSearchAdapter implements SearchAdapter {
       ? sql`jsonb_build_object(
           'contentTypes', ${counted("contentTypes", sql`select content_type as value, count(*) as n`, sql`group by 1`)},
           'spaces', ${counted("spaces", sql`select case when space_id = any(${visible}) then space_id end as value, count(*) as n`, sql`group by 1`)},
-          'labels', ${counted("labels", sql`select label as value, count(*) as n`, sql`group by 1 order by 2 desc, 1 limit ${FACET_LIMIT}`, sql`candidates, unnest(labels) as label`)},
+          'labels', ${counted("labels", sql`select label as value, count(*) as n`, sql`group by 1 order by 2 desc, 1 limit ${FACET_LIMIT}`, sql`facet_rows, unnest(labels) as label`)},
           'authors', ${counted("authors", sql`select author_id as value, count(*) as n`, sql`and author_id is not null group by 1 order by 2 desc, 1 limit ${FACET_LIMIT}`)},
           'statuses', ${counted("statuses", sql`select status as value, count(*) as n`, sql`and status is not null group by 1`)},
           'languages', ${counted("languages", sql`select language as value, count(*) as n`, sql`group by 1`)},
-          'updated', (select jsonb_build_array(${updatedCounts}) from candidates where ${passing("updated")}),
+          'updated', (select jsonb_build_array(${updatedCounts}) from facet_rows where ${passing("updated")}),
           'categories', ${request.articleFacets ? counted("categories", sql`select top_category as value, count(*) as n`, sql`and top_category is not null group by 1`) : sql`'[]'::jsonb`},
           'articleTypes', ${request.articleFacets ? counted("articleTypes", sql`select article_type as value, count(*) as n`, sql`group by 1`) : sql`'[]'::jsonb`})`
       : sql`null::jsonb`;
@@ -315,10 +322,8 @@ export class PostgresSearchAdapter implements SearchAdapter {
       facets: AdapterFacets | null;
     }>(sql`
       with matched as (
-        select c.id, c.source, c.source_id, c.item_id, t.space_id, c.content_type, c.title, c.heading, c.anchor,
-          c.labels, c.status, c.author_id, c.archived, c.attachment, c.content_updated_at, c.position, c.language,
-          case when cardinality(t.path) > 1 then t.path[1] end as top_category,
-          coalesce(t.article_type::text, 'none') as article_type, coalesce(t.translation_of, t.id) as article_id,
+        select c.id, c.source, c.source_id, t.space_id, c.content_updated_at, c.position,
+          coalesce(t.translation_of, t.id) as article_id,
           (${score})::float8 as score
           ${sql.join(flagColumns, sql``)}
         from search_chunks c
@@ -334,13 +339,28 @@ export class PostgresSearchAdapter implements SearchAdapter {
       ),
       page as (
         select b.* from best b where true ${after} order by ${order} limit ${request.limit + 1}
-      )
+      )${
+        request.facets
+          ? sql`,
+      sampled as (
+        select * from candidates order by score desc, source_id limit ${this.#facetSample}
+      ),
+      facet_rows as (
+        select b.*, fc.content_type, fc.labels, fc.status, fc.author_id, fc.language,
+          case when cardinality(ft.path) > 1 then ft.path[1] end as top_category,
+          coalesce(ft.article_type::text, 'none') as article_type
+        from sampled b
+        join search_chunks fc on fc.id = b.id
+        join tree_items ft on ft.id = fc.item_id
+      )`
+          : sql``
+      }
       select (select count(*) from best) as total, ${facets} as facets,
         (select jsonb_agg(jsonb_build_object(
-          'source', b.source, 'sourceId', b.source_id, 'itemId', b.item_id, 'spaceId', b.space_id,
-          'contentType', b.content_type, 'title', b.title, 'heading', b.heading, 'anchor', b.anchor,
-          'excerpt', ${parts.excerpt}, 'labels', b.labels, 'status', b.status, 'authorId', b.author_id,
-          'archived', b.archived, 'attachment', b.attachment, 'score', b.score, 'contentUpdatedAt', b.content_updated_at) order by ${order})
+          'source', bc.source, 'sourceId', bc.source_id, 'itemId', bc.item_id, 'spaceId', b.space_id,
+          'contentType', bc.content_type, 'title', bc.title, 'heading', bc.heading, 'anchor', bc.anchor,
+          'excerpt', ${parts.excerpt}, 'labels', bc.labels, 'status', bc.status, 'authorId', bc.author_id,
+          'archived', bc.archived, 'attachment', bc.attachment, 'score', b.score, 'contentUpdatedAt', b.content_updated_at) order by ${order})
           from page b join search_chunks bc on bc.id = b.id) as hits`);
     const row = result.rows[0];
     const hits = (row?.hits ?? []).map((hit) => ({ ...hit, score: Number(hit.score) }));
