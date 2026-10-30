@@ -1,5 +1,5 @@
 import type { WatchState } from "@lunedo/shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 
@@ -20,12 +20,16 @@ function fetchStatus(target: WatchTarget) {
 
 export type WatchStatus = Awaited<ReturnType<typeof fetchStatus>>;
 
-export function useWatchStatus(target: WatchTarget) {
-  return useQuery({
+export function watchStatusQuery(target: WatchTarget) {
+  return queryOptions({
     queryKey: watchKeys.status(target),
     queryFn: () => fetchStatus(target),
     throwOnError: false,
   });
+}
+
+export function useWatchStatus(target: WatchTarget) {
+  return useQuery(watchStatusQuery(target));
 }
 
 export function useKnownWatchStatus(target: WatchTarget) {

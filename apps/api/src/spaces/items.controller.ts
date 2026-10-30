@@ -23,14 +23,16 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
-import { taskStatusSchema } from "../collaboration/schemas.js";
+import { commentListSchema, reactionsSchema, taskStatusSchema } from "../collaboration/schemas.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
+import { attachmentListSchema } from "../files/schemas.js";
 import { ApiRoute } from "../http/api-route.js";
 import { answerConditionally } from "../http/conditional.js";
 import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { itemNumber, itemNumberParam, uuid } from "../http/schemas.js";
+import { watchStatusSchema } from "../notifications/watches.controller.js";
 import { accessExplanationSchema, exampleExplanation } from "../sharing/schemas.js";
 import { parentEntriesSchema, restorableInSpace, withParentsQuery } from "./restore-parents.js";
 import {
@@ -53,6 +55,7 @@ import {
   treeItemSchema,
   updateItemSchema,
 } from "./schemas.js";
+import { versionSchema } from "./versions.controller.js";
 
 const TAG = "Pages";
 
@@ -222,6 +225,19 @@ const editorsSchema = z
       .describe("People with the page open in the editor."),
   })
   .describe("Who is editing the page now.");
+
+const pagePanelsSchema = z
+  .object({
+    labels: labelsSchema,
+    reactions: reactionsSchema,
+    watch: watchStatusSchema,
+    editors: editorsSchema,
+    versions: z.array(versionSchema).describe("Versions, newest first."),
+    backlinks: z.array(backlinkSchema).describe("Pages that link here, ordered by title."),
+    attachments: attachmentListSchema,
+    comments: commentListSchema,
+  })
+  .describe("What the app shows around a page.");
 
 const followResultSchema = z
   .object({
@@ -588,6 +604,49 @@ export class ItemsController {
       this.#services.accessExplanations.explainAccess(actor, { type: "item", id: item.id }, actor.id),
     ]);
     return { item, content, tasks, access };
+  }
+
+  @Get("pages/:pageId/panels")
+  @Permission("item.view", page)
+  @ApiRoute({
+    summary: "Get the side information of a page",
+    description:
+      "Returns in one answer what the app shows around a page after its content: labels, reactions, the caller's watch state, the people editing it, versions, pages that link here, attachments and comments, each as its own endpoint returns it.",
+    tags: [TAG],
+    params: pageParams,
+    response: {
+      description: "The side information.",
+      schema: pagePanelsSchema,
+      example: {
+        labels: ["runbook", "vpn"],
+        reactions: { enabled: true, reactions: [] },
+        watch: { own: null, effective: { state: "watching", keepActionable: true, source: "space" } },
+        editors: { editors: [] },
+        versions: [],
+        backlinks: [],
+        attachments: [],
+        comments: { threads: [], people: {} },
+      },
+    },
+  })
+  async panels(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
+    const actor = actorOf(request);
+    const services = this.#services;
+    const [labels, reactions, watch, editors, versions, backlinks, attachments, comments] = await Promise.all(
+      [
+        services.documents.labels(pageId),
+        services.reactions.forItem(actor, pageId),
+        services.watches.status(actor.id, { type: "item", id: pageId }),
+        services.versions.editors(actor, pageId),
+        services.versions.list(pageId).then((list) => services.copies.sources(actor, list)),
+        services.documents.backlinks(actor, pageId),
+        services.authorization
+          .authorize(actor, "item.edit", { type: "item", id: pageId })
+          .then((editable) => services.attachments.list(actor, pageId, editable ? "draft" : "published")),
+        services.comments.list(actor, pageId),
+      ],
+    );
+    return { labels, reactions, watch, editors: { editors }, versions, backlinks, attachments, comments };
   }
 
   @Get("pages/:pageId/editors")

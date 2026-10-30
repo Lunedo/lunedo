@@ -938,6 +938,58 @@ describe("sharing and access", () => {
     expect(asked(`/api/v1/pages/${VPN}/access/mine`)).toBe(false);
   });
 
+  it("loads the side information of a page with one request", async () => {
+    const base = routes("editor");
+    const item = base[`GET /api/v1/items/${VPN}`]().body;
+    const content = base[`GET /api/v1/pages/${VPN}/content`]().body;
+    const { requests } = mockApi({
+      ...base,
+      "GET /api/v1/pages/by-number/1002/view": () => ({
+        body: { item, content, tasks: [], access: mine("editor")().body },
+      }),
+      [`GET /api/v1/pages/${VPN}/panels`]: () => ({
+        body: {
+          labels: ["vpn-runbook"],
+          reactions: { enabled: true, reactions: [] },
+          watch: { own: null, effective: { state: "watching", keepActionable: true, source: "space" } },
+          editors: { editors: [] },
+          versions: [],
+          backlinks: [],
+          attachments: [],
+          comments: { threads: [], people: {} },
+        },
+      }),
+    });
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
+    expect(await screen.findByText("vpn-runbook")).toBeTruthy();
+    const asked = (path: string) => requests.some((request) => request.path === path);
+    expect(asked(`/api/v1/pages/${VPN}/panels`)).toBe(true);
+    for (const part of [
+      "labels",
+      "backlinks",
+      "reactions",
+      "comments",
+      "attachments",
+      "versions",
+      "editors",
+    ]) {
+      expect(asked(`/api/v1/pages/${VPN}/${part}`), part).toBe(false);
+    }
+    expect(asked(`/api/v1/items/${VPN}/watch`)).toBe(false);
+  });
+
+  it("loads each side part on its own when the combined request fails", async () => {
+    const base = routes("editor");
+    const { requests } = mockApi({
+      ...base,
+      [`GET /api/v1/pages/${VPN}/labels`]: () => ({ body: ["vpn-runbook"] }),
+    });
+    await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);
+    expect(await screen.findByText("vpn-runbook")).toBeTruthy();
+    expect(requests.some((request) => request.path === `/api/v1/pages/${VPN}/panels`)).toBe(true);
+    expect(requests.some((request) => request.path === `/api/v1/pages/${VPN}/labels`)).toBe(true);
+  });
+
   it("shows a Share button to people who may share", async () => {
     mockApi(routes("editor", { [`GET /api/v1/pages/${VPN}/access/mine`]: mine("editor") }));
     await renderAt(`/spaces/ITOPS/pages/1002/vpn-access`);

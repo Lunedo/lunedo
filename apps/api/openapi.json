@@ -220574,6 +220574,1227 @@
         }
       }
     },
+    "/api/v1/pages/{pageId}/panels": {
+      "get": {
+        "operationId": "items.panels",
+        "summary": "Get the side information of a page",
+        "description": "Returns in one answer what the app shows around a page after its content: labels, reactions, the caller's watch state, the people editing it, versions, pages that link here, attachments and comments, each as its own endpoint returns it.\n\nRequires the permission `item.view` on the item in `pageId`.",
+        "tags": [
+          "Pages"
+        ],
+        "x-lunedo-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The side information.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "labels": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "A label, lowercase, up to 100 characters."
+                      },
+                      "description": "Labels, sorted."
+                    },
+                    "reactions": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "Whether reactions are turned on for the page's space."
+                        },
+                        "reactions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "emoji": {
+                                "type": "string",
+                                "description": "The emoji."
+                              },
+                              "count": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "description": "How many people reacted with it."
+                              },
+                              "reacted": {
+                                "type": "boolean",
+                                "description": "Whether the caller reacted with it."
+                              },
+                              "people": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "Account ID."
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "description": "Name."
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "A person."
+                                },
+                                "description": "The first 20 people who reacted, in order."
+                              }
+                            },
+                            "required": [
+                              "emoji",
+                              "count",
+                              "reacted",
+                              "people"
+                            ],
+                            "additionalProperties": false,
+                            "description": "One emoji with the people who reacted with it."
+                          },
+                          "description": "Reactions on the page."
+                        }
+                      },
+                      "required": [
+                        "enabled",
+                        "reactions"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Reactions on a page or blog post."
+                    },
+                    "watch": {
+                      "type": "object",
+                      "properties": {
+                        "own": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "watching",
+                                    "muted",
+                                    "notWatching"
+                                  ],
+                                  "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                                },
+                                "keepActionable": {
+                                  "type": "boolean",
+                                  "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
+                                },
+                                "automatic": {
+                                  "type": "boolean",
+                                  "description": "True when the caller watches because they created, edited or commented on it."
+                                }
+                              },
+                              "required": [
+                                "state",
+                                "keepActionable",
+                                "automatic"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The state the caller set for this item or space, or null."
+                        },
+                        "effective": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "watching",
+                                    "muted",
+                                    "notWatching"
+                                  ],
+                                  "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                                },
+                                "keepActionable": {
+                                  "type": "boolean",
+                                  "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
+                                },
+                                "source": {
+                                  "type": "string",
+                                  "enum": [
+                                    "target",
+                                    "series",
+                                    "space"
+                                  ],
+                                  "description": "Where the state comes from: the item or space itself, its meeting series or its space."
+                                }
+                              },
+                              "required": [
+                                "state",
+                                "keepActionable",
+                                "source"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The state that applies, or null when nothing is set."
+                        }
+                      },
+                      "required": [
+                        "own",
+                        "effective"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Whether the caller watches or muted the item or space."
+                    },
+                    "editors": {
+                      "type": "object",
+                      "properties": {
+                        "editors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the account."
+                              },
+                              "name": {
+                                "description": "Name, or null when the caller may not see it.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "pictureRef": {
+                                "description": "Version of the profile picture, or null when there is none.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "pictureRef"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A person editing the page."
+                          },
+                          "description": "People with the page open in the editor."
+                        }
+                      },
+                      "required": [
+                        "editors"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Who is editing the page now."
+                    },
+                    "versions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "number": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the version, counting from 1."
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Title of the page in this version."
+                          },
+                          "note": {
+                            "type": "string",
+                            "description": "Note of the person who published it, or empty."
+                          },
+                          "reason": {
+                            "type": "string",
+                            "description": "Why the version exists: `published` (someone published), `session` (an editing session in live mode ended), `restored` (an older version was restored in live mode), `modeChanged` (the page switched modes), `imported` (a re-import applied the source version), `importedNotApplied` (a re-import added the source version to the history without applying it) or `copied` (the page was created as a copy of `copiedFrom`). New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "published",
+                              "session",
+                              "restored",
+                              "modeChanged",
+                              "imported",
+                              "importedNotApplied",
+                              "copied"
+                            ]
+                          },
+                          "restoredFrom": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The restored version, or null."
+                          },
+                          "copiedFrom": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "itemId": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "The source, or null when the caller cannot read it or it was deleted permanently."
+                                  },
+                                  "title": {
+                                    "description": "Title of the source when it was copied, or null when the caller cannot read the source.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "path": {
+                                    "description": "Path of the source in the web interface, or null when the caller cannot read the source.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "itemId",
+                                  "title",
+                                  "path"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Where a copy came from, for the first version of a copy; null otherwise."
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the version was created. ISO 8601 timestamp in UTC."
+                          },
+                          "createdBy": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the account."
+                                  },
+                                  "name": {
+                                    "description": "Name of the person, or null when the account no longer exists.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who published or restored, or null for versions of live sessions."
+                          },
+                          "contributors": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the account."
+                                },
+                                "name": {
+                                  "description": "Name of the person, or null when the account no longer exists.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A person."
+                            },
+                            "description": "Everyone who changed the content since the previous version."
+                          }
+                        },
+                        "required": [
+                          "number",
+                          "title",
+                          "note",
+                          "reason",
+                          "restoredFrom",
+                          "copiedFrom",
+                          "createdAt",
+                          "createdBy",
+                          "contributors"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A version of a page."
+                      },
+                      "description": "Versions, newest first."
+                    },
+                    "backlinks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Page that links here."
+                          },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991,
+                            "description": "Number of that page in the addresses of the app."
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Title of that page."
+                          },
+                          "spaceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Space of that page."
+                          },
+                          "spaceKey": {
+                            "type": "string",
+                            "description": "Key of that space."
+                          },
+                          "spaceName": {
+                            "type": "string",
+                            "description": "Name of that space."
+                          }
+                        },
+                        "required": [
+                          "itemId",
+                          "number",
+                          "title",
+                          "spaceId",
+                          "spaceKey",
+                          "spaceName"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A page that links to this page."
+                      },
+                      "description": "Pages that link here, ordered by title."
+                    },
+                    "attachments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the attachment."
+                          },
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Page or blog post the file is attached to."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "File name of the current version."
+                          },
+                          "size": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Size of the current version in bytes."
+                          },
+                          "contentType": {
+                            "type": "string",
+                            "description": "Media type, decided from the content of the file."
+                          },
+                          "preview": {
+                            "type": "string",
+                            "description": "How the file can be previewed; `none` offers only the download. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "image",
+                              "pdf",
+                              "video",
+                              "audio",
+                              "text",
+                              "code",
+                              "markdown",
+                              "csv",
+                              "svg",
+                              "word",
+                              "excel",
+                              "none"
+                            ]
+                          },
+                          "inline": {
+                            "type": "boolean",
+                            "description": "Whether browsers may show the file directly: images, video and audio."
+                          },
+                          "tooLargeForPreview": {
+                            "type": "boolean",
+                            "description": "Whether the image has more than 100 megapixels. Such images get no smaller version; pages and previews show them as a file that opens in full size."
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Number of the current version."
+                          },
+                          "versions": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Number of stored versions."
+                          },
+                          "draft": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "x-extensible-enum": [
+                                  "added",
+                                  "changed",
+                                  "deleted"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                          },
+                          "uploadedBy": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the account."
+                                  },
+                                  "name": {
+                                    "description": "Name, or null when hidden.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who uploaded the current version."
+                          },
+                          "uploadedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the current version was uploaded. ISO 8601 timestamp in UTC."
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the file was first attached. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "itemId",
+                          "name",
+                          "size",
+                          "contentType",
+                          "preview",
+                          "inline",
+                          "tooLargeForPreview",
+                          "version",
+                          "versions",
+                          "draft",
+                          "uploadedBy",
+                          "uploadedAt",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A file attached to a page or blog post."
+                      },
+                      "description": "Attachments, ordered by name."
+                    },
+                    "comments": {
+                      "type": "object",
+                      "properties": {
+                        "threads": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the comment."
+                              },
+                              "itemId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "Page or blog post the comment belongs to."
+                              },
+                              "parentId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "The comment this replies to, or null for a new thread."
+                              },
+                              "author": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "description": "Account ID."
+                                      },
+                                      "name": {
+                                        "description": "Name, or null when the caller may not see the person.",
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "pictureRef": {
+                                        "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "pictureRef"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Author, or null for a deleted comment."
+                              },
+                              "body": {
+                                "anyOf": [
+                                  {
+                                    "description": "Comment content as ProseMirror JSON with the reduced comment schema: paragraphs with bold, italic, underline, strike, subscript, superscript, inline code and links, mentions, bullet and numbered lists and code blocks. No tables, images or headings.",
+                                    "$ref": "#/components/schemas/Schema113ae44d8375"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Content, or null for a deleted comment."
+                              },
+                              "deleted": {
+                                "type": "boolean",
+                                "description": "Whether the comment was deleted. A deleted comment with replies stays as a placeholder."
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When the comment was written. ISO 8601 timestamp in UTC."
+                              },
+                              "editedAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "When the author last changed it, or null. ISO 8601 timestamp in UTC."
+                              },
+                              "reactions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "emoji": {
+                                      "type": "string",
+                                      "description": "The emoji."
+                                    },
+                                    "count": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991,
+                                      "description": "How many people reacted with it."
+                                    },
+                                    "reacted": {
+                                      "type": "boolean",
+                                      "description": "Whether the caller reacted with it."
+                                    },
+                                    "people": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "description": "Account ID."
+                                          },
+                                          "name": {
+                                            "type": "string",
+                                            "description": "Name."
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "name"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "A person."
+                                      },
+                                      "description": "The first 20 people who reacted, in order."
+                                    }
+                                  },
+                                  "required": [
+                                    "emoji",
+                                    "count",
+                                    "reacted",
+                                    "people"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "One emoji with the people who reacted with it."
+                                },
+                                "description": "Reactions, empty when reactions are turned off."
+                              },
+                              "quote": {
+                                "description": "For inline comments, the text the comment refers to; for comments on a whiteboard element, the text of the element (possibly empty). Readers see inline comments only once their text is published.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "anchor": {
+                                "type": "string",
+                                "description": "`page` for a comment on the whole page or whiteboard, `inline` for a comment on text in it, `element` for a comment on an element of a whiteboard, `detached` for a comment whose text or element no longer exists. Detached comments are listed with the page comments. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "page",
+                                  "inline",
+                                  "element",
+                                  "detached"
+                                ]
+                              },
+                              "elementId": {
+                                "description": "The whiteboard element the comment refers to, also after it was removed, or null.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "resolvedAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "When the inline comment was resolved, or null while it is open. ISO 8601 timestamp in UTC."
+                              },
+                              "resolvedBy": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "description": "Account ID."
+                                      },
+                                      "name": {
+                                        "description": "Name, or null when the caller may not see the person.",
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "pictureRef": {
+                                        "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "pictureRef"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Who resolved it, or null."
+                              },
+                              "replies": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "ID of the comment."
+                                    },
+                                    "itemId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "Page or blog post the comment belongs to."
+                                    },
+                                    "parentId": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "format": "uuid"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "The comment this replies to, or null for a new thread."
+                                    },
+                                    "author": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "format": "uuid",
+                                              "description": "Account ID."
+                                            },
+                                            "name": {
+                                              "description": "Name, or null when the caller may not see the person.",
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "pictureRef": {
+                                              "description": "Version of the profile picture, or null without one. Changes whenever the picture changes; load the picture from `GET /api/v1/accounts/{accountId}/picture`.",
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "name",
+                                            "pictureRef"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Author, or null for a deleted comment."
+                                    },
+                                    "body": {
+                                      "anyOf": [
+                                        {
+                                          "description": "Comment content as ProseMirror JSON with the reduced comment schema: paragraphs with bold, italic, underline, strike, subscript, superscript, inline code and links, mentions, bullet and numbered lists and code blocks. No tables, images or headings.",
+                                          "$ref": "#/components/schemas/Schema113ae44d8375"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Content, or null for a deleted comment."
+                                    },
+                                    "deleted": {
+                                      "type": "boolean",
+                                      "description": "Whether the comment was deleted. A deleted comment with replies stays as a placeholder."
+                                    },
+                                    "createdAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "description": "When the comment was written. ISO 8601 timestamp in UTC."
+                                    },
+                                    "editedAt": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "format": "date-time"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "When the author last changed it, or null. ISO 8601 timestamp in UTC."
+                                    },
+                                    "reactions": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "emoji": {
+                                            "type": "string",
+                                            "description": "The emoji."
+                                          },
+                                          "count": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991,
+                                            "description": "How many people reacted with it."
+                                          },
+                                          "reacted": {
+                                            "type": "boolean",
+                                            "description": "Whether the caller reacted with it."
+                                          },
+                                          "people": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "object",
+                                              "properties": {
+                                                "id": {
+                                                  "type": "string",
+                                                  "format": "uuid",
+                                                  "description": "Account ID."
+                                                },
+                                                "name": {
+                                                  "type": "string",
+                                                  "description": "Name."
+                                                }
+                                              },
+                                              "required": [
+                                                "id",
+                                                "name"
+                                              ],
+                                              "additionalProperties": false,
+                                              "description": "A person."
+                                            },
+                                            "description": "The first 20 people who reacted, in order."
+                                          }
+                                        },
+                                        "required": [
+                                          "emoji",
+                                          "count",
+                                          "reacted",
+                                          "people"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "One emoji with the people who reacted with it."
+                                      },
+                                      "description": "Reactions, empty when reactions are turned off."
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "itemId",
+                                    "parentId",
+                                    "author",
+                                    "body",
+                                    "deleted",
+                                    "createdAt",
+                                    "editedAt",
+                                    "reactions"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "A reply."
+                                },
+                                "description": "Replies, oldest first. Replies are one level deep."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "itemId",
+                              "parentId",
+                              "author",
+                              "body",
+                              "deleted",
+                              "createdAt",
+                              "editedAt",
+                              "reactions",
+                              "quote",
+                              "anchor",
+                              "elementId",
+                              "resolvedAt",
+                              "resolvedBy",
+                              "replies"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A comment with its replies."
+                          },
+                          "description": "Threads, oldest first."
+                        },
+                        "people": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Name of the person."
+                          },
+                          "description": "Names of people mentioned in the comments that the caller may see, by account ID."
+                        }
+                      },
+                      "required": [
+                        "threads",
+                        "people"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Comments of a page."
+                    }
+                  },
+                  "required": [
+                    "labels",
+                    "reactions",
+                    "watch",
+                    "editors",
+                    "versions",
+                    "backlinks",
+                    "attachments",
+                    "comments"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What the app shows around a page."
+                },
+                "example": {
+                  "labels": [
+                    "runbook",
+                    "vpn"
+                  ],
+                  "reactions": {
+                    "enabled": true,
+                    "reactions": []
+                  },
+                  "watch": {
+                    "own": null,
+                    "effective": {
+                      "state": "watching",
+                      "keepActionable": true,
+                      "source": "space"
+                    }
+                  },
+                  "editors": {
+                    "editors": []
+                  },
+                  "versions": [],
+                  "backlinks": [],
+                  "attachments": [],
+                  "comments": {
+                    "threads": [],
+                    "people": {}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:lunedo:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:lunedo:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:lunedo:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:lunedo:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:lunedo:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/pages/{pageId}/publish": {
       "post": {
         "operationId": "versions.publish",

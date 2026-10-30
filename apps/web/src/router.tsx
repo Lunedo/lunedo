@@ -139,6 +139,7 @@ import { FolderScreen } from "./spaces/folder-screen.js";
 import { itemHref } from "./spaces/item-paths.js";
 import { LabelScreen } from "./spaces/label-screen.js";
 import { itemNumberParams, resolveNumberedItem } from "./spaces/numbered-item.js";
+import { preloadPagePanels } from "./spaces/page-panels.js";
 import { PageScreen } from "./spaces/page-screen.js";
 import { resolveNumberedPage } from "./spaces/page-view.js";
 import { PersonalSpaceScreen } from "./spaces/personal-space-screen.js";
@@ -532,6 +533,7 @@ const pageRoute = createRoute({
   loader: async ({ context: { queryClient }, params, location }) => {
     const item = await resolveNumberedPage(queryClient, params.number, location);
     if (item?.kind !== "page") return;
+    preloadPagePanels(queryClient, item.id);
     await settle(
       queryClient.ensureQueryData(contentQuery(item.id)),
       queryClient.ensureQueryData(taskStatusesQuery(item.id)),

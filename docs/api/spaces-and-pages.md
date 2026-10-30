@@ -30,6 +30,7 @@ The previews return who gains or loses access or gets another role. People the c
 | `GET /api/v1/items/{itemId}` | One item with its space and ancestors | `item.view` |
 | `GET /api/v1/items/by-number/{number}` | The same, by the item's number | `item.view` |
 | `GET /api/v1/pages/by-number/{number}/view` | The item by its number together with the content readers see, the task statuses and the caller's own access, in one answer | `item.view` |
+| `GET /api/v1/pages/{pageId}/panels` | Labels, reactions, own watch state, editors, versions, backlinks, attachments and comments of a page in one answer, each as its own route returns it | `item.view` |
 | `GET /api/v1/items?q=` | Finds pages and folders by title | signed in or token |
 | `PATCH /api/v1/items/{itemId}` | Changes title, folder description, page width or heading numbers | `item.edit` |
 | `POST /api/v1/items/{itemId}/move/preview`, `…/move` | Previews and moves an item with its children, also to another space | `item.edit` |

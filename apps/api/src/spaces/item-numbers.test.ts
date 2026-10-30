@@ -167,6 +167,20 @@ describe.skipIf(!databaseBaseUrl)("item lookup by number", () => {
           tasks: isPage ? tasks.json() : null,
           access: access.json(),
         });
+        if (!isPage) continue;
+        const panels = await caller.get(`/api/v1/pages/${target.id}/panels`);
+        const part = async (path: string) => (await caller.get(path)).json();
+        expect(panels.statusCode, label).toBe(200);
+        expect(panels.json(), label).toEqual({
+          labels: await part(`/api/v1/pages/${target.id}/labels`),
+          reactions: await part(`/api/v1/pages/${target.id}/reactions`),
+          watch: await part(`/api/v1/items/${target.id}/watch`),
+          editors: await part(`/api/v1/pages/${target.id}/editors`),
+          versions: await part(`/api/v1/pages/${target.id}/versions`),
+          backlinks: await part(`/api/v1/pages/${target.id}/backlinks`),
+          attachments: await part(`/api/v1/pages/${target.id}/attachments`),
+          comments: await part(`/api/v1/pages/${target.id}/comments`),
+        });
       }
     }
     expect(seen).toEqual(new Set(["200", "401", "404"]));
