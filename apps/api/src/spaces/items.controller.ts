@@ -632,20 +632,15 @@ export class ItemsController {
   async panels(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
     const actor = actorOf(request);
     const services = this.#services;
-    const [labels, reactions, watch, editors, versions, backlinks, attachments, comments] = await Promise.all(
-      [
-        services.documents.labels(pageId),
-        services.reactions.forItem(actor, pageId),
-        services.watches.status(actor.id, { type: "item", id: pageId }),
-        services.versions.editors(actor, pageId),
-        services.versions.list(pageId).then((list) => services.copies.sources(actor, list)),
-        services.documents.backlinks(actor, pageId),
-        services.authorization
-          .authorize(actor, "item.edit", { type: "item", id: pageId })
-          .then((editable) => services.attachments.list(actor, pageId, editable ? "draft" : "published")),
-        services.comments.list(actor, pageId),
-      ],
-    );
+    const labels = await services.documents.labels(pageId);
+    const reactions = await services.reactions.forItem(actor, pageId);
+    const watch = await services.watches.status(actor.id, { type: "item", id: pageId });
+    const editors = await services.versions.editors(actor, pageId);
+    const versions = await services.copies.sources(actor, await services.versions.list(pageId));
+    const backlinks = await services.documents.backlinks(actor, pageId);
+    const editable = await services.authorization.authorize(actor, "item.edit", { type: "item", id: pageId });
+    const attachments = await services.attachments.list(actor, pageId, editable ? "draft" : "published");
+    const comments = await services.comments.list(actor, pageId);
     return { labels, reactions, watch, editors: { editors }, versions, backlinks, attachments, comments };
   }
 
