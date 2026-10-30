@@ -247391,7 +247391,7 @@
       "get": {
         "operationId": "items.children",
         "summary": "List items of the page tree",
-        "description": "Lists the root items of a space or the children of an item, in tree order. Children load per level, so large spaces stay fast.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "description": "Lists the root items of a space or the children of an item, in tree order. Children load per level, so large spaces stay fast. The response carries an `ETag`; a request with the same value in `If-None-Match` answers `304` without a body while the list is unchanged.\n\nRequires the permission `space.view` on the space in `spaceId`.",
         "tags": [
           "Pages"
         ],
@@ -247961,6 +247961,9 @@
                 }
               }
             }
+          },
+          "304": {
+            "description": "Not modified: the response matches the `If-None-Match` header."
           },
           "400": {
             "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",

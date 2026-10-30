@@ -173,6 +173,32 @@ describe.skipIf(!databaseBaseUrl)("ownership and page status through the API", (
     expect(listed.json()).toMatchObject({ enabled: false });
   });
 
+  it("answers an unchanged item list with 304 and never to a person who may not read it", async () => {
+    const context = await setup();
+    const url = `/api/v1/spaces/${context.space.id}/items`;
+    const first = await context.reader.client.get(url);
+    expect(first.statusCode).toBe(200);
+    const etag = String(first.headers.etag);
+    expect(etag).toMatch(/^"[A-Za-z0-9_-]+"$/);
+    expect(first.headers["cache-control"]).toBe("private, no-cache");
+
+    const unchanged = await context.reader.client.get(url, { "if-none-match": etag });
+    expect(unchanged.statusCode).toBe(304);
+    expect(unchanged.body).toBe("");
+
+    const renamed = await context.editor.client.patch(`/api/v1/items/${context.page.id}`, {
+      title: "Restart the VPN gateway now",
+    });
+    expect(renamed.statusCode, renamed.body).toBe(200);
+    const changed = await context.reader.client.get(url, { "if-none-match": etag });
+    expect(changed.statusCode).toBe(200);
+    expect(changed.headers.etag).not.toBe(etag);
+
+    const outsider = await person();
+    const refused = await outsider.client.get(url, { "if-none-match": String(changed.headers.etag) });
+    expect(refused.statusCode).toBe(404);
+  });
+
   it("lists items without an owner for space admins only", async () => {
     const context = await setup();
     await test.runtime.services.memberships.deactivate({ type: "system" }, context.author.id);

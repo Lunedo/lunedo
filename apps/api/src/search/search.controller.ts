@@ -238,8 +238,15 @@ function facetSchema<T extends z.ZodType>(value: T, description: string) {
 const responseSchema = z
   .object({
     results: z.array(resultSchema).describe("Results, in the requested order."),
-    total: z.number().int().describe("Number of results the caller can read, on all pages, up to the 1,000 best matches."),
-    totalCapped: z.boolean().describe("True when the search has more matches than `total` counts. Show the number as \"1,000+\"; the results and counts cover the 1,000 most recently changed matches."),
+    total: z
+      .number()
+      .int()
+      .describe("Number of results the caller can read, on all pages, up to the 1,000 best matches."),
+    totalCapped: z
+      .boolean()
+      .describe(
+        'True when the search has more matches than `total` counts. Show the number as "1,000+"; the results and counts cover the 1,000 most recently changed matches.',
+      ),
     nextCursor: z.string().nullable().describe("Cursor for the next page, or null on the last page."),
     facets: z
       .object({

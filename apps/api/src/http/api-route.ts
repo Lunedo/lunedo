@@ -27,6 +27,7 @@ export interface ApiRouteDefinition {
   bodyExample?: unknown;
   upload?: { contentTypes: string[]; description: string };
   response?: ApiResponse;
+  conditional?: boolean;
   raw?: RawResponse;
   errors?: ProblemCode[];
 }
