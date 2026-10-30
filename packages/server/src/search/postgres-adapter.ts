@@ -27,6 +27,7 @@ const MIN_TYPO_LENGTH = 4;
 const TYPO_SIMILARITY = 0.5;
 const TYPO_ALTERNATIVES = 3;
 const TYPO_CANDIDATES = 40;
+const TYPO_FEW_RESULTS = 5;
 const FACET_LIMIT = 20;
 const FACET_SAMPLE = 5000;
 const RECENT_USE_DAYS = 30;
@@ -44,6 +45,7 @@ function usageBoost(view: SQL): SQL {
 }
 
 interface QueryParts {
+  expanded: boolean;
   match: SQL;
   score: SQL;
   excerpt: SQL;
@@ -246,9 +248,8 @@ export class PostgresSearchAdapter implements SearchAdapter {
   }
 
   async search(executor: Executor, request: AdapterSearch): Promise<AdapterResult> {
-    const { viewer } = request;
-    const parts = await this.#queryParts(executor, request);
-    if (parts === "nothing")
+    const exact = await this.#queryParts(executor, request, false);
+    if (exact === "nothing")
       return {
         hits: [],
         total: 0,
@@ -256,6 +257,15 @@ export class PostgresSearchAdapter implements SearchAdapter {
         facets: request.facets ? emptyFacets() : null,
         corrections: new Map(),
       };
+    const result = await this.#execute(executor, request, exact);
+    if (result.total >= TYPO_FEW_RESULTS) return result;
+    const tolerant = await this.#queryParts(executor, request, true);
+    if (tolerant === "nothing" || !tolerant.expanded) return result;
+    return this.#execute(executor, request, tolerant);
+  }
+
+  async #execute(executor: Executor, request: AdapterSearch, parts: QueryParts): Promise<AdapterResult> {
+    const { viewer } = request;
 
     const conditions = [...visibleChunkConditions(request.viewer), parts.match];
     if (!request.filters.includeArchived) conditions.push(sql`not c.archived`);
@@ -483,16 +493,28 @@ export class PostgresSearchAdapter implements SearchAdapter {
     return new Map(result.rows.map((row) => [row.language, Number(row.n)]));
   }
 
-  async #queryParts(executor: Executor, request: AdapterSearch): Promise<QueryParts | "nothing"> {
+  async #queryParts(
+    executor: Executor,
+    request: AdapterSearch,
+    typos: boolean,
+  ): Promise<QueryParts | "nothing"> {
     const { query } = request;
     const plainExcerpt = sql`left(bc.body, 240)`;
     if (query.clauses.length === 0 && query.excluded.length === 0) {
-      return { match: sql`true`, score: sql`0`, excerpt: plainExcerpt, corrections: new Map() };
+      return {
+        expanded: false,
+        match: sql`true`,
+        score: sql`0`,
+        excerpt: plainExcerpt,
+        corrections: new Map(),
+      };
     }
     const configs = await this.#configs(executor, request.viewer);
     if (configs.length === 0) return "nothing";
     const prefix = request.prefixLastTerm ? lastTerm(query) : null;
-    const expansions = await this.#expansions(executor, request.viewer, configs, query, prefix);
+    const expansions = typos
+      ? await this.#expansions(executor, request.viewer, configs, query, prefix)
+      : { alternatives: new Map<string, string[]>(), corrections: new Map<string, string>() };
     const perConfig = configs.map((config) => ({
       config,
       full: tsquery(sql`${config}::regconfig`, query, expansions.alternatives, prefix),
@@ -504,6 +526,9 @@ export class PostgresSearchAdapter implements SearchAdapter {
         sql` `,
       )} end)`;
     return {
+      expanded:
+        [...expansions.alternatives.values()].some((words) => words.length > 0) ||
+        expansions.corrections.size > 0,
       match: sql`(${sql.join(
         perConfig.map((entry) => sql`(c.config = ${entry.config} and c.document @@ ${entry.full})`),
         sql` or `,

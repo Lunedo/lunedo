@@ -289,6 +289,31 @@ describe.skipIf(!baseUrl)("search", () => {
     expect(await ids(w.other, w.org.id, `${w.word} cartrige`)).toEqual([w.gamma]);
   });
 
+  it("looks for similar words only when a search finds fewer than five results", async () => {
+    const org = await organization();
+    const authorId = await member(org.id, "member", "Typo Author");
+    const author = accountPrincipal(authorId);
+    const created = await space(org.id, authorId, { visibility: "organization" });
+    const stem = `cartridg${Math.random().toString(36).slice(2, 8).replace(/[^a-z]/g, "")}`;
+    const add = (title: string, text: string) =>
+      test.services.tree.create(author, created.id, {
+        kind: "page",
+        title,
+        mode: "live",
+        placement: { parentId: null },
+        document: doc(paragraph(text)),
+      });
+    const near = await add("Near", `${stem}x spare`);
+    const first = await add("One", `${stem}e spare`);
+    await drain();
+    expect((await ids(author, org.id, `${stem}e`)).sort()).toEqual([first.id, near.id].sort());
+    for (let index = 0; index < 5; index++) await add(`More ${index}`, `${stem}e spare`);
+    await drain();
+    const many = await ids(author, org.id, `${stem}e`);
+    expect(many).toHaveLength(6);
+    expect(many).not.toContain(near.id);
+  });
+
   it("keeps the words used to correct typos per organization", async () => {
     const w = await world();
     const unique = `zephyr${w.word.replace(/[^a-z]/g, "")}`;
