@@ -151,6 +151,22 @@ describe.skipIf(!databaseBaseUrl)("item lookup by number", () => {
         expect(byNumber.statusCode, label).toBe(byId.statusCode);
         expect(byNumber.json(), label).toEqual(byId.json());
         seen.add(`${byId.statusCode}`);
+        const view = await caller.get(`/api/v1/pages/by-number/${target.number}/view`);
+        expect(view.statusCode, label).toBe(byId.statusCode);
+        if (view.statusCode !== 200) {
+          expect(view.json(), label).toEqual(byNumber.json());
+          continue;
+        }
+        const content = await caller.get(`/api/v1/pages/${target.id}/content`);
+        const tasks = await caller.get(`/api/v1/pages/${target.id}/tasks`);
+        const access = await caller.get(`/api/v1/pages/${target.id}/access/mine`);
+        const isPage = target !== folder;
+        expect(view.json(), label).toEqual({
+          item: byNumber.json(),
+          content: isPage ? content.json() : null,
+          tasks: isPage ? tasks.json() : null,
+          access: access.json(),
+        });
       }
     }
     expect(seen).toEqual(new Set(["200", "401", "404"]));

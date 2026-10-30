@@ -24,6 +24,7 @@ export type ItemCopy = Ok<"/api/v1/items/{itemId}/copy", "post">;
 export type SpacePermission = Ok<"/api/v1/spaces/{spaceId}/permissions", "get">[number];
 export type HolderKind = SpacePermission["principalKind"];
 export type PageContent = Ok<"/api/v1/pages/{pageId}/content", "get">;
+export type PageView = Ok<"/api/v1/pages/by-number/{number}/view", "get">;
 export type NewestContent = Ok<"/api/v1/spaces/{spaceId}/newest-content", "get">[number];
 
 export const spaceKeys = {
@@ -37,6 +38,7 @@ export const spaceKeys = {
   labelPages: (spaceId: string, label: string) => ["spaces", spaceId, "labels", label] as const,
   item: (itemId: string) => ["items", itemId] as const,
   itemNumber: (number: number) => ["itemNumbers", number] as const,
+  pageView: (number: number) => ["itemNumbers", number, "view"] as const,
   content: (itemId: string) => ["items", itemId, "content"] as const,
   labels: (itemId: string) => ["items", itemId, "labels"] as const,
   backlinks: (itemId: string) => ["items", itemId, "backlinks"] as const,
@@ -63,6 +65,17 @@ export function itemNumberQuery(number: number) {
         api.GET("/api/v1/items/by-number/{number}", { params: { path: { number: String(number) } } }),
       ),
     staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function pageViewQuery(number: number) {
+  return queryOptions({
+    queryKey: spaceKeys.pageView(number),
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/pages/by-number/{number}/view", { params: { path: { number: String(number) } } }),
+      ),
+    staleTime: 0,
   });
 }
 

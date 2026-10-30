@@ -27,3 +27,10 @@ export function currentRequestContext(): RequestContext | undefined {
 export function clearRequestCache(): void {
   storage.getStore()?.cache?.clear();
 }
+
+/** Runs `fn` with an empty request cache, so it reads every fact again but each only once. */
+export function withFreshRequestCache<T>(fn: () => T): T {
+  const current = storage.getStore();
+  if (!current) return fn();
+  return storage.run({ ...current, cache: new Map() }, fn);
+}

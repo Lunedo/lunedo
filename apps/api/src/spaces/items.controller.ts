@@ -1,4 +1,10 @@
-import { containsBlock, MAX_TREE_PAGE, renderPageMarkdown, treeItemKinds } from "@lunedo/server";
+import {
+  containsBlock,
+  MAX_TREE_PAGE,
+  type Principal,
+  renderPageMarkdown,
+  treeItemKinds,
+} from "@lunedo/server";
 import {
   Body,
   Controller,
@@ -17,6 +23,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
+import { taskStatusSchema } from "../collaboration/schemas.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { answerConditionally } from "../http/conditional.js";
@@ -24,6 +31,7 @@ import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { itemNumber, itemNumberParam, uuid } from "../http/schemas.js";
+import { accessExplanationSchema, exampleExplanation } from "../sharing/schemas.js";
 import { parentEntriesSchema, restorableInSpace, withParentsQuery } from "./restore-parents.js";
 import {
   archivedItemSchema,
@@ -47,6 +55,22 @@ import {
 } from "./schemas.js";
 
 const TAG = "Pages";
+
+const pageViewSchema = z
+  .object({
+    item: itemDetailsSchema,
+    content: pageContentSchema
+      .nullable()
+      .describe(
+        "The content readers see, or null for an item that is not a page or has no readable content.",
+      ),
+    tasks: z
+      .array(taskStatusSchema)
+      .nullable()
+      .describe("Statuses of the tasks in the order of the page, or null for an item that is not a page."),
+    access: accessExplanationSchema,
+  })
+  .describe("What the app needs to show a page.");
 const space = { type: "space", param: "spaceId" } as const;
 const item = { type: "item", param: "itemId" } as const;
 const numberedItem = { type: "item", param: "number", by: "number" } as const;
@@ -512,14 +536,58 @@ export class ItemsController {
     response: { description: "The content.", schema: pageContentSchema, example: examplePageContent },
   })
   async content(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
+    const content = await this.#readableContent(actorOf(request), pageId);
+    if (!content) throw notFound();
+    return content;
+  }
+
+  async #readableContent(actor: Principal, pageId: string) {
     const readable = await this.#services.documents.readable(pageId);
-    if (!readable) throw notFound();
+    if (!readable) return null;
     const document = await this.#services.comments.markOpenThreads(pageId, readable.document);
-    return {
-      ...readable,
-      document,
-      references: await this.#services.documents.references(actorOf(request), document),
-    };
+    return { ...readable, document, references: await this.#services.documents.references(actor, document) };
+  }
+
+  @Get("pages/by-number/:number/view")
+  @Permission("item.view", numberedItem)
+  @ApiRoute({
+    summary: "Get a page to read",
+    description:
+      "Returns in one answer what the app needs to show a page found by the number in its address: the item as `GET /items/by-number/{number}` returns it, the content readers see as `GET /pages/{pageId}/content` returns it, the statuses of its tasks and the caller's own access. `content` and `tasks` are null for an item that is not a page, and `content` also when the page has nothing readers may see yet. A number that does not exist and a number of an item the caller cannot see give the same `notFound` answer.",
+    tags: [TAG],
+    params: numberParams,
+    response: {
+      description: "The page.",
+      schema: pageViewSchema,
+      example: {
+        item: {
+          ...exampleItem,
+          spaceKey: "ITOPS",
+          spaceName: "IT Operations",
+          spaceAccess: true,
+          spaceContentLanguage: "en",
+          ancestors: [],
+          owner: null,
+          ownershipTransferable: false,
+        },
+        content: examplePageContent,
+        tasks: [],
+        access: exampleExplanation,
+      },
+    },
+  })
+  async view(@Param("number") number: string, @Req() request: FastifyRequest) {
+    const actor = actorOf(request);
+    const itemId = await this.#services.tree.idOfNumber(Number(number));
+    const item = itemId ? await this.#services.tree.details(actor, itemId) : null;
+    if (!item) throw notFound();
+    const page = item.kind === "page";
+    const [content, tasks, access] = await Promise.all([
+      page ? this.#readableContent(actor, item.id) : null,
+      page ? this.#services.tasks.statuses(actor, item.id) : null,
+      this.#services.accessExplanations.explainAccess(actor, { type: "item", id: item.id }, actor.id),
+    ]);
+    return { item, content, tasks, access };
   }
 
   @Get("pages/:pageId/editors")

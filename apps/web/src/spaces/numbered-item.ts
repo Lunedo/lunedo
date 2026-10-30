@@ -1,7 +1,13 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { notFound, redirect } from "@tanstack/react-router";
 import { itemHref } from "./item-paths.js";
-import { type ItemDetails, itemNumberQuery, itemQuery } from "./space-queries.js";
+import {
+  contentQuery,
+  type ItemDetails,
+  itemNumberQuery,
+  itemQuery,
+  pageViewQuery,
+} from "./space-queries.js";
 
 const ITEM_NUMBER = /^[1-9][0-9]{0,14}$/;
 
@@ -18,13 +24,19 @@ export const itemNumberParams = {
   }),
 };
 
+export type ItemLocation = { pathname: string; searchStr: string; hash: string };
+
 export async function resolveNumberedItem(
   queryClient: QueryClient,
   number: number,
-  location: { pathname: string; searchStr: string; hash: string },
+  location: ItemLocation,
 ): Promise<ItemDetails | null> {
   const item = await queryClient.fetchQuery({ ...itemNumberQuery(number), staleTime: 0 }).catch(() => null);
   if (!item) return null;
+  return keepItem(queryClient, item, location);
+}
+
+export function keepItem(queryClient: QueryClient, item: ItemDetails, location: ItemLocation): ItemDetails {
   queryClient.setQueryData(itemQuery(item.id).queryKey, item);
   const href = itemHref({ ...item, link: null }, item.spaceKey);
   if (href && decodeURI(href) !== decodeURI(location.pathname)) {
