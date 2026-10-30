@@ -9,7 +9,8 @@ Every environment variable Lunedo reads, grouped by task. The [configuration fil
 | Variable | Default | Allowed values | Secret | Description |
 |---|---|---|---|---|
 | `LUNEDO_DATABASE_URL` | required | A `postgres://` URL, for example `postgres://user:password@host:5432/database`. | yes, also as `LUNEDO_DATABASE_URL_FILE` | PostgreSQL connection URL. |
-| `LUNEDO_DATABASE_POOL_SIZE` | twice the number of CPUs plus 2, at least 6 and at most 24 | A whole number of at least 1. |  | Maximum database connections in the pool of each process. The API, the worker and the collaboration server each have a pool, and each process also holds one connection for notifications and up to four for the job queue. |
+| `LUNEDO_DATABASE_POOL_SIZE` | twice the number of CPUs plus 2, at least 6 and at most 24; with several API processes each of them gets this number divided by their count, at least 2 | A whole number of at least 1. |  | Maximum database connections in the pool of each process. The worker, the collaboration server and every API process each have a pool; each process also holds one connection for notifications, and the worker up to four and every API process one for the job queue. |
+| `LUNEDO_API_PROCESSES` | the number of CPUs, at most 8 | A whole number from 1 to 64. |  | Number of API processes. Requests are spread over them, so the API can use more than one CPU. Each process has its own database pool. |
 | `LUNEDO_HOST` | `0.0.0.0` |  |  | Address the HTTP servers listen on. |
 | `LUNEDO_API_PORT` | `3000` | A whole number from 1 to 65,535. |  | Port of the API. |
 | `LUNEDO_COLLAB_PORT` | `3001` | A whole number from 1 to 65,535. |  | Port of the collaboration server. |

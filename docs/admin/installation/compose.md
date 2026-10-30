@@ -15,6 +15,7 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     shm_size: 1gb
+    command: ["postgres", "-c", "max_connections=200"]
     environment:
       POSTGRES_USER: lunedo
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}

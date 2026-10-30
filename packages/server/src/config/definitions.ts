@@ -128,10 +128,17 @@ export const configSettings: readonly ConfigSetting[] = [
     setting(
       "LUNEDO_DATABASE_POOL_SIZE",
       positiveInt.optional(),
-      "Maximum database connections in the pool of each process. The API, the worker and the collaboration server each have a pool, and each process also holds one connection for notifications and up to four for the job queue.",
+      "Maximum database connections in the pool of each process. The worker, the collaboration server and every API process each have a pool; each process also holds one connection for notifications, and the worker up to four and every API process one for the job queue.",
       {
-        defaultText: "twice the number of CPUs plus 2, at least 6 and at most 24",
+        defaultText:
+          "twice the number of CPUs plus 2, at least 6 and at most 24; with several API processes each of them gets this number divided by their count, at least 2",
       },
+    ),
+    setting(
+      "LUNEDO_API_PROCESSES",
+      positiveInt.max(64).optional(),
+      "Number of API processes. Requests are spread over them, so the API can use more than one CPU. Each process has its own database pool.",
+      { defaultText: "the number of CPUs, at most 8" },
     ),
     setting("LUNEDO_HOST", nonEmpty.default("0.0.0.0"), "Address the HTTP servers listen on."),
     setting("LUNEDO_API_PORT", port.default(3000), "Port of the API."),

@@ -154,7 +154,7 @@ export async function createServerRuntime(options: {
   const pool = createDatabasePool({
     connectionString,
     applicationName: `lunedo-${role}`,
-    max: config.database.poolSize,
+    max: role === "api" ? config.database.apiPoolSize : config.database.poolSize,
     onAcquire: metrics.observeDatabaseAcquire,
   });
   pool.on("error", (error) => logger.warn({ err: error }, "Idle database connection failed"));

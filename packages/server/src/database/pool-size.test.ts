@@ -1,17 +1,25 @@
 import { describe, expect, it } from "vitest";
 import {
+  apiPoolSize,
   connectionsOfAllRoles,
-  connectionsPerProcess,
+  defaultApiProcesses,
   defaultPoolSize,
-  JOB_QUEUE_CONNECTIONS,
-  LISTENER_CONNECTIONS,
+  MAX_API_PROCESSES,
   MAX_POOL_SIZE,
+  MIN_API_POOL_SIZE,
   MIN_POOL_SIZE,
 } from "./pool-size.js";
 
 const POSTGRES_DEFAULT_LIMIT = 100;
+const COMPOSE_LIMIT = 200;
 const RESERVED_FOR_ADMINISTRATORS = 3;
 const ROOM_FOR_TOOLS = 5;
+
+function defaults(cpus: number) {
+  const poolSize = defaultPoolSize(cpus);
+  const apiProcesses = defaultApiProcesses(cpus);
+  return { poolSize, apiProcesses, apiPoolSize: apiPoolSize(poolSize, apiProcesses) };
+}
 
 describe("the default pool size", () => {
   it("grows with the CPUs of the container", () => {
@@ -25,14 +33,35 @@ describe("the default pool size", () => {
     }
   });
 
-  it("counts the notification and job queue connections of each process", () => {
-    expect(connectionsPerProcess(10)).toBe(10 + JOB_QUEUE_CONNECTIONS + LISTENER_CONNECTIONS);
+  it("starts one API process per CPU, at most eight", () => {
+    expect([0, 1, 2, 4, 8, 16].map(defaultApiProcesses)).toEqual([1, 1, 2, 4, 8, MAX_API_PROCESSES]);
   });
 
-  it("keeps the three processes of one container below the PostgreSQL default limit with room for tools", () => {
-    for (let cpus = 1; cpus <= 1024; cpus++) {
-      expect(connectionsOfAllRoles(defaultPoolSize(cpus))).toBeLessThanOrEqual(
+  it("splits the pool of the API among its processes and keeps a single process at the full pool", () => {
+    expect(apiPoolSize(10, 1)).toBe(10);
+    expect(apiPoolSize(10, 4)).toBe(MIN_API_POOL_SIZE);
+    expect(apiPoolSize(24, 8)).toBe(3);
+    expect(apiPoolSize(25, 2)).toBe(12);
+  });
+
+  it("counts the pools, notification and job queue connections of every process", () => {
+    expect(connectionsOfAllRoles({ poolSize: 10, apiPoolSize: 2, apiProcesses: 4 })).toBe(
+      4 * (2 + 1 + 1) + (10 + 4 + 1) + (10 + 1),
+    );
+  });
+
+  it("keeps one container up to eight CPUs below the PostgreSQL default limit with room for tools", () => {
+    for (let cpus = 1; cpus <= 8; cpus++) {
+      expect(connectionsOfAllRoles(defaults(cpus)), `${cpus} CPUs`).toBeLessThanOrEqual(
         POSTGRES_DEFAULT_LIMIT - RESERVED_FOR_ADMINISTRATORS - ROOM_FOR_TOOLS,
+      );
+    }
+  });
+
+  it("keeps one container on any CPU count below the limit the Compose file sets", () => {
+    for (let cpus = 1; cpus <= 1024; cpus++) {
+      expect(connectionsOfAllRoles(defaults(cpus)), `${cpus} CPUs`).toBeLessThanOrEqual(
+        COMPOSE_LIMIT - RESERVED_FOR_ADMINISTRATORS - ROOM_FOR_TOOLS,
       );
     }
   });

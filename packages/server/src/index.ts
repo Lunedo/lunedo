@@ -733,6 +733,7 @@ export {
   type WatchStatus,
   type WatchTarget,
 } from "./notifications/watches.js";
+export { aggregateClusterMetrics } from "./observability/cluster-metrics.js";
 export { isAuthorizedMetricsRequest, Metrics } from "./observability/metrics.js";
 export {
   currentRequestContext,
@@ -882,6 +883,7 @@ export {
   type TermCount,
 } from "./portal/statistics.js";
 export { type PushDevice, PushService, PushSubscriptionError } from "./push/push-service.js";
+export { type ClusterProcess, runApiCluster } from "./runtime/api-cluster.js";
 export {
   availableMasterKeys,
   createServerRuntime,

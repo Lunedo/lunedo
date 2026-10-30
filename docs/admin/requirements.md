@@ -28,9 +28,19 @@ What Lunedo needs to run. The [setup script](installation/script.md) checks the 
 
 ### Database connections
 
-Each Lunedo process (the API, the worker and the collaboration server) has its own pool of database connections, set by `LUNEDO_DATABASE_POOL_SIZE`. Without it, a process uses twice the number of CPUs of its container plus 2, at least 6 and at most 24. Every process also holds one connection for notifications and up to four for the job queue.
+A container runs the worker, the collaboration server and one API process per CPU, at most 8 (`LUNEDO_API_PROCESSES` sets another number). Requests are spread over the API processes, so the API uses more than one CPU without a proxy in front of several containers.
 
-Add up `pool size + 5` for every process, in every container, that uses the same database. The sum, plus a few connections for backups and `psql`, must stay below `max_connections` of PostgreSQL. The PostgreSQL container of the setup script keeps the default of 100, which the three processes of one container stay below with any pool size up to 24. Raise `max_connections` before you raise the pool size or run more containers.
+Each process has its own pool of database connections. Without `LUNEDO_DATABASE_POOL_SIZE`, the worker and the collaboration server use twice the number of CPUs of the container plus 2, at least 6 and at most 24, and this number is divided among the API processes, at least 2 each. With `LUNEDO_DATABASE_POOL_SIZE`, every process, each API process included, uses that number. Every process also holds one connection for notifications; the worker holds up to four more for the job queue and every API process one.
+
+Add up for every container that uses the same database:
+
+- worker: pool size + 5
+- collaboration server: pool size + 1
+- every API process: pool size + 2
+
+The sum, plus a few connections for backups and `psql`, must stay below `max_connections` of PostgreSQL. With the defaults, one container on up to 8 CPUs stays below the PostgreSQL default of 100, for example 42 connections on 4 CPUs and 74 on 8 CPUs. The PostgreSQL container of the setup script sets `max_connections` to 200. Raise `max_connections` before you raise the pool size or the number of API processes, or run more containers.
+
+Limits that protect the memory of a process count per API process: diagram sanitizing and uploads, Word and PDF files created at once and password checks.
 
 Migrations only go forward. When several processes start at the same time, a PostgreSQL advisory lock lets one of them migrate while the others wait. Readiness (`/health/ready`) answers `503` while the schema is behind the code. When migrations are pending, the first process takes a backup before it migrates; see [Backups before updates](updates.md#backups-before-updates).
 

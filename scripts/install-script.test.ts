@@ -38,7 +38,7 @@ describe("install.sh", () => {
     assert.match(printed.stdout, /LUNEDO_INSTANCE_URL: \$\{LUNEDO_INSTANCE_URL:-\}/);
     assert.match(
       printed.stdout,
-      /\n {2}postgres:\n {4}image: postgres:17-alpine\n {4}restart: unless-stopped\n {4}shm_size: 1gb\n/,
+      /\n {2}postgres:\n {4}image: postgres:17-alpine\n {4}restart: unless-stopped\n {4}shm_size: 1gb\n {4}command: \["postgres", "-c", "max_connections=200"\]\n/,
     );
   });
 
