@@ -1,0 +1,1 @@
+CREATE INDEX "tree_items_restore_parent_index" ON "tree_items" USING btree ("restore_parent_id") WHERE "tree_items"."parent_id" is null and "tree_items"."restore_parent_id" is not null;

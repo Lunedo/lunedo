@@ -34,8 +34,11 @@ export async function refreshReaderVisibility(executor: Executor, itemIds: strin
         where t.id = ${itemId}
         union
         select c.id, w.visible and ${published(sql`c`)}
-        from tree_items c join walk w
-          on c.parent_id = w.id or (c.parent_id is null and c.restore_parent_id = w.id)
+        from walk w cross join lateral (
+          select * from tree_items child where child.parent_id = w.id
+          union all
+          select * from tree_items restored where restored.parent_id is null and restored.restore_parent_id = w.id
+        ) c
       )
       update tree_items t set reader_visible = w.visible from walk w
       where t.id = w.id and t.reader_visible <> w.visible
