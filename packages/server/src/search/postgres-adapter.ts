@@ -289,7 +289,6 @@ export class PostgresSearchAdapter implements SearchAdapter {
         sql` and `,
       );
     const failing = sql`(${sql.join([sql`0`, ...flags.map(([group]) => sql`(not ${sql.raw(`f_${group}`)})::int`)], sql` + `)})`;
-    const poolOrder = sql`${flags.length > 0 ? sql`${failing}, ` : sql``}content_updated_at desc, id desc`;
     const deduplicated = sql`select distinct on (source, source_id) * from matched order by source, source_id, score desc, position`;
     const candidates = languages
       ? sql`select distinct on (article_id) * from (${deduplicated}) d order by article_id, (${passing()}) desc, score desc, position`
@@ -344,11 +343,20 @@ export class PostgresSearchAdapter implements SearchAdapter {
         where ${sql.join(conditions, sql` and `)}
       ),
       pool as (
-        select * from pooled${flags.length > 0 ? sql` where ${failing} <= 1` : sql``}
-        order by ${poolOrder} limit ${this.#matchCap + 1}
+        (select * from pooled${flags.length > 0 ? sql` where ${failing} = 0` : sql``}
+          order by content_updated_at desc, id desc limit ${this.#matchCap + 1})${
+            flags.length > 0
+              ? sql`
+        union all
+        (select * from pooled where ${failing} = 1 order by content_updated_at desc, id desc limit ${this.#matchCap})`
+              : sql``
+          }
       ),
       kept as (
-        select * from pool order by ${poolOrder} limit ${this.#matchCap}
+        select r.* from (
+          select pool.*, row_number() over (partition by (${failing} = 0) order by content_updated_at desc, id desc) as place
+          from pool
+        ) r where r.place <= ${this.#matchCap} or ${failing} > 0
       ),
       matched as (
         select c.id, c.source, c.source_id, t.space_id, c.content_updated_at, c.position,

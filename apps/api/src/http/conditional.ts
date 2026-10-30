@@ -6,7 +6,10 @@ export function answerConditionally<T>(request: FastifyRequest, reply: FastifyRe
   reply.header("etag", etag);
   reply.header("cache-control", "private, no-cache");
   const sent = request.headers["if-none-match"];
-  if (typeof sent === "string" && sent.split(",").some((value) => value.trim() === etag)) {
+  if (
+    typeof sent === "string" &&
+    sent.split(",").some((value) => value.trim().replace(/^W\//, "") === etag)
+  ) {
     reply.status(304);
     return "";
   }

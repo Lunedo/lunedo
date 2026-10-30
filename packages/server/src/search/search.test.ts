@@ -490,6 +490,27 @@ describe.skipIf(!baseUrl)("search", () => {
     }
   });
 
+  it("keeps the other values of a used filter in the counts when more matches pass it than the limit", async () => {
+    const w = await world();
+    const bounded = new SearchService({
+      database: test.database,
+      authorization: test.services.authorization,
+      people: test.services.people,
+      adapter: new PostgresSearchAdapter({ matchCap: 1 }),
+      indexer: test.services.search.indexer,
+    });
+    const limited = await bounded.search(
+      w.other,
+      w.org.id,
+      searchRequest(w.word, { spaceIds: [w.shared.id] }),
+    );
+    expect(limited).toMatchObject({ total: 1, totalCapped: true });
+    const counted = new Map((limited.facets?.spaces ?? []).map((facet) => [facet.value, facet.count]));
+    expect(counted.get(w.shared.id)).toBeGreaterThan(0);
+    expect(counted.get(w.second.id)).toBe(1);
+    expect(counted.has(w.hidden.id)).toBe(false);
+  });
+
   it("looks up status names in spaces the person can see only", async () => {
     const w = await world();
     const statuses = test.services.pageStatus;

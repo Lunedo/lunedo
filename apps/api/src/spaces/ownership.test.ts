@@ -194,6 +194,11 @@ describe.skipIf(!databaseBaseUrl)("ownership and page status through the API", (
     expect(changed.statusCode).toBe(200);
     expect(changed.headers.etag).not.toBe(etag);
 
+    const weak = await context.reader.client.get(url, {
+      "if-none-match": `W/${String(changed.headers.etag)}`,
+    });
+    expect(weak.statusCode).toBe(304);
+
     const outsider = await person();
     const refused = await outsider.client.get(url, { "if-none-match": String(changed.headers.etag) });
     expect(refused.statusCode).toBe(404);
