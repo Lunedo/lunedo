@@ -312,6 +312,41 @@ describe.skipIf(!baseUrl)("batch decisions", () => {
     expect(await count(items.slice(0, 8))).toBe(await count(items.slice(0, 2)));
   });
 
+  it("checks a page with at most four queries and reuses them for the rest of the request", async () => {
+    const [, editor] = principals.find(([name]) => name === "editor") ?? [];
+    const [target] = resources.item ?? [];
+    if (!editor || !target) throw new Error("missing editor or item");
+    const counter = countQueries(test.pool);
+    await runWithRequestContext({ requestId: "budget", cache: new Map() }, async () => {
+      await test.services.authorization.explain(editor, "item.view", target);
+      const first = counter.count;
+      await test.services.authorization.explain(editor, "item.view", target);
+      await test.services.authorization.explain(editor, "item.edit", target);
+      expect(first).toBeLessThanOrEqual(4);
+      expect(counter.count).toBe(first);
+    });
+    counter.stop();
+  });
+
+  it("sees a change made earlier in the same request", async () => {
+    const [, editor] = principals.find(([name]) => name === "editor") ?? [];
+    const spaceId = (
+      await test.database.execute<{ space_id: string }>(
+        sql`select space_id from tree_items where id = ${resources.item?.[0]?.id ?? null}`,
+      )
+    ).rows[0]?.space_id;
+    if (!editor || editor.type !== "account" || !spaceId) throw new Error("missing editor or space");
+    const itemId = await page(editor.id, spaceId, "Trashed later");
+    const resource = { type: "item", id: itemId };
+    await runWithRequestContext({ requestId: "write", cache: new Map() }, async () => {
+      expect((await test.services.authorization.explain(editor, "item.view", resource)).allowed).toBe(true);
+      await test.services.trash.deleteItem(editor, itemId);
+      const after = await test.services.authorization.explain(editor, "item.view", resource);
+      expect(after.allowed).toBe(false);
+      expect(after.denials).toContain("inTrash");
+    });
+  });
+
   it("answers queued checks of several actions together", async () => {
     const [, reader] = principals.find(([name]) => name === "reader") ?? [];
     if (!reader) throw new Error("missing reader");

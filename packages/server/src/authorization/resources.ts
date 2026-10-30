@@ -873,17 +873,27 @@ async function itemStates(
   const key = (id: string) => `authorization:item-state:${id}`;
   const found = new Map<string, ItemState>();
   const missing: string[] = [];
-  for (const id of new Set(ids)) {
-    const known = cache?.get(key(id)) as ItemState | null | undefined;
-    if (known === undefined) missing.push(id);
-    else if (known) found.set(id, known);
-  }
-  const loaded = await loadItemStates(executor, missing);
-  for (const id of missing) {
-    const state = loaded.get(id) ?? null;
-    cache?.set(key(id), state);
+  const pending: Promise<void>[] = [];
+  const keep = (id: string, state: ItemState | null) => {
     if (state) found.set(id, state);
+  };
+  for (const id of new Set(ids)) {
+    const known = cache?.get(key(id)) as Promise<ItemState | null> | undefined;
+    if (known) pending.push(known.then((state) => keep(id, state)));
+    else missing.push(id);
   }
+  if (missing.length > 0) {
+    const loading = loadItemStates(executor, missing);
+    for (const id of missing) {
+      const one = loading.then((loaded) => loaded.get(id) ?? null);
+      if (cache) {
+        cache.set(key(id), one);
+        one.catch(() => cache.delete(key(id)));
+      }
+      pending.push(one.then((state) => keep(id, state)));
+    }
+  }
+  await Promise.all(pending);
   return found;
 }
 
