@@ -335,7 +335,7 @@ describe.skipIf(!baseUrl)("batch decisions", () => {
         sql`select space_id from tree_items where id = ${resources.item?.[0]?.id ?? null}`,
       )
     ).rows[0]?.space_id;
-    if (!editor || editor.type !== "account" || !spaceId) throw new Error("missing editor or space");
+    if (editor?.type !== "account" || !spaceId) throw new Error("missing editor or space");
     const itemId = await page(editor.id, spaceId, "Trashed later");
     const resource = { type: "item", id: itemId };
     await runWithRequestContext({ requestId: "write", cache: new Map() }, async () => {

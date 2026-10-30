@@ -1,13 +1,7 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { notFound, redirect } from "@tanstack/react-router";
 import { itemHref } from "./item-paths.js";
-import {
-  contentQuery,
-  type ItemDetails,
-  itemNumberQuery,
-  itemQuery,
-  pageViewQuery,
-} from "./space-queries.js";
+import { type ItemDetails, itemNumberQuery, itemQuery } from "./space-queries.js";
 
 const ITEM_NUMBER = /^[1-9][0-9]{0,14}$/;
 
