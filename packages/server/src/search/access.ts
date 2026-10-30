@@ -90,7 +90,8 @@ export async function loadViewer(
         where gm.account_id = a.id and (gm.expires_at is null or gm.expires_at > now())
         order by gm.group_id) as groups,
       array(select r.item_id::text from page_restrictions r
-        join tree_items t on t.id = r.item_id join spaces s on s.id = t.space_id
+        cross join lateral (select ls.organization_id, ls.personal_of from tree_items t
+          join spaces ls on ls.id = t.space_id where t.id = r.item_id offset 0) s
         where r.kind = 'view' and (s.organization_id = ${organization} or s.personal_of is not null)
           and ${restrictionListedCondition(sql`r`, sql`a.id`, sql`s.organization_id`)}
         order by r.item_id) as listed,
