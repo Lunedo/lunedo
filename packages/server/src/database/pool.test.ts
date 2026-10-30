@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { createDatabasePool, type PoolAcquireEvent, pingDatabase } from "./pool.js";
+import { createDatabasePool, MAX_PREPARED_STATEMENTS, type PoolAcquireEvent, pingDatabase } from "./pool.js";
 
 const url = process.env.LUNEDO_TEST_DATABASE_URL;
 
@@ -32,6 +32,48 @@ describe("database pool", () => {
 
     it("pings the database", async () => {
       await expect(pingDatabase(pool)).resolves.toBeUndefined();
+    });
+
+    it("prepares parameterized statements once per connection and leaves others alone", async () => {
+      const one = createDatabasePool({ connectionString: url ?? "", applicationName: "lunedo-test", max: 1 });
+      const client = await one.connect();
+      try {
+        for (const value of [1, 2, 3]) {
+          const result = await client.query<{ value: number }>("select $1::int + 1 as value", [value]);
+          expect(result.rows[0]?.value).toBe(value + 1);
+        }
+        await client.query({ text: "select $1::text as word", values: ["kept"] });
+        await client.query("select 1");
+        await client.query("begin; select 2; commit");
+        const prepared = await client.query<{ statement: string }>(
+          "select statement from pg_prepared_statements where name like 'lunedo%' order by statement",
+        );
+        expect(prepared.rows.map((row) => row.statement)).toEqual([
+          "select $1::int + 1 as value",
+          "select $1::text as word",
+        ]);
+      } finally {
+        client.release();
+        await one.end();
+      }
+    });
+
+    it("stops preparing new statements at the limit and keeps answering", async () => {
+      const one = createDatabasePool({ connectionString: url ?? "", applicationName: "lunedo-test", max: 1 });
+      const client = await one.connect();
+      try {
+        for (let index = 0; index < MAX_PREPARED_STATEMENTS + 5; index++) {
+          const result = await client.query<{ value: number }>(`select $1::int + ${index} as value`, [1]);
+          expect(result.rows[0]?.value).toBe(index + 1);
+        }
+        const count = await client.query<{ count: string }>(
+          "select count(*) from pg_prepared_statements where name like 'lunedo%'",
+        );
+        expect(Number(count.rows[0]?.count)).toBe(MAX_PREPARED_STATEMENTS);
+      } finally {
+        client.release();
+        await one.end();
+      }
     });
 
     it("turns off just-in-time compilation on every connection", async () => {

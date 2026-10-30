@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import pg from "pg";
 
 export type DatabasePool = pg.Pool;
@@ -45,6 +46,37 @@ class ObservedPool extends pg.Pool {
   }
 }
 
+export const MAX_PREPARED_STATEMENTS = 500;
+
+type QueryText = { text: string; name?: string | undefined; [key: string]: unknown };
+
+function statementName(text: string): string {
+  return `lunedo_${createHash("sha1").update(text).digest("hex").slice(0, 24)}`;
+}
+
+export function prepareRepeatedStatements(client: pg.PoolClient): void {
+  const query = client.query;
+  const prepared = new Set<string>();
+  client.query = function (this: pg.PoolClient, ...args: unknown[]) {
+    const [first, values] = args;
+    const parameters = Array.isArray(values) ? values : (first as { values?: unknown[] } | null)?.values;
+    const config: QueryText | null =
+      typeof first === "string"
+        ? { text: first }
+        : typeof first === "object" && first !== null && typeof (first as QueryText).text === "string"
+          ? (first as QueryText)
+          : null;
+    if (config && !config.name && parameters && parameters.length > 0) {
+      const name = statementName(config.text);
+      if (prepared.has(name) || prepared.size < MAX_PREPARED_STATEMENTS) {
+        prepared.add(name);
+        args[0] = { ...config, name };
+      }
+    }
+    return Reflect.apply(query, this, args);
+  } as pg.PoolClient["query"];
+}
+
 export function createDatabasePool(options: {
   connectionString: string;
   applicationName: string;
@@ -63,7 +95,9 @@ export function createDatabasePool(options: {
     connectionTimeoutMillis: options.connectionTimeoutMillis ?? 5000,
     options: settings.join(" "),
   };
-  return options.onAcquire ? new ObservedPool(config, options.onAcquire) : new pg.Pool(config);
+  const pool = options.onAcquire ? new ObservedPool(config, options.onAcquire) : new pg.Pool(config);
+  pool.on("connect", prepareRepeatedStatements);
+  return pool;
 }
 
 export async function pingDatabase(pool: DatabasePool): Promise<void> {
