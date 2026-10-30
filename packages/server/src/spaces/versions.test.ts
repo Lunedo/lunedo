@@ -9,6 +9,7 @@ import { accountPrincipal } from "../accounts/principal.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
+import { lockSpaces, lockSpacesShared } from "./items.js";
 import { liveVersionIdleMinutesSetting } from "./settings.js";
 
 const baseUrl = testDatabaseBaseUrl();
@@ -68,6 +69,75 @@ describe.skipIf(!baseUrl)("publish and live modes with versions", () => {
     await test.services.versions.publish(context.editor, page.id);
     return page;
   }
+
+  async function holdingSpaceLock(spaceId: string, kind: "shared" | "exclusive") {
+    let release: () => void = () => undefined;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let acquired: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      acquired = resolve;
+    });
+    const transaction = test.database.transaction(async (tx) => {
+      if (kind === "shared") await lockSpacesShared(tx, [spaceId]);
+      else await lockSpaces(tx, [spaceId]);
+      acquired();
+      await released;
+    });
+    await held;
+    return async () => {
+      release();
+      await transaction;
+    };
+  }
+
+  async function settlesWithin(work: Promise<unknown>, milliseconds: number): Promise<boolean> {
+    return Promise.race([
+      work.then(() => true),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), milliseconds)),
+    ]);
+  }
+
+  it("publishes while another change that does not move pages holds the space", async () => {
+    const context = await setup();
+    const page = await test.services.tree.create(context.editor, context.space.id, {
+      kind: "page",
+      title: "Parallel",
+      mode: "publish",
+      placement: { parentId: null },
+    });
+    await test.services.documents.replace(context.editor, page.id, documentWith(paragraph("Text")));
+    const release = await holdingSpaceLock(context.space.id, "shared");
+    const publishing = test.services.versions.publish(context.editor, page.id);
+    expect(await settlesWithin(publishing, 5000)).toBe(true);
+    await release();
+  });
+
+  it("makes publishing wait for a change that moves pages in the same space", async () => {
+    const context = await setup();
+    const page = await test.services.tree.create(context.editor, context.space.id, {
+      kind: "page",
+      title: "Waiting",
+      mode: "publish",
+      placement: { parentId: null },
+    });
+    await test.services.documents.replace(context.editor, page.id, documentWith(paragraph("Text")));
+    const release = await holdingSpaceLock(context.space.id, "exclusive");
+    const publishing = test.services.versions.publish(context.editor, page.id);
+    expect(await settlesWithin(publishing, 600)).toBe(false);
+    await release();
+    expect((await publishing).version).toBe(1);
+  });
+
+  it("makes a change that moves pages wait for publishing in progress", async () => {
+    const context = await setup();
+    const release = await holdingSpaceLock(context.space.id, "shared");
+    const moving = test.database.transaction((tx) => lockSpaces(tx, [context.space.id]));
+    expect(await settlesWithin(moving, 600)).toBe(false);
+    await release();
+    await moving;
+  });
 
   it("keeps a draft note only with the draft it was written for", async () => {
     const context = await setup();

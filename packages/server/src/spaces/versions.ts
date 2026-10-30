@@ -33,7 +33,7 @@ import {
   recomputeLinks,
   recordClient,
 } from "./documents.js";
-import { lockSpaces } from "./items.js";
+import { lockSpacesShared } from "./items.js";
 import type { PeopleService } from "./people.js";
 import type { DiscardReason, PageMode, VersionReason } from "./schema.js";
 import { liveVersionIdleMinutesSetting } from "./settings.js";
@@ -341,7 +341,7 @@ export class VersionService {
     );
     const spaceId = before.rows[0]?.space_id;
     if (!spaceId) throw new SpaceError("itemNotFound", "The item does not exist");
-    await lockSpaces(tx, [spaceId]);
+    await lockSpacesShared(tx, [spaceId]);
     const after = await tx.execute<{ space_id: string }>(
       sql`select space_id from tree_items where id = ${itemId}`,
     );

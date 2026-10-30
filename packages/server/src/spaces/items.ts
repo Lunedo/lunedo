@@ -313,6 +313,14 @@ export async function lockSpaces(tx: Transaction, spaceIds: string[]): Promise<v
   }
 }
 
+export async function lockSpacesShared(tx: Transaction, spaceIds: string[]): Promise<void> {
+  for (const id of [...new Set(spaceIds)].sort()) {
+    const result = await tx.execute<{ id: string }>(sql`select id from spaces where id = ${id} for share`);
+    if (!result.rows[0]) throw new SpaceError("spaceNotFound", "The space does not exist");
+    await tx.execute(sql`select pg_advisory_xact_lock_shared(hashtextextended(${`pagehall.tree:${id}`}, 0))`);
+  }
+}
+
 async function broadlySharedPages(
   tx: Transaction,
   itemId: string,
