@@ -47,6 +47,7 @@ class ObservedPool extends pg.Pool {
 }
 
 export const MAX_PREPARED_STATEMENTS = 500;
+export const IDLE_CONNECTION_MS = 5 * 60 * 1000;
 
 type QueryText = { text: string; name?: string | undefined; [key: string]: unknown };
 
@@ -93,6 +94,8 @@ export function createDatabasePool(options: {
     application_name: options.applicationName,
     max: options.max ?? 10,
     connectionTimeoutMillis: options.connectionTimeoutMillis ?? 5000,
+    idleTimeoutMillis: IDLE_CONNECTION_MS,
+    allowExitOnIdle: true,
     options: settings.join(" "),
   };
   const pool = options.onAcquire ? new ObservedPool(config, options.onAcquire) : new pg.Pool(config);

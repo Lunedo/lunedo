@@ -1,9 +1,25 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { createDatabasePool, MAX_PREPARED_STATEMENTS, type PoolAcquireEvent, pingDatabase } from "./pool.js";
+import {
+  createDatabasePool,
+  IDLE_CONNECTION_MS,
+  MAX_PREPARED_STATEMENTS,
+  type PoolAcquireEvent,
+  pingDatabase,
+} from "./pool.js";
 
 const url = process.env.LUNEDO_TEST_DATABASE_URL;
 
 describe("database pool", () => {
+  it("keeps idle connections for minutes, so their prepared statements survive pauses in the load", async () => {
+    const pool = createDatabasePool({
+      connectionString: "postgres://lunedo:lunedo@127.0.0.1:1/lunedo",
+      applicationName: "lunedo-test",
+    });
+    expect(pool.options.idleTimeoutMillis).toBe(IDLE_CONNECTION_MS);
+    expect(IDLE_CONNECTION_MS).toBeGreaterThanOrEqual(60_000);
+    await pool.end();
+  });
+
   it("fails the ping when the database is unreachable", async () => {
     const pool = createDatabasePool({
       connectionString: "postgres://lunedo:lunedo@127.0.0.1:1/lunedo",
