@@ -269,56 +269,51 @@ async function loadItemFacts(
     select t.id as target, case when cardinality(t.path) > 0 then t.path else array[t.id] end as path,
       s.organization_id, ${organizationMembership(sql`s.organization_id`, account)} as in_organization
     from tree_items t join spaces s on s.id = t.space_id where t.id = any(${ids}))`;
-  const items = await executor.execute<{ target: string; path: string[]; in_organization: boolean }>(
-    sql`with ${targets} select target, path, in_organization from targets`,
-  );
-  if (items.rows.length === 0) return new Map();
-  const shares = await executor.execute<{
+  const rows = await executor.execute<{
     target: string;
-    id: string;
-    item_id: string;
-    role: SpaceRole;
-    principal_kind: "account" | "group";
-    principal_id: string;
-    group_name: string | null;
+    path: string[];
+    in_organization: boolean;
+    shares: {
+      id: string;
+      item_id: string;
+      role: SpaceRole;
+      principal_kind: "account" | "group";
+      principal_id: string;
+      group_name: string | null;
+    }[];
+    links: { id: string; scope: string }[];
+    restrictions: { item_id: string; kind: "view" | "edit"; listed: boolean }[];
+    responsibilities: { listed: boolean }[];
   }>(sql`
     with ${targets}
-    select x.target, ps.id, ps.item_id, ps.role, ps.principal_kind, ps.principal_id, g.name as group_name
-    from targets x join page_shares ps on ps.item_id = any(x.path)
-      and (ps.item_id = x.target or ps.include_descendants)
-    left join groups g on ps.principal_kind = 'group' and g.id = ps.principal_id
-    where ${holderMatches(sql`ps.principal_kind`, sql`ps.principal_id`, account)}
-    order by x.target, ps.id`);
-  const links = await executor.execute<{ target: string; id: string; scope: string }>(sql`
-    select l.item_id as target, l.id, l.scope from share_link_accesses la join share_links l on l.id = la.link_id
-    join tree_items t on t.id = l.item_id join spaces s on s.id = t.space_id
-    where l.item_id = any(${ids}) and la.account_id = ${account} and ${activeLinkCondition(sql`l`)}
-      and ${linkScopeCondition(sql`l`, account, sql`s`)}
-    order by l.item_id, l.id`);
-  const restrictions = await executor.execute<{
-    target: string;
-    item_id: string;
-    kind: "view" | "edit";
-    listed: boolean;
-  }>(sql`
-    with ${targets}
-    select x.target, r.item_id, r.kind,
-      ${restrictionListedCondition(sql`r`, account, sql`x.organization_id`)} as listed
-    from targets x join page_restrictions r
-      on (r.kind = 'view' and r.item_id = any(x.path)) or (r.kind = 'edit' and r.item_id = x.target)
-    order by x.target, array_position(x.path, r.item_id)`);
-  const responsibilities = await executor.execute<{ target: string; listed: boolean }>(sql`
-    with ${targets}
-    select x.target, exists (select 1 from category_responsible_groups cg
-      where cg.item_id = cr.item_id
-        and ${holderMatches(sql`'group'`, sql`cg.group_id`, account)}) as listed
-    from targets x join category_responsibilities cr on cr.item_id = any(x.path)`);
+    select x.target, x.path, x.in_organization,
+      coalesce((select json_agg(json_build_object('id', ps.id, 'item_id', ps.item_id, 'role', ps.role,
+          'principal_kind', ps.principal_kind, 'principal_id', ps.principal_id, 'group_name', g.name)
+          order by ps.id)
+        from page_shares ps
+        left join groups g on ps.principal_kind = 'group' and g.id = ps.principal_id
+        where ps.item_id = any(x.path) and (ps.item_id = x.target or ps.include_descendants)
+          and ${holderMatches(sql`ps.principal_kind`, sql`ps.principal_id`, account)}), '[]'::json) as shares,
+      coalesce((select json_agg(json_build_object('id', l.id, 'scope', l.scope) order by l.id)
+        from share_link_accesses la join share_links l on l.id = la.link_id
+        where l.item_id = x.target and la.account_id = ${account} and ${activeLinkCondition(sql`l`)}
+          and ${linkScopeCondition(sql`l`, account, sql`x`)}), '[]'::json) as links,
+      coalesce((select json_agg(json_build_object('item_id', r.item_id, 'kind', r.kind,
+          'listed', ${restrictionListedCondition(sql`r`, account, sql`x.organization_id`)})
+          order by array_position(x.path, r.item_id))
+        from page_restrictions r
+        where (r.kind = 'view' and r.item_id = any(x.path)) or (r.kind = 'edit' and r.item_id = x.target)),
+        '[]'::json) as restrictions,
+      coalesce((select json_agg(json_build_object('listed', exists (select 1 from category_responsible_groups cg
+          where cg.item_id = cr.item_id
+            and ${holderMatches(sql`'group'`, sql`cg.group_id`, account)})))
+        from category_responsibilities cr where cr.item_id = any(x.path)), '[]'::json) as responsibilities
+    from targets x`);
   const facts = new Map<string, ItemFacts>();
-  for (const row of items.rows) {
+  for (const row of rows.rows) {
     const itemId = row.target;
-    const own = <T extends { target: string }>(rows: T[]) => rows.filter((entry) => entry.target === itemId);
-    const itemShares = own(shares.rows);
-    const itemRestrictions = own(restrictions.rows);
+    const itemShares = row.shares;
+    const itemRestrictions = row.restrictions;
     const edit = itemRestrictions.find((restriction) => restriction.kind === "edit");
     const shareSource = (share: (typeof itemShares)[number]): ItemGrantSource => ({
       type: "share",
@@ -339,15 +334,13 @@ async function loadItemFacts(
       inactiveSources: itemShares.filter(inert).map(shareSource),
       sources: [
         ...itemShares.filter((share) => !inert(share)).map(shareSource),
-        ...own(links.rows).map(
-          (link): ItemGrantSource => ({ type: "link", linkId: link.id, scope: link.scope }),
-        ),
+        ...row.links.map((link): ItemGrantSource => ({ type: "link", linkId: link.id, scope: link.scope })),
       ],
       viewRestrictions: itemRestrictions
         .filter((restriction) => restriction.kind === "view")
         .map((restriction) => ({ itemId: restriction.item_id, listed: restriction.listed })),
       editRestriction: edit ? { listed: edit.listed } : null,
-      responsibility: responsibilityOf(own(responsibilities.rows)),
+      responsibility: responsibilityOf(row.responsibilities),
     });
   }
   return facts;

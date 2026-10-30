@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { AccountState, AccountType } from "../accounts/schema.js";
+import { requestAccount } from "../accounts/scope.js";
 import type { Executor } from "../database/database.js";
 import { withheldAssignmentIds } from "../identity/withheld.js";
 import { currentRequestContext } from "../observability/request-context.js";
@@ -93,16 +94,19 @@ function cached<T>(key: string, load: () => Promise<T>, fresh: boolean): Promise
   return loading;
 }
 
-async function loadAccount(executor: Executor, accountId: string): Promise<AccountFacts | null> {
-  const result = await executor.execute<{
-    id: string;
-    type: AccountType;
-    state: AccountState;
-    home_organization_id: string | null;
-  }>(sql`select id, type, state, home_organization_id from accounts where id = ${accountId}`);
-  const row = result.rows[0];
-  return row
-    ? { id: row.id, type: row.type, state: row.state, homeOrganizationId: row.home_organization_id }
+async function loadAccount(
+  executor: Executor,
+  accountId: string,
+  fresh: boolean,
+): Promise<AccountFacts | null> {
+  const account = await requestAccount(executor, accountId, { fresh });
+  return account
+    ? {
+        id: account.id,
+        type: account.type,
+        state: account.state,
+        homeOrganizationId: account.homeOrganizationId,
+      }
     : null;
 }
 
@@ -117,7 +121,7 @@ export async function instanceFacts(
   return cached(
     `authorization:instance:${accountId}`,
     async () => {
-      const account = await loadAccount(executor, accountId);
+      const account = await loadAccount(executor, accountId, options.fresh ?? false);
       if (!account) return { account: null, owner: false, roles: [] };
       const owner = await executor.execute<{ owner: boolean }>(
         sql`select owner_account_id = ${accountId} as owner from instance`,
@@ -162,7 +166,7 @@ export async function organizationFacts(
   return cached(
     `authorization:organization:${accountId}:${organizationId}`,
     async () => {
-      const account = await loadAccount(executor, accountId);
+      const account = await loadAccount(executor, accountId, options.fresh ?? false);
       const empty: OrganizationFacts = {
         account,
         organizationId,
@@ -291,14 +295,43 @@ export async function spaceFacts(
   return cached(
     `authorization:space:${accountId}:${spaceId}`,
     async () => {
-      const account = await loadAccount(executor, accountId);
+      const account = await loadAccount(executor, accountId, options.fresh ?? false);
+      const internal = account?.type === "standard";
       const spaceRows = await executor.execute<{
         id: string;
         organization_id: string | null;
         visibility: SpaceVisibility;
         personal_of: string | null;
         type: string;
-      }>(sql`select id, organization_id, visibility, personal_of, type from spaces where id = ${spaceId}`);
+        membership: MembershipKind | null;
+        permissions: {
+          id: string;
+          role: SpaceRole;
+          principal_kind: PrincipalKind;
+          principal_id: string | null;
+          group_name: string | null;
+        }[];
+      }>(sql`
+        with m as (
+          select (select kind from memberships
+            where organization_id = s.organization_id and account_id = ${accountId}
+              and (expires_at is null or expires_at > now())) as kind
+          from spaces s where s.id = ${spaceId})
+        select s.id, s.organization_id, s.visibility, s.personal_of, s.type, m.kind as membership,
+          coalesce((select json_agg(json_build_object('id', sp.id, 'role', sp.role,
+              'principal_kind', sp.principal_kind, 'principal_id', sp.principal_id, 'group_name', g.name)
+              order by sp.id)
+            from space_permissions sp
+            left join groups g on sp.principal_kind = 'group' and g.id = sp.principal_id
+            where sp.space_id = s.id and (
+              (sp.principal_kind = 'account' and sp.principal_id = ${accountId})
+              or (sp.principal_kind = 'group' and exists (
+                select 1 from group_members gm
+                where gm.group_id = sp.principal_id and gm.account_id = ${accountId}
+                  and (gm.expires_at is null or gm.expires_at > now())))
+              or (sp.principal_kind = 'organizationMembers' and m.kind = 'member')
+              or (sp.principal_kind = 'instanceUsers' and ${internal}))), '[]'::json) as permissions
+        from spaces s cross join m where s.id = ${spaceId}`);
       const row = spaceRows.rows[0];
       const space = row
         ? {
@@ -319,36 +352,10 @@ export async function spaceFacts(
       if (!account || !space || account.state !== "active") return empty;
       if (account.type === "portal" && row?.type !== "knowledgeBase") return empty;
 
-      let membership: MembershipKind | null = null;
-      if (space.organizationId) {
-        const memberships = await executor.execute<{ kind: MembershipKind }>(sql`
-          select kind from memberships
-          where organization_id = ${space.organizationId} and account_id = ${accountId}
-            and (expires_at is null or expires_at > now())`);
-        membership = memberships.rows[0]?.kind ?? null;
-      }
+      const membership = space.organizationId ? (row?.membership ?? null) : null;
       const member = membership === "member";
       const inOrganization = space.organizationId === null || membership !== null;
-      const internal = account.type === "standard";
-      const permissions = await executor.execute<{
-        id: string;
-        role: SpaceRole;
-        principal_kind: PrincipalKind;
-        principal_id: string | null;
-        group_name: string | null;
-      }>(sql`
-        select sp.id, sp.role, sp.principal_kind, sp.principal_id, g.name as group_name
-        from space_permissions sp
-        left join groups g on sp.principal_kind = 'group' and g.id = sp.principal_id
-        where sp.space_id = ${spaceId} and (
-          (sp.principal_kind = 'account' and sp.principal_id = ${accountId})
-          or (sp.principal_kind = 'group' and exists (
-            select 1 from group_members gm
-            where gm.group_id = sp.principal_id and gm.account_id = ${accountId}
-              and (gm.expires_at is null or gm.expires_at > now())))
-          or (sp.principal_kind = 'organizationMembers' and ${member})
-          or (sp.principal_kind = 'instanceUsers' and ${internal}))`);
-      const all: SpaceRoleSource[] = permissions.rows.map((permission) => ({
+      const all: SpaceRoleSource[] = (row?.permissions ?? []).map((permission) => ({
         role: permission.role,
         permissionId: permission.id,
         via:

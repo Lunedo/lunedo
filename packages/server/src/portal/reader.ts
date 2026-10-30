@@ -1,6 +1,7 @@
 import { slugify } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
+import { requestAccount } from "../accounts/scope.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
 import { lastReviewedAt } from "../knowledge-bases/reviews.js";
@@ -474,10 +475,10 @@ export class PortalReader {
   }
 
   async account(accountId: string): Promise<{ name: string; email: string; type: string } | null> {
-    const result = await this.#database.execute<{ name: string; email: string | null; type: string }>(sql`
-      select name, email, type from accounts where id = ${accountId} and state = 'active'`);
-    const row = result.rows[0];
-    return row ? { name: row.name, email: row.email ?? "", type: row.type } : null;
+    const account = await requestAccount(this.#database, accountId);
+    return account?.state === "active"
+      ? { name: account.name, email: account.email ?? "", type: account.type }
+      : null;
   }
 
   async admits(principal: Principal, config: PortalConfig): Promise<boolean> {

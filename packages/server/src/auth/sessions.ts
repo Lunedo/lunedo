@@ -2,12 +2,12 @@ import { and, desc, eq, inArray, lt, ne, or, type SQL, sql } from "drizzle-orm";
 import { UAParser } from "ua-parser-js";
 import { SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
-import { accountScopeChain } from "../accounts/scope.js";
+import { accountScopeChain, primeRequestAccount, scopeChainOf } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { SignInMethod } from "../audit/catalog.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { settingValues } from "../settings/schema.js";
-import type { SettingsService } from "../settings/service.js";
+import type { ScopeChain, SettingsService } from "../settings/service.js";
 import { sessions } from "./schema.js";
 import {
   maxSessionsSetting,
@@ -42,6 +42,15 @@ export interface ClientInfo {
   userAgent?: string;
   deviceToken?: string;
 }
+
+const accountColumns = {
+  id: accounts.id,
+  type: accounts.type,
+  state: accounts.state,
+  homeOrganizationId: accounts.homeOrganizationId,
+  name: accounts.name,
+  email: accounts.email,
+};
 
 const sessionColumns = {
   id: sessions.id,
@@ -171,14 +180,14 @@ export class SessionService {
 
   async #resolveWhere(condition: SQL): Promise<Session | null> {
     const [row] = await this.#database
-      .select({ ...sessionColumns, accountState: accounts.state })
+      .select({ ...sessionColumns, account: accountColumns })
       .from(sessions)
       .innerJoin(accounts, eq(accounts.id, sessions.accountId))
       .where(condition);
     if (!row) return null;
-    const { accountState, ...session } = row;
+    const { account, ...session } = row;
     const now = this.#clock();
-    if (accountState !== "active" || (await this.#expired(session, now))) {
+    if (account.state !== "active" || (await this.#expired(session, now, scopeChainOf(account)))) {
       await this.#database.delete(sessions).where(eq(sessions.id, session.id));
       return null;
     }
@@ -191,6 +200,7 @@ export class SessionService {
       await touch;
       session.lastUsedAt = now;
     }
+    primeRequestAccount(account);
     return session;
   }
 
@@ -210,8 +220,8 @@ export class SessionService {
     }
   }
 
-  async #expired(session: Session, now: Date): Promise<boolean> {
-    const chain = await accountScopeChain(this.#database, session.accountId);
+  async #expired(session: Session, now: Date, known?: ScopeChain): Promise<boolean> {
+    const chain = known ?? (await accountScopeChain(this.#database, session.accountId));
     const idle = await this.#settings.get(sessionIdleTimeoutSetting, chain);
     const lifetime = await this.#settings.get(sessionLifetimeSetting, chain);
     return (
