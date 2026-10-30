@@ -64,6 +64,8 @@
       ],
       "loadRuns": [
         {
+          "scenario": "peak",
+          "commit": "8c70161e224357f7bf99f8f03b9ea1788d342f58",
           "startedAt": "2026-10-29T03:43:41.261Z",
           "durationSeconds": 900,
           "disturbed": false,
@@ -129,6 +131,8 @@
           }
         },
         {
+          "scenario": "peak",
+          "commit": "8c70161e224357f7bf99f8f03b9ea1788d342f58",
           "startedAt": "2026-10-29T03:59:40.701Z",
           "durationSeconds": 900,
           "disturbed": false,
@@ -194,6 +198,8 @@
           }
         },
         {
+          "scenario": "peak",
+          "commit": "8c70161e224357f7bf99f8f03b9ea1788d342f58",
           "startedAt": "2026-10-29T04:15:32.584Z",
           "durationSeconds": 900,
           "disturbed": false,
@@ -312,6 +318,8 @@
       ],
       "loadRuns": [
         {
+          "scenario": "peak",
+          "commit": "8c70161e224357f7bf99f8f03b9ea1788d342f58",
           "startedAt": "2026-10-29T02:37:19.670Z",
           "durationSeconds": 900,
           "disturbed": false,
@@ -377,6 +385,8 @@
           }
         },
         {
+          "scenario": "peak",
+          "commit": "8c70161e224357f7bf99f8f03b9ea1788d342f58",
           "startedAt": "2026-10-29T02:54:23.730Z",
           "durationSeconds": 900,
           "disturbed": false,
@@ -442,6 +452,8 @@
           }
         },
         {
+          "scenario": "peak",
+          "commit": "8c70161e224357f7bf99f8f03b9ea1788d342f58",
           "startedAt": "2026-10-29T03:11:49.538Z",
           "durationSeconds": 900,
           "disturbed": false,
@@ -552,6 +564,8 @@
       ],
       "loadRuns": [
         {
+          "scenario": "peak",
+          "commit": "8c70161e224357f7bf99f8f03b9ea1788d342f58",
           "startedAt": "2026-10-29T15:11:42.812Z",
           "durationSeconds": 900,
           "disturbed": false,
@@ -987,6 +1001,8 @@
           }
         },
         {
+          "scenario": "peak",
+          "commit": "8c70161e224357f7bf99f8f03b9ea1788d342f58",
           "startedAt": "2026-10-29T15:42:18.460Z",
           "durationSeconds": 900,
           "disturbed": false,
@@ -1436,6 +1452,8 @@
           }
         },
         {
+          "scenario": "peak",
+          "commit": "8c70161e224357f7bf99f8f03b9ea1788d342f58",
           "startedAt": "2026-10-29T16:19:23.338Z",
           "durationSeconds": 900,
           "disturbed": false,

@@ -95,7 +95,24 @@ Directories that you mount must belong to UID 1000, or the [system check](system
 
 This section is generated from `docs/data/requirements.json`, `packages/server/src/backup/configuration.ts` by `pnpm docs:generate`. Do not edit it by hand; change the sources and run the command again.
 
-Measured on 2026-10-29 with commit `8c70161e` on a reference machine with 4 vCPU (12th Gen Intel(R) Core(TM) i5-12500), 7.8 GiB of RAM and 272.5 GB of disk, running Ubuntu 24.04.5 LTS with kernel 6.8.0-147-generic, Docker 29.9.2, Docker Compose 5.6.1 and PostgreSQL 17.11. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. The load came from one computer, which sent the requests of each person from a client address of its own. Each size had 3 load runs of 15 minutes each, in which the people active at the same time open pages, search, edit and publish, and read notifications, and five of them edit the same page together.
+Measured on a reference machine with 4 vCPU (12th Gen Intel(R) Core(TM) i5-12500), 7.8 GiB of RAM and 272.5 GB of disk, running Ubuntu 24.04.5 LTS with kernel 6.8.0-147-generic, Docker 29.9.2, Docker Compose 5.6.1 and PostgreSQL 17.11. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. Size, backups and start times were measured on 2026-10-29 with commit `8c70161e`. The load came from one computer, which sent the requests of each person from a client address of its own, in load runs of 15 minutes.
+
+### Scenarios
+
+The load runs follow one of two scenarios. Both are assumptions about how people use a wiki, not measured use. In both, five of the people active at the same time edit the same page together.
+
+| Scenario | Wait between two actions | Open a page | Search | Edit and publish | Notifications and For you |
+|---|---|---|---|---|---|
+| typical | 30 to 90 seconds, 60 on average | 70 % | 15 % | 2 % | 13 % |
+| peak | 7 to 36 seconds, 18 on average | 70 % | 15 % | 10 % | 5 % |
+
+The targets apply to **typical**; **peak** shows how much room is left. A size measured only with peak is judged by peak, and its hardware comes from peak.
+
+| Size | Scenario | Load runs | Measured on | Commit |
+|---|---|---|---|---|
+| small | peak | 3 | 2026-10-29 | `8c70161e` |
+| medium | peak | 3 | 2026-10-29 | `8c70161e` |
+| large | peak | 3 | 2026-10-29 | `8c70161e` |
 
 ### Sizes
 
@@ -121,33 +138,33 @@ The minimum of medium and large is what the reference machine used while it miss
 
 Median of the load runs; p95 is the time within which 95 % of the requests finished. **Readable** is the time until the page is shown in the browser.
 
-| Size | Open a page, API | Open a page, readable | Search | Save | For you and notifications | Errors |
-|---|---|---|---|---|---|---|
-| small | 160 ms / 256 ms | 353 ms / 855 ms | 86 ms / 136 ms | 54 ms / 85 ms | 45 ms / 69 ms | 0 |
-| medium | 271 ms / 1.20 s | 829 ms / 1.84 s | 252 ms / 865 ms | 89 ms / 349 ms | 404 ms / 919 ms | 0 |
-| large | 23.7 s / 32.7 s | 11.4 s / 28.0 s | 9.04 s / 18.5 s | 8.14 s / 14.9 s | 9.71 s / 15.6 s | 58,616 |
+| Size | Scenario | Open a page, API | Open a page, readable | Search | Save | For you and notifications | Errors |
+|---|---|---|---|---|---|---|---|
+| small | peak | 160 ms / 256 ms | 353 ms / 855 ms | 86 ms / 136 ms | 54 ms / 85 ms | 45 ms / 69 ms | 0 |
+| medium | peak | 271 ms / 1.20 s | 829 ms / 1.84 s | 252 ms / 865 ms | 89 ms / 349 ms | 404 ms / 919 ms | 0 |
+| large | peak | 23.7 s / 32.7 s | 11.4 s / 28.0 s | 9.04 s / 18.5 s | 8.14 s / 14.9 s | 9.71 s / 15.6 s | 58,616 |
 
 Each cell shows p50 / p95.
 
 ### Targets
 
-| Size | Target | Limit | Measured (worst run) | Met |
-|---|---|---|---|---|
-| small | Open a page, API (p95) | below 500 ms | 263 ms | yes |
-| small | Open a page, readable (p95) | below 1.50 s | 879 ms | yes |
-| small | Search (p95) | below 800 ms | 148 ms | yes |
-| small | Save (p95) | below 500 ms | 101 ms | yes |
-| small | Errors | 0 | 0 | yes |
-| medium | Open a page, API (p95) | below 500 ms | 1.48 s | no |
-| medium | Open a page, readable (p95) | below 1.50 s | 1.93 s | no |
-| medium | Search (p95) | below 800 ms | 1.41 s | no |
-| medium | Save (p95) | below 500 ms | 375 ms | yes |
-| medium | Errors | 0 | 0 | yes |
-| large | Open a page, API (p95) | below 500 ms | 33.0 s | no |
-| large | Open a page, readable (p95) | below 1.50 s | 29.6 s | no |
-| large | Search (p95) | below 800 ms | 22.6 s | no |
-| large | Save (p95) | below 500 ms | 22.2 s | no |
-| large | Errors | 0 | 58,616 | no |
+| Size | Scenario | Target | Limit | Measured (worst run) | Met |
+|---|---|---|---|---|---|
+| small | peak | Open a page, API (p95) | below 500 ms | 263 ms | yes |
+| small | peak | Open a page, readable (p95) | below 1.50 s | 879 ms | yes |
+| small | peak | Search (p95) | below 800 ms | 148 ms | yes |
+| small | peak | Save (p95) | below 500 ms | 101 ms | yes |
+| small | peak | Errors | 0 | 0 | yes |
+| medium | peak | Open a page, API (p95) | below 500 ms | 1.48 s | no |
+| medium | peak | Open a page, readable (p95) | below 1.50 s | 1.93 s | no |
+| medium | peak | Search (p95) | below 800 ms | 1.41 s | no |
+| medium | peak | Save (p95) | below 500 ms | 375 ms | yes |
+| medium | peak | Errors | 0 | 0 | yes |
+| large | peak | Open a page, API (p95) | below 500 ms | 33.0 s | no |
+| large | peak | Open a page, readable (p95) | below 1.50 s | 29.6 s | no |
+| large | peak | Search (p95) | below 800 ms | 22.6 s | no |
+| large | peak | Save (p95) | below 500 ms | 22.2 s | no |
+| large | peak | Errors | 0 | 58,616 | no |
 
 ### Footprint and operations
 

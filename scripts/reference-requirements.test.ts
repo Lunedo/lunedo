@@ -23,6 +23,8 @@ const retention = { daily: 7, weekly: 4, monthly: 6, beforeUpdate: 3 };
 function run(overrides: Partial<LoadRun> & { p95?: number } = {}): LoadRun {
   const { p95 = 200, ...rest } = overrides;
   return {
+    scenario: "peak",
+    commit: "fedcba9876543210fedcba9876543210fedcba98",
     startedAt: "2026-10-28T10:00:00Z",
     durationSeconds: 900,
     disturbed: false,
@@ -134,6 +136,47 @@ describe("parseRequirements", () => {
   });
 });
 
+describe("scenarios", () => {
+  const typical = (overrides: Partial<LoadRun> & { p95?: number } = {}) =>
+    run({ scenario: "typical", ...overrides });
+
+  it("judge a size by its typical runs and keep peak as headroom", () => {
+    const parsed = parseRequirements(data([run({ p95: 900 }), run({ p95: 900 }), typical(), typical()]));
+    const size = only(parsed.sizes);
+    assert.ok(targetResults(size, parsed.targets).every((target) => target.met));
+    assert.equal(targetResults(size, parsed.targets, "peak")[0]?.met, false);
+    assert.equal(derive(size, parsed, 20).recommendedCpus, 3);
+  });
+
+  it("take the hardware from typical when it was measured", () => {
+    const parsed = parseRequirements(
+      data([
+        run({ machinePeakCpuPercent: 97.5 }),
+        run({ machinePeakCpuPercent: 97.5 }),
+        typical(),
+        typical(),
+      ]),
+    );
+    assert.equal(derive(only(parsed.sizes), parsed, 20).minimumCpus, 2);
+  });
+
+  it("judge a size with fewer than two typical runs by peak", () => {
+    const parsed = parseRequirements(data([run({ p95: 900 }), run(), typical()]));
+    assert.equal(targetResults(only(parsed.sizes), parsed.targets)[0]?.met, false);
+  });
+
+  it("refuse an unknown scenario or a run without commit", () => {
+    assert.throws(
+      () => parseRequirements(data([{ ...run(), scenario: "busy" as LoadRun["scenario"] }, run()])),
+      /loadRuns\[0\]\.scenario must be typical or peak/,
+    );
+    assert.throws(
+      () => parseRequirements(data([{ ...run(), commit: "main" }, run()])),
+      /loadRuns\[0\]\.commit must be a commit hash/,
+    );
+  });
+});
+
 describe("derived requirements", () => {
   it("round the peak up for the minimum and multiply it for the recommendation", () => {
     const parsed = parseRequirements(data());
@@ -160,7 +203,7 @@ describe("derived requirements", () => {
     const text = renderRequirements(
       source(data([run({ errors: { count: 58616, kinds: { "HTTP 500": 58616 } } }), run()])),
     );
-    assert.match(text, /\| small \| Errors \| 0 \| 58,616 \| no \|/);
+    assert.match(text, /\| small \| peak \| Errors \| 0 \| 58,616 \| no \|/);
   });
 
   it("ignore disturbed runs", () => {
@@ -191,10 +234,9 @@ describe("derived requirements", () => {
 describe("rendered section", () => {
   it("shows the machine, the date, the commit and every size", () => {
     const text = renderRequirements(source(data()));
-    assert.match(
-      text,
-      /^Measured on 2026-10-28 with commit `01234567` on a reference machine with 4 vCPU \(Example CPU\)/,
-    );
+    assert.match(text, /^Measured on a reference machine with 4 vCPU \(Example CPU\)/);
+    assert.match(text, /Size, backups and start times were measured on 2026-10-28 with commit `01234567`/);
+    assert.match(text, /\| small \| peak \| 2 \| 2026-10-28 \| `fedcba98` \|/);
     assert.match(
       text,
       /without TLS and without a reverse proxy, with synthetic content and the default limits/,
@@ -203,7 +245,22 @@ describe("rendered section", () => {
     assert.match(text, /counts the 20 backups that the default retention keeps/);
     assert.match(text, /\| small \| 4 \| 263 \| 1,310 \| 52 \| 4\.4 MB\/s \| 80 % \|/);
     assert.match(text, /RAM from the Lunedo and PostgreSQL containers/);
-    assert.match(text, /\| small \| Errors \| 0 \| 0 \| yes \|/);
+    assert.match(text, /\| small \| peak \| Errors \| 0 \| 0 \| yes \|/);
+  });
+
+  it("names both scenarios with their assumptions and the commit of each scenario's runs", () => {
+    const typical = () =>
+      run({
+        scenario: "typical",
+        commit: "abcdef0123456789abcdef0123456789abcdef01",
+        startedAt: "2026-11-01T08:00:00Z",
+      });
+    const text = renderRequirements(source(data([run(), run(), typical(), typical()])));
+    assert.match(text, /\| typical \| 30 to 90 seconds, 60 on average \| 70 % \| 15 % \| 2 % \| 13 % \|/);
+    assert.match(text, /\| peak \| 7 to 36 seconds, 18 on average \| 70 % \| 15 % \| 10 % \| 5 % \|/);
+    assert.match(text, /The targets apply to \*\*typical\*\*/);
+    assert.match(text, /\| small \| typical \| 2 \| 2026-11-01 \| `abcdef01` \|/);
+    assert.match(text, /\| small \| peak \| 2 \| 2026-10-28 \| `fedcba98` \|/);
   });
 
   it("says when the targets were missed instead of recommending CPU", () => {
