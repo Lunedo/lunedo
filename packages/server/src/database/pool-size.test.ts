@@ -50,8 +50,8 @@ describe("the default pool size", () => {
     expect(apiPoolSize(25, 2)).toBe(13);
   });
 
-  it("runs one search at once per four CPUs, at least one and at most four", () => {
-    expect([1, 4, 7, 8, 16, 64].map(defaultSearchSlots)).toEqual([1, 1, 1, 2, 4, 4]);
+  it("runs one search at once per four CPUs, at least two and at most four", () => {
+    expect([1, 4, 7, 8, 12, 16, 64].map(defaultSearchSlots)).toEqual([2, 2, 2, 2, 3, 4, 4]);
   });
 
   it("counts the pools, notification and job queue connections of every process", () => {
