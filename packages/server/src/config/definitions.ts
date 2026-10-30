@@ -135,6 +135,22 @@ export const configSettings: readonly ConfigSetting[] = [
       },
     ),
     setting(
+      "LUNEDO_SEARCH_SLOTS",
+      positiveInt.max(64).optional(),
+      "Searches that run in PostgreSQL at once, for all API processes and containers together. Further searches wait without holding a database connection.",
+      { defaultText: "a quarter of the number of CPUs, at least 1 and at most 4" },
+    ),
+    setting(
+      "LUNEDO_SEARCH_WAIT_SECONDS",
+      z.coerce.number().positive().max(30).default(2),
+      "How long a search waits for a free slot before it is answered with `429` and `Retry-After`.",
+    ),
+    setting(
+      "LUNEDO_SEARCH_TIMEOUT_SECONDS",
+      z.coerce.number().positive().max(300).default(5),
+      "Longest time one search statement may run in PostgreSQL before it is cancelled.",
+    ),
+    setting(
       "LUNEDO_API_PROCESSES",
       positiveInt.max(64).optional(),
       "Number of API processes. Requests are spread over them, so the API can use more than one CPU. Each process has its own database pool.",

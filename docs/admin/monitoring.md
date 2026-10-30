@@ -66,6 +66,9 @@ The API reports its processes together: counters and histograms are summed over 
 | `lunedo_job_duration_seconds{queue,state}` | histogram | Duration of job attempts on this worker, by outcome. |
 | `lunedo_db_pool_connections{state}` | gauge | Database connections of this process, for the API of all its processes together: `total`, `idle`, `waiting`. |
 | `lunedo_db_pool_acquire_seconds` | histogram | Time a query waited for a free database connection. |
+| `lunedo_search_slot_wait_seconds` | histogram | Time a search waited for a free search slot (API). |
+| `lunedo_search_slots_in_use` | gauge | Search slots held at the moment (API). |
+| `lunedo_search_rejected_total` | counter | Searches answered with `429` because no slot became free in time (API). |
 | `lunedo_db_pool_acquire_timeouts_total` | counter | Queries that gave up waiting for a connection and failed. |
 | `lunedo_log_errors_total{type}` | counter | Error-level log events by their fixed text, the same as under [Recent errors](monitoring/system-status.md#recent-errors). |
 | `lunedo_collab_connections` | gauge | Open editor connections (collaboration server). |

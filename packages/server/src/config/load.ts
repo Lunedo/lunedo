@@ -3,7 +3,12 @@ import { availableParallelism } from "node:os";
 import path from "node:path";
 import { z } from "zod";
 import { instanceUrlSchema } from "../accounts/instance-settings.js";
-import { apiPoolSize, defaultApiProcesses, defaultPoolSize } from "../database/pool-size.js";
+import {
+  apiPoolSize,
+  defaultApiProcesses,
+  defaultPoolSize,
+  defaultSearchSlots,
+} from "../database/pool-size.js";
 import type { LogLevel } from "../logging/logger.js";
 import { resourcePath } from "../resources.js";
 
@@ -38,6 +43,7 @@ export interface ServerConfig {
   logLevel: LogLevel;
   database: { url: Secret; poolSize: number; apiPoolSize: number };
   apiProcesses: number;
+  search: { slots: number; waitSeconds: number; timeoutSeconds: number };
   paths: {
     files: string;
     secrets: string;
@@ -273,6 +279,11 @@ export function loadConfig(env: Env): ServerConfig {
         configuredPoolSize === undefined ? apiPoolSize(poolSize, apiProcesses) : configuredPoolSize,
     },
     apiProcesses,
+    search: {
+      slots: (values.LUNEDO_SEARCH_SLOTS as number | undefined) ?? defaultSearchSlots(availableParallelism()),
+      waitSeconds: values.LUNEDO_SEARCH_WAIT_SECONDS as number,
+      timeoutSeconds: values.LUNEDO_SEARCH_TIMEOUT_SECONDS as number,
+    },
     fileStorage:
       values.LUNEDO_FILE_STORAGE === "s3"
         ? {

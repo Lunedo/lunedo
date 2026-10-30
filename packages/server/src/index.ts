@@ -906,6 +906,7 @@ export {
 } from "./search/adapter.js";
 export { type IndexState, SearchIndexer } from "./search/indexer.js";
 export { searchIndexJob } from "./search/jobs.js";
+export { SearchBusyError, SearchLane, SearchTimeoutError } from "./search/lane.js";
 export { contentLanguageSetting } from "./search/languages.js";
 export { PostgresSearchAdapter } from "./search/postgres-adapter.js";
 export { MAX_QUERY_LENGTH, searchOperators } from "./search/query.js";

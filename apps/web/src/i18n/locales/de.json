@@ -1356,6 +1356,8 @@
     "rateLimitedRetry": "Zu viele Anfragen. Versuche es in {seconds, plural, one {# Sekunde} other {# Sekunden}} erneut.",
     "internalError": "Der Server konnte die Anfrage nicht ausführen. Versuche es erneut; klappt es weiterhin nicht, bitte deine Administration, das Server-Log zu prüfen.",
     "busy": "Der Server ist ausgelastet. Versuche es gleich erneut.",
+    "searchBusy": "Die Suche ist ausgelastet, weil gerade viele Suchen laufen. Versuche es gleich noch einmal.",
+    "searchTimedOut": "Die Suche hat zu lange gedauert. Grenze sie mit weiteren Wörtern oder einem Filter ein und versuche es erneut.",
     "uploadTimeout": "Der Upload wurde nicht rechtzeitig fertig, wahrscheinlich wegen einer langsamen Verbindung. Versuche es mit einer schnelleren Verbindung oder einer kleineren Datei erneut.",
     "passwordExpired": "Dein Verzeichnispasswort ist abgelaufen. Ändere es auf dem in deiner Organisation üblichen Weg, zum Beispiel bei der Anmeldung am Computer, oder wende dich an die Administration von {organization}. Lunedo ändert Verzeichnispasswörter nie.",
     "passwordMustChange": "Dein Verzeichnispasswort muss geändert werden, bevor du dich anmelden kannst. Ändere es auf dem in deiner Organisation üblichen Weg, zum Beispiel bei der Anmeldung am Computer, oder wende dich an die Administration von {organization}. Lunedo ändert Verzeichnispasswörter nie.",
@@ -10306,6 +10308,7 @@
     }
   },
   "search": {
+    "busy": "Die Suche ist ausgelastet. Neuer Versuch …",
     "title": "Suche",
     "titleWithQuery": "Suche: {query}",
     "field": "Suchbegriff",

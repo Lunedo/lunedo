@@ -4,6 +4,7 @@ import type { DatabasePool, PoolAcquireEvent } from "../database/pool.js";
 import type { JobFinishedEvent, JobQueue } from "../jobs/job-queue.js";
 import type { LoggedError } from "../logging/logger.js";
 import type { InstanceMetricsSource } from "../operations/instance-metrics.js";
+import type { SearchLaneObserver } from "../search/lane.js";
 import { clusterMetricsOf } from "./cluster-metrics.js";
 
 const DURATION_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
@@ -208,6 +209,31 @@ export class Metrics {
   readonly observeJob = (event: JobFinishedEvent): void => {
     this.#jobDuration.observe({ queue: event.name, state: event.state }, event.durationSeconds);
   };
+
+  observeSearchLane(): SearchLaneObserver {
+    const registers = [this.registry];
+    const waits = new Histogram({
+      name: "lunedo_search_slot_wait_seconds",
+      help: "Time a search waited for a free search slot.",
+      buckets: DURATION_BUCKETS,
+      registers,
+    });
+    const rejected = new Counter({
+      name: "lunedo_search_rejected_total",
+      help: "Searches answered with 429 because no search slot became free in time.",
+      registers,
+    });
+    const using = new Gauge({
+      name: "lunedo_search_slots_in_use",
+      help: "Search slots held by searches of this process.",
+      registers,
+    });
+    return {
+      waited: (seconds) => waits.observe(seconds),
+      rejected: () => rejected.inc(),
+      using: (change) => using.inc(change),
+    };
+  }
 
   observeDatabasePool(pool: DatabasePool): void {
     new Gauge({

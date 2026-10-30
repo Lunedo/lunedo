@@ -4,6 +4,7 @@ import {
   connectionsOfAllRoles,
   defaultApiProcesses,
   defaultPoolSize,
+  defaultSearchSlots,
   MAX_API_PROCESSES,
   MAX_POOL_SIZE,
   MIN_API_POOL_SIZE,
@@ -18,7 +19,12 @@ const ROOM_FOR_TOOLS = 5;
 function defaults(cpus: number) {
   const poolSize = defaultPoolSize(cpus);
   const apiProcesses = defaultApiProcesses(cpus);
-  return { poolSize, apiProcesses, apiPoolSize: apiPoolSize(poolSize, apiProcesses) };
+  return {
+    poolSize,
+    apiProcesses,
+    apiPoolSize: apiPoolSize(poolSize, apiProcesses),
+    searchSlots: defaultSearchSlots(cpus),
+  };
 }
 
 describe("the default pool size", () => {
@@ -44,9 +50,13 @@ describe("the default pool size", () => {
     expect(apiPoolSize(25, 2)).toBe(12);
   });
 
+  it("runs one search at once per four CPUs, at least one and at most four", () => {
+    expect([1, 4, 7, 8, 16, 64].map(defaultSearchSlots)).toEqual([1, 1, 1, 2, 4, 4]);
+  });
+
   it("counts the pools, notification and job queue connections of every process", () => {
-    expect(connectionsOfAllRoles({ poolSize: 10, apiPoolSize: 2, apiProcesses: 4 })).toBe(
-      4 * (2 + 1 + 1) + (10 + 4 + 1) + (10 + 1),
+    expect(connectionsOfAllRoles({ poolSize: 10, apiPoolSize: 2, apiProcesses: 4, searchSlots: 1 })).toBe(
+      4 * (2 + 1 + 1 + 1) + (10 + 4 + 1) + (10 + 1),
     );
   });
 

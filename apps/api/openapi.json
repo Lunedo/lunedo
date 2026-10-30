@@ -190552,7 +190552,7 @@
             }
           },
           "429": {
-            "description": "`rateLimited`: Too many requests.",
+            "description": "`rateLimited`: Too many requests. `searchBusy`: Search is busy.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -190565,6 +190565,34 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  },
+                  "searchBusy": {
+                    "value": {
+                      "type": "urn:lunedo:problem:searchBusy",
+                      "title": "Search is busy",
+                      "status": 429,
+                      "code": "searchBusy"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`searchTimedOut`: The search took too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "searchTimedOut": {
+                    "value": {
+                      "type": "urn:lunedo:problem:searchTimedOut",
+                      "title": "The search took too long",
+                      "status": 503,
+                      "code": "searchTimedOut"
                     }
                   }
                 }

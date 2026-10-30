@@ -49,14 +49,19 @@ export function createDatabasePool(options: {
   connectionString: string;
   applicationName: string;
   max?: number;
+  connectionTimeoutMillis?: number;
+  settings?: Readonly<Record<string, string | number>>;
   onAcquire?: (event: PoolAcquireEvent) => void;
 }): DatabasePool {
+  const settings = Object.entries({ jit: "off", ...options.settings }).map(
+    ([name, value]) => `-c ${name}=${value}`,
+  );
   const config: pg.PoolConfig = {
     connectionString: options.connectionString,
     application_name: options.applicationName,
     max: options.max ?? 10,
-    connectionTimeoutMillis: 5000,
-    options: "-c jit=off",
+    connectionTimeoutMillis: options.connectionTimeoutMillis ?? 5000,
+    options: settings.join(" "),
   };
   return options.onAcquire ? new ObservedPool(config, options.onAcquire) : new pg.Pool(config);
 }

@@ -13,6 +13,8 @@ import { loadPortalViewer, loadViewer } from "./access.js";
 import {
   type AdapterFacets,
   type AdapterHit,
+  type AdapterResult,
+  type AdapterSearch,
   type ArticleList,
   type ArticleListRequest,
   EXCERPT_END,
@@ -25,6 +27,7 @@ import {
   type SearchUpdatedRange,
 } from "./adapter.js";
 import type { SearchIndexer } from "./indexer.js";
+import type { SearchLane } from "./lane.js";
 import { parseQuery } from "./query.js";
 
 export const SEARCH_PAGE_LIMIT = 50;
@@ -238,6 +241,7 @@ export class SearchService {
   readonly #people: PeopleService;
   readonly #adapter: SearchAdapter;
   readonly #indexer: SearchIndexer;
+  readonly #lane: SearchLane | undefined;
 
   constructor(options: {
     database: Database;
@@ -245,12 +249,19 @@ export class SearchService {
     people: PeopleService;
     adapter: SearchAdapter;
     indexer: SearchIndexer;
+    lane?: SearchLane | undefined;
   }) {
     this.#database = options.database;
+    this.#lane = options.lane;
     this.#authorization = options.authorization;
     this.#people = options.people;
     this.#adapter = options.adapter;
     this.#indexer = options.indexer;
+  }
+
+  #searchIndex(request: AdapterSearch): Promise<AdapterResult> {
+    if (!this.#lane) return this.#adapter.search(this.#database, request);
+    return this.#lane.run((executor) => this.#adapter.search(executor, request));
   }
 
   get indexer(): SearchIndexer {
@@ -280,7 +291,7 @@ export class SearchService {
     const filters = await this.#filters(principal, request, query.operators, spaces);
     if (!filters) return empty;
     const limit = Math.min(Math.max(request.limit, 1), SEARCH_PAGE_LIMIT);
-    const result = await this.#adapter.search(this.#database, {
+    const result = await this.#searchIndex({
       viewer,
       query,
       prefixLastTerm: quick && !/\s$/.test(request.query),
