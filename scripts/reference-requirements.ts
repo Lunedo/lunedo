@@ -34,6 +34,7 @@ export interface LoadRun {
   readonly commit: string;
   readonly startedAt: string;
   readonly durationSeconds: number;
+  readonly warmupSeconds: number;
   readonly disturbed: boolean;
   readonly actions: Readonly<Record<Action, Timing>>;
   readonly errors: { readonly count: number; readonly kinds: Readonly<Record<string, number>> };
@@ -180,6 +181,8 @@ function loadRun(value: unknown, where: string): LoadRun {
     commit,
     startedAt: text(source.startedAt, `${where}.startedAt`),
     durationSeconds: number(source.durationSeconds, `${where}.durationSeconds`),
+    warmupSeconds:
+      source.warmupSeconds === undefined ? 0 : number(source.warmupSeconds, `${where}.warmupSeconds`),
     disturbed: flag(source.disturbed, `${where}.disturbed`),
     actions: Object.fromEntries(
       ACTIONS.map((action) => [action, timing(actions[action], `${where}.actions.${action}`)]),
@@ -441,15 +444,23 @@ export function renderRequirements(source: RequirementsSource): string {
         ["peak", "7 to 36 seconds, 18 on average", "70 %", "15 %", "10 %", "5 %"],
       ],
     ),
-    "The targets apply to **typical**; **peak** shows how much room is left. A size measured only with peak is judged by peak, and its hardware comes from peak.",
+    "The targets apply to **typical**; **peak** shows how much room is left. A size measured only with peak is judged by peak, and its hardware comes from peak. Response times of the first minutes of a run, while the people start and the load generator opens its connections, are not counted where the table says so; errors always are.",
     table(
-      ["Size", "Scenario", "Load runs", "Measured on", "Commit"],
+      ["Size", "Scenario", "Load runs", "Measured on", "Commit", "Not counted at the start"],
       data.sizes.flatMap((entry) =>
         scenariosOf(entry).map((scenario) => {
           const runs = counted(runsOf(entry, scenario));
           const dates = [...new Set(runs.map((run) => run.startedAt.slice(0, 10)))].sort();
           const commits = [...new Set(runs.map((run) => `\`${run.commit.slice(0, 8)}\``))];
-          return [entry.name, scenario, integer(runs.length), dates.join(", "), commits.join(", ")];
+          const warmup = Math.max(...runs.map((run) => run.warmupSeconds));
+          return [
+            entry.name,
+            scenario,
+            integer(runs.length),
+            dates.join(", "),
+            commits.join(", "),
+            warmup > 0 ? `${Math.round(warmup / 60)} min` : "nothing",
+          ];
         }),
       ),
     ),

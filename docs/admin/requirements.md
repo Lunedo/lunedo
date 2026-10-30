@@ -106,13 +106,13 @@ The load runs follow one of two scenarios. Both are assumptions about how people
 | typical | 30 to 90 seconds, 60 on average | 70 % | 15 % | 2 % | 13 % |
 | peak | 7 to 36 seconds, 18 on average | 70 % | 15 % | 10 % | 5 % |
 
-The targets apply to **typical**; **peak** shows how much room is left. A size measured only with peak is judged by peak, and its hardware comes from peak.
+The targets apply to **typical**; **peak** shows how much room is left. A size measured only with peak is judged by peak, and its hardware comes from peak. Response times of the first minutes of a run, while the people start and the load generator opens its connections, are not counted where the table says so; errors always are.
 
-| Size | Scenario | Load runs | Measured on | Commit |
-|---|---|---|---|---|
-| small | peak | 3 | 2026-10-29 | `8c70161e` |
-| medium | peak | 3 | 2026-10-29 | `8c70161e` |
-| large | peak | 3 | 2026-10-29 | `8c70161e` |
+| Size | Scenario | Load runs | Measured on | Commit | Not counted at the start |
+|---|---|---|---|---|---|
+| small | peak | 3 | 2026-10-29 | `8c70161e` | nothing |
+| medium | peak | 3 | 2026-10-29 | `8c70161e` | nothing |
+| large | peak | 3 | 2026-10-29 | `8c70161e` | nothing |
 
 ### Sizes
 

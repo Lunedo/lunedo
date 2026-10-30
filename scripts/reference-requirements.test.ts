@@ -27,6 +27,7 @@ function run(overrides: Partial<LoadRun> & { p95?: number } = {}): LoadRun {
     commit: "fedcba9876543210fedcba9876543210fedcba98",
     startedAt: "2026-10-28T10:00:00Z",
     durationSeconds: 900,
+    warmupSeconds: 0,
     disturbed: false,
     actions: Object.fromEntries(
       ACTIONS.map((action) => [action, { count: 100, p50Ms: 80, p95Ms: p95 }]),
@@ -254,13 +255,14 @@ describe("rendered section", () => {
         scenario: "typical",
         commit: "abcdef0123456789abcdef0123456789abcdef01",
         startedAt: "2026-11-01T08:00:00Z",
+        warmupSeconds: 240,
       });
     const text = renderRequirements(source(data([run(), run(), typical(), typical()])));
     assert.match(text, /\| typical \| 30 to 90 seconds, 60 on average \| 70 % \| 15 % \| 2 % \| 13 % \|/);
     assert.match(text, /\| peak \| 7 to 36 seconds, 18 on average \| 70 % \| 15 % \| 10 % \| 5 % \|/);
     assert.match(text, /The targets apply to \*\*typical\*\*/);
-    assert.match(text, /\| small \| typical \| 2 \| 2026-11-01 \| `abcdef01` \|/);
-    assert.match(text, /\| small \| peak \| 2 \| 2026-10-28 \| `fedcba98` \|/);
+    assert.match(text, /\| small \| typical \| 2 \| 2026-11-01 \| `abcdef01` \| 4 min \|/);
+    assert.match(text, /\| small \| peak \| 2 \| 2026-10-28 \| `fedcba98` \| nothing \|/);
   });
 
   it("says when the targets were missed instead of recommending CPU", () => {
