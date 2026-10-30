@@ -277,6 +277,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
         [sql`true`, ...flags.filter(([group]) => group !== except).map(([group]) => sql.raw(`f_${group}`))],
         sql` and `,
       );
+    const failing = sql`(${sql.join([sql`0`, ...flags.map(([group]) => sql`(not ${sql.raw(`f_${group}`)})::int`)], sql` + `)})`;
     const deduplicated = sql`select distinct on (source, source_id) * from matched order by source, source_id, score desc, position`;
     const candidates = languages
       ? sql`select distinct on (article_id) * from (${deduplicated}) d order by article_id, (${passing()}) desc, score desc, position`
@@ -343,7 +344,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
         request.facets
           ? sql`,
       sampled as (
-        select * from candidates order by score desc, source_id limit ${this.#facetSample}
+        select * from candidates where ${failing} <= 1 order by ${flags.length > 0 ? sql`${failing},` : sql``} score desc, source_id limit ${this.#facetSample}
       ),
       facet_rows as (
         select b.*, fc.content_type, fc.labels, fc.status, fc.author_id, fc.language,

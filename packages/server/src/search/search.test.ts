@@ -442,6 +442,25 @@ describe.skipIf(!baseUrl)("search", () => {
     expect((limited.facets?.spaces ?? []).reduce((sum, facet) => sum + facet.count, 0)).toBe(2);
   });
 
+  it("keeps the counts of the other filters complete when a filter picks few of many matches", async () => {
+    const w = await world();
+    for (const picked of [w.shared.id, w.second.id]) {
+      const filtered = searchRequest(w.word, { spaceIds: [picked] });
+      const full = await test.services.search.search(w.other, w.org.id, filtered);
+      const bounded = new SearchService({
+        database: test.database,
+        authorization: test.services.authorization,
+        people: test.services.people,
+        adapter: new PostgresSearchAdapter({ facetSample: full.total }),
+        indexer: test.services.search.indexer,
+      });
+      const limited = await bounded.search(w.other, w.org.id, filtered);
+      expect(full.total).toBeGreaterThan(0);
+      expect(limited.facets?.contentTypes).toEqual(full.facets?.contentTypes);
+      expect(limited.facets?.authors).toEqual(full.facets?.authors);
+    }
+  });
+
   it("looks up status names in spaces the person can see only", async () => {
     const w = await world();
     const statuses = test.services.pageStatus;
