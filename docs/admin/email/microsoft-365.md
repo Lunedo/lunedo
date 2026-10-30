@@ -42,6 +42,14 @@ Both are set up under **Settings › Instance › Services › Delivery** and ne
 
 A test mail can be sent with settings before they are saved; it always uses the stored credentials. Graph accepts a mail with `202 Accepted` and delivers it later, so a successful test only means that Microsoft 365 accepted it. A delivery failure arrives as a non-delivery report in the sender mailbox, for example `550 5.7.233` when the tenant has reached its daily limit of external recipients. The message trace in the Exchange admin center shows what happened to a mail.
 
+### Sending limits
+
+Exchange Online allows one mailbox to send 30 messages per minute and to reach 10,000 recipients in 24 hours, for Microsoft Graph and SMTP alike; the tenant also has a daily limit of external recipients that depends on its licenses. Mail above the per-minute limit is held back by Microsoft and delivered late, mail above the daily limits is rejected with a non-delivery report.
+
+When **E-mails per minute** is not set, Lunedo sends at most 30 e-mails per minute through Microsoft Graph, so it stays within the limit of the sender mailbox. When you send through Microsoft 365 over SMTP, set **E-mails per minute** to 30 yourself: Lunedo cannot tell which service is behind an SMTP server and sends without a limit there unless one is set.
+
+For a large organization the daily limit of 10,000 recipients is the tighter one. Set the e-mail of frequent events to **In the daily digest** in the [organization defaults](../notifications.md#organization-defaults), so people get one e-mail a day instead of one per event, or send through an SMTP relay or a bulk mail service that allows more, and set **E-mails per minute** to its limit.
+
 ### Credentials and renewal
 
 Client secrets and private keys are stored with envelope encryption and never returned. Several credentials can exist at the same time, so you can renew without a gap:

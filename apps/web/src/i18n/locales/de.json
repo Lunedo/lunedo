@@ -2954,8 +2954,8 @@
       },
       "mail_sendRatePerMinute": {
         "label": "E-Mails pro Minute",
-        "description": "Weitere E-Mails warten auf die nächste Minute.",
-        "help": "Mail-Dienste begrenzen, wie viele E-Mails ein Postfach senden darf. Microsoft 365 erlaubt über SMTP 30 pro Minute; die Grenze gilt für SMTP und Microsoft Graph gleichermaßen."
+        "description": "Leer: 30 bei Graph, unbegrenzt bei SMTP.",
+        "help": "Microsoft 365 erlaubt einem Postfach 30 E-Mails pro Minute und 10.000 Empfänger am Tag, für Microsoft Graph und SMTP gleichermaßen. Setze hier 30, wenn du über SMTP von Microsoft 365 sendest. Für große Organisationen nutze Zusammenfassungen oder ein SMTP-Relay."
       }
     },
     "disabled": {
@@ -2964,6 +2964,7 @@
       "noPermission": "Deine Rollen erlauben dir nicht, diese Einstellung zu ändern."
     },
     "noLimit": "Keine Begrenzung",
+    "mailRateByMethod": "30 für Microsoft Graph, keine Begrenzung für SMTP",
     "limitDuration": "Begrenzen",
     "lockTitle": "{name} sperren?",
     "lockImpactInstance": "Alle Organisationen und ihre Mitglieder verwenden dann {value} für {name} und können es nicht mehr ändern.",

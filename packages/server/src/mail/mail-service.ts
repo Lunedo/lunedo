@@ -93,11 +93,18 @@ export const graphMailSetting = defineSetting({
 
 export const mailSendRateSetting = defineSetting({
   key: "mail.sendRatePerMinute",
-  schema: z.number().int().min(1).max(10_000),
-  default: 30,
+  schema: z.number().int().min(1).max(10_000).nullable(),
+  default: null,
   levels: ["instance"],
   lockable: false,
 });
+
+export const GRAPH_SEND_RATE_PER_MINUTE = 30;
+
+export function sendRatePerMinute(configured: number | null, method: MailMethod): number | null {
+  if (configured !== null) return configured;
+  return method === "graph" ? GRAPH_SEND_RATE_PER_MINUTE : null;
+}
 
 export const mailCredentialReminderJob = defineJob({
   name: "mail.send-credential-reminders",
@@ -477,7 +484,11 @@ export class MailService {
   async #waitForSendSlot(signal: AbortSignal): Promise<void> {
     const sender = await this.#sender();
     if (!sender) return;
-    const perMinute = await this.#settings.get(mailSendRateSetting, {});
+    const perMinute = sendRatePerMinute(
+      await this.#settings.get(mailSendRateSetting, {}),
+      await this.method(),
+    );
+    if (perMinute === null) return;
     for (;;) {
       signal.throwIfAborted();
       const slot = await this.#sendRate.claim(sender, perMinute);

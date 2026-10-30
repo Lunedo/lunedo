@@ -19,6 +19,7 @@ import {
   MailService,
   mailSendRateSetting,
   SmtpConfigurationError,
+  sendRatePerMinute,
 } from "./mail-service.js";
 import { instanceSecrets, mailOutbox, mailSends } from "./schema.js";
 import { renderMail } from "./templates.js";
@@ -176,6 +177,7 @@ describe.skipIf(!databaseUrl)("MailService", () => {
   }
 
   async function fillSendWindow(count: number) {
+    await new SettingsService({ database, logger }).set(mailSendRateSetting, {}, "instance", count);
     await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
     await database
       .insert(mailSends)
@@ -223,6 +225,27 @@ describe.skipIf(!databaseUrl)("MailService", () => {
     expect(transport.sent.map((sent) => sent.to)).toEqual(["waiting@example.org"]);
     expect(await database.select().from(mailOutbox).where(eq(mailOutbox.id, id))).toEqual([]);
     await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+    await new SettingsService({ database, logger }).clear(mailSendRateSetting, {}, "instance");
+  });
+
+  it("sends over SMTP without a send rate unless one is set", async () => {
+    const transport = new CapturingTransport();
+    const mail = service(transport, async () => {
+      throw new Error("Delivery must not wait");
+    });
+    await fillSendWindow(30);
+    await new SettingsService({ database, logger }).clear(mailSendRateSetting, {}, "instance");
+    const id = await queue(mail, "unlimited@example.org");
+    await mail.deliver(testJobContext(deliverMailJob.name, { mailId: id }));
+    expect(transport.sent.map((sent) => sent.to)).toEqual(["unlimited@example.org"]);
+    await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
+  });
+
+  it("limits Microsoft Graph to 30 e-mails per minute and SMTP to nothing by default", () => {
+    expect(sendRatePerMinute(null, "graph")).toBe(30);
+    expect(sendRatePerMinute(null, "smtp")).toBeNull();
+    expect(sendRatePerMinute(120, "graph")).toBe(120);
+    expect(sendRatePerMinute(10, "smtp")).toBe(10);
   });
 
   it("puts a waiting mail back in the queue when the worker stops", async () => {
@@ -240,6 +263,7 @@ describe.skipIf(!databaseUrl)("MailService", () => {
     expect(transport.sent).toHaveLength(0);
     await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
     await database.delete(mailOutbox).where(eq(mailOutbox.id, id));
+    await new SettingsService({ database, logger }).clear(mailSendRateSetting, {}, "instance");
   });
 
   async function deliverInWorker(perMinute: number, count: number, until: (sent: number) => boolean) {
@@ -264,7 +288,7 @@ describe.skipIf(!databaseUrl)("MailService", () => {
       await worker.stop({ timeoutSeconds: 1 });
       await database.delete(mailOutbox).where(inArray(mailOutbox.id, ids));
       await database.delete(mailSends).where(eq(mailSends.sender, "wiki@example.org"));
-      await new SettingsService({ database, logger }).set(mailSendRateSetting, {}, "instance", 30);
+      await new SettingsService({ database, logger }).clear(mailSendRateSetting, {}, "instance");
     }
   }
 

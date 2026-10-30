@@ -2954,8 +2954,8 @@
       },
       "mail_sendRatePerMinute": {
         "label": "E-mails per minute",
-        "description": "Further e-mails wait for the next minute.",
-        "help": "Mail services limit how many e-mails one mailbox may send. Microsoft 365 allows 30 per minute over SMTP; the limit applies to SMTP and Microsoft Graph alike."
+        "description": "Unset: 30 for Graph, no limit for SMTP.",
+        "help": "Microsoft 365 allows one mailbox 30 e-mails per minute and 10,000 recipients a day, for Microsoft Graph and SMTP alike. Set 30 here when you send through Microsoft 365 over SMTP. For large organizations, use digests or an SMTP relay."
       }
     },
     "disabled": {
@@ -2964,6 +2964,7 @@
       "noPermission": "Your roles do not allow you to change this setting."
     },
     "noLimit": "No limit",
+    "mailRateByMethod": "30 for Microsoft Graph, no limit for SMTP",
     "limitDuration": "Set a limit",
     "lockTitle": "Lock {name}?",
     "lockImpactInstance": "Every organization and all its members will use {value} for {name} and can no longer change it.",
