@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, inject, it } from "vitest";
 import { createLogger } from "../logging/logger.js";
@@ -55,6 +58,40 @@ describe.skipIf(!baseUrl)("migrations", () => {
     const hashes = await appliedMigrations(target);
     expect(new Set(hashes).size).toBe(hashes.length);
     expect(hashes.length).toBe((await migrationStatus(target)).expected);
+  });
+
+  it("logs what a migration reports about changed data, but not notices of PostgreSQL itself", async () => {
+    const target = await freshDatabase();
+    const folder = mkdtempSync(path.join(tmpdir(), "lunedo-notices-"));
+    try {
+      mkdirSync(path.join(folder, "meta"));
+      writeFileSync(
+        path.join(folder, "meta", "_journal.json"),
+        JSON.stringify({
+          entries: [{ idx: 0, version: "7", when: 1, tag: "0000_notices", breakpoints: true }],
+        }),
+      );
+      writeFileSync(
+        path.join(folder, "0000_notices.sql"),
+        [
+          "CREATE SCHEMA IF NOT EXISTS public;",
+          `CREATE TABLE "${"n".repeat(70)}" (id int);`,
+          "DO $$ BEGIN RAISE NOTICE '2 rows moved'; END $$;",
+        ].join("--> statement-breakpoint\n"),
+      );
+      const lines: string[] = [];
+      const recording = createLogger({
+        service: "test",
+        level: "warn",
+        destination: { write: (line: string) => lines.push(line) },
+      });
+      await runMigrations(target, { logger: recording, folder });
+      expect(lines.map((line) => JSON.parse(line) as { notice?: string; message: string })).toEqual([
+        expect.objectContaining({ notice: "2 rows moved", message: "A migration changed existing data" }),
+      ]);
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
   });
 
   it("runs once when two processes start at the same time", async () => {

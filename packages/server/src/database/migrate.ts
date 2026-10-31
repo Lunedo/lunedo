@@ -10,6 +10,7 @@ export const migrationsFolder = resourcePath("drizzle");
 const MIGRATIONS_SCHEMA = "drizzle";
 const MIGRATIONS_TABLE = "__drizzle_migrations";
 const LOCK_NAME = "lunedo.migrations";
+const RAISED_NOTICE = "00000";
 
 interface JournalEntry {
   idx: number;
@@ -54,8 +55,10 @@ export async function runMigrations(
 ): Promise<void> {
   const folder = options.folder ?? migrationsFolder;
   const client = await pool.connect();
-  const notice = (message: { message?: string }) =>
-    options.logger.warn({ notice: message.message ?? "" }, "A migration changed existing data");
+  const notice = (message: { message?: string; code?: string }) => {
+    if (message.code === RAISED_NOTICE)
+      options.logger.warn({ notice: message.message ?? "" }, "A migration changed existing data");
+  };
   client.on("notice", notice);
   try {
     await client.query("select pg_advisory_lock(hashtext($1))", [LOCK_NAME]);
