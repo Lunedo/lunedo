@@ -10,7 +10,8 @@
     "kernel": "6.8.0-147-generic",
     "docker": "29.9.2",
     "compose": "5.6.1",
-    "postgres": "17.11"
+    "postgres": "17.11",
+    "storage": "ZFS on one consumer NVMe SSD without power-loss protection, shared with seven other virtual machines, which were kept quiet during the load runs of size large"
   },
   "targets": {
     "pageOpenP95Ms": 500,
@@ -549,8 +550,8 @@
         }
       ],
       "searchIndexSeconds": {
-        "p50": 1.5,
-        "p95": 2.7
+        "p50": 0.9,
+        "p95": 2.4
       },
       "bulk": [
         {
@@ -565,106 +566,36 @@
       "loadRuns": [
         {
           "scenario": "typical",
-          "commit": "da1bd1fa",
-          "startedAt": "2026-10-31T14:58:47.764Z",
+          "commit": "21e978c3",
+          "startedAt": "2026-10-31T20:46:27.584Z",
           "warmupSeconds": 240,
           "durationSeconds": 900,
           "disturbed": false,
           "actions": {
             "pageOpen": {
-              "count": 1596,
-              "p50Ms": 39,
-              "p95Ms": 185
+              "count": 1533,
+              "p50Ms": 37,
+              "p95Ms": 67
             },
             "pageReadable": {
-              "count": 58,
-              "p50Ms": 255,
-              "p95Ms": 341
+              "count": 55,
+              "p50Ms": 222,
+              "p95Ms": 240
             },
             "search": {
-              "count": 336,
-              "p50Ms": 210,
-              "p95Ms": 1373
+              "count": 348,
+              "p50Ms": 180,
+              "p95Ms": 231
             },
             "save": {
-              "count": 68,
-              "p50Ms": 27,
-              "p95Ms": 135
+              "count": 54,
+              "p50Ms": 23,
+              "p95Ms": 37
             },
             "forYou": {
-              "count": 193,
-              "p50Ms": 24,
-              "p95Ms": 53
-            }
-          },
-          "errors": {
-            "count": 32,
-            "kinds": {
-              "GET /api/v1/organizations/:id/search 429": 32
-            }
-          },
-          "containers": [
-            {
-              "name": "lunedo-lunedo-1",
-              "peakMemoryBytes": 2889439248,
-              "averageMemoryBytes": 2873006571,
-              "peakCpuPercent": 193.5,
-              "averageCpuPercent": 15.1
-            },
-            {
-              "name": "lunedo-postgres-1",
-              "peakMemoryBytes": 2079837913,
-              "averageMemoryBytes": 2036002680,
-              "peakCpuPercent": 271.4,
-              "averageCpuPercent": 24.6
-            }
-          ],
-          "totals": {
-            "peakMemoryBytes": 4953171034,
-            "peakCpuPercent": 292.9
-          },
-          "machinePeakCpuPercent": 70.6,
-          "postgresConnections": {
-            "peak": 72,
-            "average": 62.7
-          },
-          "jobQueue": {
-            "peak": 15,
-            "average": 0.8
-          }
-        },
-        {
-          "scenario": "typical",
-          "commit": "da1bd1fa",
-          "startedAt": "2026-10-31T15:16:46.432Z",
-          "warmupSeconds": 240,
-          "durationSeconds": 900,
-          "disturbed": false,
-          "actions": {
-            "pageOpen": {
-              "count": 1701,
-              "p50Ms": 41,
-              "p95Ms": 237
-            },
-            "pageReadable": {
-              "count": 58,
-              "p50Ms": 248,
-              "p95Ms": 348
-            },
-            "search": {
-              "count": 152,
-              "p50Ms": 200,
-              "p95Ms": 1439
-            },
-            "save": {
-              "count": 82,
-              "p50Ms": 27,
-              "p95Ms": 143
-            },
-            "forYou": {
-              "count": 323,
-              "p50Ms": 21,
-              "p95Ms": 141
+              "count": 282,
+              "p50Ms": 20,
+              "p95Ms": 37
             }
           },
           "errors": {
@@ -674,171 +605,303 @@
           "containers": [
             {
               "name": "lunedo-lunedo-1",
-              "peakMemoryBytes": 2892660474,
-              "averageMemoryBytes": 2874946545,
-              "peakCpuPercent": 203,
-              "averageCpuPercent": 21.6
+              "peakMemoryBytes": 2599528956,
+              "averageMemoryBytes": 2573081869,
+              "peakCpuPercent": 142,
+              "averageCpuPercent": 18.2
             },
             {
               "name": "lunedo-postgres-1",
-              "peakMemoryBytes": 2097017782,
-              "averageMemoryBytes": 2050149795,
-              "peakCpuPercent": 275.7,
-              "averageCpuPercent": 23.3
+              "peakMemoryBytes": 1959578829,
+              "averageMemoryBytes": 1931909328,
+              "peakCpuPercent": 142.8,
+              "averageCpuPercent": 28
             }
           ],
           "totals": {
-            "peakMemoryBytes": 4973572129,
-            "peakCpuPercent": 310.6
+            "peakMemoryBytes": 4556960301,
+            "peakCpuPercent": 169.1
           },
-          "machinePeakCpuPercent": 47,
+          "machinePeakCpuPercent": 27,
           "postgresConnections": {
-            "peak": 73,
-            "average": 63.3
+            "peak": 64,
+            "average": 60.6
           },
           "jobQueue": {
             "peak": 16,
-            "average": 0.6
+            "average": 1.1
           }
         },
         {
-          "scenario": "peak",
-          "commit": "da1bd1fa",
-          "startedAt": "2026-10-31T15:34:07.587Z",
+          "scenario": "typical",
+          "commit": "21e978c3",
+          "startedAt": "2026-10-31T21:06:18.088Z",
           "warmupSeconds": 240,
           "durationSeconds": 900,
           "disturbed": false,
           "actions": {
             "pageOpen": {
-              "count": 5396,
-              "p50Ms": 32,
-              "p95Ms": 97
+              "count": 1563,
+              "p50Ms": 38,
+              "p95Ms": 66
             },
             "pageReadable": {
-              "count": 178,
-              "p50Ms": 250,
-              "p95Ms": 364
+              "count": 55,
+              "p50Ms": 223,
+              "p95Ms": 257
             },
             "search": {
-              "count": 1028,
-              "p50Ms": 207,
-              "p95Ms": 844
+              "count": 326,
+              "p50Ms": 180,
+              "p95Ms": 227
             },
             "save": {
-              "count": 1456,
-              "p50Ms": 37,
-              "p95Ms": 214
+              "count": 45,
+              "p50Ms": 21,
+              "p95Ms": 81
             },
             "forYou": {
-              "count": 357,
-              "p50Ms": 22,
-              "p95Ms": 59
+              "count": 277,
+              "p50Ms": 21,
+              "p95Ms": 38
             }
           },
           "errors": {
-            "count": 31,
-            "kinds": {
-              "GET /api/v1/organizations/:id/search 429": 31
-            }
+            "count": 0,
+            "kinds": {}
           },
           "containers": [
             {
               "name": "lunedo-lunedo-1",
-              "peakMemoryBytes": 2892660474,
-              "averageMemoryBytes": 2884859885,
-              "peakCpuPercent": 208.8,
-              "averageCpuPercent": 57.6
+              "peakMemoryBytes": 2726230491,
+              "averageMemoryBytes": 2702785283,
+              "peakCpuPercent": 56.7,
+              "averageCpuPercent": 17
             },
             {
               "name": "lunedo-postgres-1",
-              "peakMemoryBytes": 2072321720,
-              "averageMemoryBytes": 2024055574,
-              "peakCpuPercent": 311.5,
-              "averageCpuPercent": 79.3
+              "peakMemoryBytes": 1954210120,
+              "averageMemoryBytes": 1890195182,
+              "peakCpuPercent": 91.8,
+              "averageCpuPercent": 25.1
             }
           ],
           "totals": {
-            "peakMemoryBytes": 4958539743,
-            "peakCpuPercent": 382.2
+            "peakMemoryBytes": 4679366869,
+            "peakCpuPercent": 113.8
           },
-          "machinePeakCpuPercent": 88.4,
+          "machinePeakCpuPercent": 28.2,
           "postgresConnections": {
-            "peak": 73,
-            "average": 64.9
+            "peak": 68,
+            "average": 61.7
           },
           "jobQueue": {
-            "peak": 14,
-            "average": 0.4
+            "peak": 15,
+            "average": 0.9
           }
         },
         {
           "scenario": "peak",
-          "commit": "da1bd1fa",
-          "startedAt": "2026-10-31T15:50:59.408Z",
+          "commit": "21e978c3",
+          "startedAt": "2026-10-31T21:26:20.259Z",
           "warmupSeconds": 240,
           "durationSeconds": 900,
           "disturbed": false,
           "actions": {
             "pageOpen": {
-              "count": 5040,
-              "p50Ms": 31,
-              "p95Ms": 83
+              "count": 5128,
+              "p50Ms": 43,
+              "p95Ms": 105
             },
             "pageReadable": {
-              "count": 177,
-              "p50Ms": 250,
-              "p95Ms": 348
+              "count": 190,
+              "p50Ms": 226,
+              "p95Ms": 333
             },
             "search": {
-              "count": 1136,
-              "p50Ms": 195,
-              "p95Ms": 784
+              "count": 1091,
+              "p50Ms": 196,
+              "p95Ms": 538
             },
             "save": {
-              "count": 1330,
-              "p50Ms": 33,
-              "p95Ms": 122
+              "count": 695,
+              "p50Ms": 23,
+              "p95Ms": 57
             },
             "forYou": {
-              "count": 405,
-              "p50Ms": 22,
+              "count": 349,
+              "p50Ms": 23,
               "p95Ms": 63
             }
           },
           "errors": {
-            "count": 21,
-            "kinds": {
-              "GET /api/v1/organizations/:id/search 429": 21
-            }
+            "count": 0,
+            "kinds": {}
           },
           "containers": [
             {
               "name": "lunedo-lunedo-1",
-              "peakMemoryBytes": 3010772074,
-              "averageMemoryBytes": 2980905712,
-              "peakCpuPercent": 184.4,
-              "averageCpuPercent": 61.4
+              "peakMemoryBytes": 2823940997,
+              "averageMemoryBytes": 2793178000,
+              "peakCpuPercent": 141.3,
+              "averageCpuPercent": 55.1
             },
             {
               "name": "lunedo-postgres-1",
-              "peakMemoryBytes": 2089501590,
-              "averageMemoryBytes": 2034198050,
-              "peakCpuPercent": 295.4,
-              "averageCpuPercent": 72.5
+              "peakMemoryBytes": 2040109466,
+              "averageMemoryBytes": 1949193457,
+              "peakCpuPercent": 272.5,
+              "averageCpuPercent": 86.6
             }
           ],
           "totals": {
-            "peakMemoryBytes": 5070208893,
-            "peakCpuPercent": 380.7
+            "peakMemoryBytes": 4860829237,
+            "peakCpuPercent": 378.8
           },
-          "machinePeakCpuPercent": 77.3,
+          "machinePeakCpuPercent": 59.3,
           "postgresConnections": {
-            "peak": 74,
-            "average": 63.8
+            "peak": 69,
+            "average": 65.5
           },
           "jobQueue": {
-            "peak": 29,
-            "average": 0.7
+            "peak": 15,
+            "average": 1
+          }
+        },
+        {
+          "scenario": "peak",
+          "commit": "21e978c3",
+          "startedAt": "2026-10-31T21:45:02.306Z",
+          "warmupSeconds": 240,
+          "durationSeconds": 900,
+          "disturbed": false,
+          "actions": {
+            "pageOpen": {
+              "count": 5158,
+              "p50Ms": 43,
+              "p95Ms": 101
+            },
+            "pageReadable": {
+              "count": 190,
+              "p50Ms": 227,
+              "p95Ms": 326
+            },
+            "search": {
+              "count": 1073,
+              "p50Ms": 199,
+              "p95Ms": 387
+            },
+            "save": {
+              "count": 756,
+              "p50Ms": 24,
+              "p95Ms": 62
+            },
+            "forYou": {
+              "count": 323,
+              "p50Ms": 25,
+              "p95Ms": 66
+            }
+          },
+          "errors": {
+            "count": 0,
+            "kinds": {}
+          },
+          "containers": [
+            {
+              "name": "lunedo-lunedo-1",
+              "peakMemoryBytes": 2928093954,
+              "averageMemoryBytes": 2886095476,
+              "peakCpuPercent": 139.2,
+              "averageCpuPercent": 54.8
+            },
+            {
+              "name": "lunedo-postgres-1",
+              "peakMemoryBytes": 2058363077,
+              "averageMemoryBytes": 2032768339,
+              "peakCpuPercent": 195.5,
+              "averageCpuPercent": 84.3
+            }
+          ],
+          "totals": {
+            "peakMemoryBytes": 4975719612,
+            "peakCpuPercent": 305.3
+          },
+          "machinePeakCpuPercent": 57.4,
+          "postgresConnections": {
+            "peak": 68,
+            "average": 64.1
+          },
+          "jobQueue": {
+            "peak": 16,
+            "average": 1.1
+          }
+        },
+        {
+          "scenario": "peak",
+          "commit": "21e978c3",
+          "startedAt": "2026-10-31T22:03:47.354Z",
+          "warmupSeconds": 240,
+          "durationSeconds": 900,
+          "disturbed": false,
+          "actions": {
+            "pageOpen": {
+              "count": 5114,
+              "p50Ms": 43,
+              "p95Ms": 106
+            },
+            "pageReadable": {
+              "count": 190,
+              "p50Ms": 229,
+              "p95Ms": 334
+            },
+            "search": {
+              "count": 1103,
+              "p50Ms": 202,
+              "p95Ms": 480
+            },
+            "save": {
+              "count": 728,
+              "p50Ms": 26,
+              "p95Ms": 57
+            },
+            "forYou": {
+              "count": 361,
+              "p50Ms": 26,
+              "p95Ms": 71
+            }
+          },
+          "errors": {
+            "count": 0,
+            "kinds": {}
+          },
+          "containers": [
+            {
+              "name": "lunedo-lunedo-1",
+              "peakMemoryBytes": 2914135310,
+              "averageMemoryBytes": 2825002940,
+              "peakCpuPercent": 140.4,
+              "averageCpuPercent": 56.1
+            },
+            {
+              "name": "lunedo-postgres-1",
+              "peakMemoryBytes": 2104533975,
+              "averageMemoryBytes": 2058953045,
+              "peakCpuPercent": 222.4,
+              "averageCpuPercent": 82.1
+            }
+          ],
+          "totals": {
+            "peakMemoryBytes": 5017595544,
+            "peakCpuPercent": 269.9
+          },
+          "machinePeakCpuPercent": 55.9,
+          "postgresConnections": {
+            "peak": 70,
+            "average": 65.9
+          },
+          "jobQueue": {
+            "peak": 13,
+            "average": 0.9
           }
         }
       ]
