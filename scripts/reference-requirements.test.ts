@@ -162,6 +162,20 @@ describe("scenarios", () => {
     assert.equal(derive(only(parsed.sizes), parsed, 20).minimumCpus, 2);
   });
 
+  it("recommend at least the CPU the peak scenario used when typical needs less", () => {
+    const parsed = parseRequirements(
+      data([
+        run({ machinePeakCpuPercent: 59.3 }),
+        run({ machinePeakCpuPercent: 57.4 }),
+        typical({ machinePeakCpuPercent: 28.2 }),
+        typical({ machinePeakCpuPercent: 27 }),
+      ]),
+    );
+    const values = derive(only(parsed.sizes), parsed, 20);
+    assert.equal(values.minimumCpus, 2);
+    assert.equal(values.recommendedCpus, 3);
+  });
+
   it("judge a size with fewer than two typical runs by peak", () => {
     const parsed = parseRequirements(data([run({ p95: 900 }), run(), typical()]));
     assert.equal(targetResults(only(parsed.sizes), parsed.targets)[0]?.met, false);

@@ -373,12 +373,19 @@ export function derive(size: SizeResult, data: Requirements, backups: number): D
   const stored = footprint.imageBytes + footprint.databaseBytes + footprint.fileStorageBytes;
   const met = targetResults(size, data.targets).every((target) => target.met);
   const minimumCpus = Math.max(1, Math.ceil(peakCores));
+  const busiestRuns = counted(runsOf(size, "peak"));
+  const busiestCores = busiestRuns.length
+    ? (Math.max(...busiestRuns.map((run) => run.machinePeakCpuPercent)) / 100) * data.referenceMachine.vcpus
+    : 0;
   return {
     minimumCpus,
     minimumMemoryGiB: Math.max(1, Math.ceil(peakMemory / GIB)),
     minimumDiskGB: Math.ceil((stored + footprint.backupBytes) / GB),
     recommendedCpus: met
-      ? Math.min(data.referenceMachine.vcpus, Math.max(2, minimumCpus, Math.ceil(peakCores * CPU_FACTOR)))
+      ? Math.min(
+          data.referenceMachine.vcpus,
+          Math.max(2, minimumCpus, Math.ceil(peakCores * CPU_FACTOR), Math.ceil(busiestCores)),
+        )
       : null,
     recommendedMemoryGiB: Math.ceil((peakMemory * RAM_FACTOR) / GIB),
     diskBackupsElsewhereGB: Math.ceil(((stored + footprint.backupBytes) * DISK_HEADROOM) / GB),
@@ -479,7 +486,7 @@ export function renderRequirements(source: RequirementsSource): string {
       ]),
     ),
     "### Hardware",
-    `**Minimum** is what the reference machine used at the peak of the load runs, rounded up: CPU from the busy time of the whole machine, RAM from the Lunedo and PostgreSQL containers. Add what the operating system needs. **Recommended** RAM is the peak × ${RAM_FACTOR}, and recommended CPU keeps the response times below the targets with room for peaks. Disk is the image, the database, the file store and backups, with ${Math.round((DISK_HEADROOM - 1) * 100)} % headroom; with backups on the same host, it counts the ${backups} backups that the default retention keeps.`,
+    `**Minimum** is what the reference machine used at the peak of the load runs, rounded up: CPU from the busy time of the whole machine, RAM from the Lunedo and PostgreSQL containers. Add what the operating system needs. **Recommended** RAM is the peak × ${RAM_FACTOR}, and recommended CPU keeps the response times below the targets with room for peaks: at least the peak × ${CPU_FACTOR} and at least what the peak scenario used, never more than the reference machine has. Disk is the image, the database, the file store and backups, with ${Math.round((DISK_HEADROOM - 1) * 100)} % headroom; with backups on the same host, it counts the ${backups} backups that the default retention keeps.`,
     table(
       [
         "Size",

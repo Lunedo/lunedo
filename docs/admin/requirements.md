@@ -128,13 +128,13 @@ The targets apply to **typical**; **peak** shows how much room is left. A size m
 
 ### Hardware
 
-**Minimum** is what the reference machine used at the peak of the load runs, rounded up: CPU from the busy time of the whole machine, RAM from the Lunedo and PostgreSQL containers. Add what the operating system needs. **Recommended** RAM is the peak × 1.5, and recommended CPU keeps the response times below the targets with room for peaks. Disk is the image, the database, the file store and backups, with 30 % headroom; with backups on the same host, it counts the 20 backups that the default retention keeps.
+**Minimum** is what the reference machine used at the peak of the load runs, rounded up: CPU from the busy time of the whole machine, RAM from the Lunedo and PostgreSQL containers. Add what the operating system needs. **Recommended** RAM is the peak × 1.5, and recommended CPU keeps the response times below the targets with room for peaks: at least the peak × 1.5 and at least what the peak scenario used, never more than the reference machine has. Disk is the image, the database, the file store and backups, with 30 % headroom; with backups on the same host, it counts the 20 backups that the default retention keeps.
 
 | Size | Minimum CPU | Minimum RAM | Minimum disk | Recommended CPU | Recommended RAM | Recommended disk, backups elsewhere | Recommended disk, backups on this host |
 |---|---|---|---|---|---|---|---|
 | small | 2 vCPU | 2 GiB | 6 GB | 3 vCPU | 3 GiB | 7 GB | 56 GB |
 | medium | 4 vCPU | 2 GiB | 42 GB | more than 4 vCPU; the targets were missed on the reference machine | 3 GiB | 55 GB | 541 GB |
-| large | 2 vCPU | 5 GiB | 107 GB | 2 vCPU | 7 GiB | 139 GB | 1,371 GB |
+| large | 2 vCPU | 5 GiB | 107 GB | 3 vCPU | 7 GiB | 139 GB | 1,371 GB |
 
 The minimum of medium is what the reference machine used while it missed the targets, not what keeps this size usable.
 
