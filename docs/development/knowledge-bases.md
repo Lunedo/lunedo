@@ -45,7 +45,7 @@ Unknown, hidden and unpublished articles all return `null` and the same 404 page
 
 ## Domain list
 
-`PortalService.isPortalDomain` keeps the set of allowed domains in memory on each API node. `enableDomainCache` listens on the PostgreSQL channel `pagehall_portal_domains` and drops the set whenever a domain is allowed or removed on any node, and again after the listener reconnects. The next request loads it again. A failed load is not cached, so the next request tries again.
+`PortalService.isPortalDomain` keeps the set of allowed domains in memory on each API node. `enableDomainCache` listens on the PostgreSQL channel `lunedo_portal_domains` and drops the set whenever a domain is allowed or removed on any node, and again after the listener reconnects. The next request loads it again. A failed load is not cached, so the next request tries again.
 
 ## Sign-in on own domains
 
@@ -87,7 +87,7 @@ Images inside the sections `steps`, `symptom` and `resolution` (`FRAMED_SECTIONS
 | Job | Trigger | Work |
 |---|---|---|
 | `portal.render-article` | publishing an article | stores the rendering of the published version |
-| `knowledge-bases.queue-reviews` | `NOTIFY` on `pagehall_review_changes`, start of a node, reconnect of the listener | schedules a reminder job for each pending lead and due reminder |
+| `knowledge-bases.queue-reviews` | `NOTIFY` on `lunedo_review_changes`, start of a node, reconnect of the listener | schedules a reminder job for each pending lead and due reminder |
 | `knowledge-bases.remind-review` | scheduled for the moment the reminder is due | sends one reminder; idempotency key from article, kind, due date and lead days |
 | `knowledge-bases.check-reviews` | hourly at minute 17 | safety net: queues pending reminders again and sends overdue reminders whose job was lost |
 | `knowledge-bases.prune-removed-articles` | daily at 03:43 | deletes the records of removed articles (`article_sync`) after 90 days; the article sync of the API reports removed articles from them |

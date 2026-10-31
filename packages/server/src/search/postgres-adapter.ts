@@ -138,7 +138,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
       return;
     }
     await executor.execute(
-      sql`select pg_advisory_xact_lock(hashtextextended(${`pagehall.search.terms:${organizationId}`}, 0))`,
+      sql`select pg_advisory_xact_lock(hashtextextended(${`lunedo.search.terms:${organizationId}`}, 0))`,
     );
     await executor.execute(sql`
       with words as (

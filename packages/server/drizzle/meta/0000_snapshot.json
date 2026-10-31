@@ -12498,8 +12498,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "pagehall_group_id": {
-          "name": "pagehall_group_id",
+        "lunedo_group_id": {
+          "name": "lunedo_group_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -12611,12 +12611,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "mapping_rules_pagehall_group_id_groups_id_fk": {
-          "name": "mapping_rules_pagehall_group_id_groups_id_fk",
+        "mapping_rules_lunedo_group_id_groups_id_fk": {
+          "name": "mapping_rules_lunedo_group_id_groups_id_fk",
           "tableFrom": "mapping_rules",
           "tableTo": "groups",
           "columnsFrom": [
-            "pagehall_group_id"
+            "lunedo_group_id"
           ],
           "columnsTo": [
             "id"
@@ -12635,7 +12635,7 @@
         },
         "mapping_rules_instance": {
           "name": "mapping_rules_instance",
-          "value": "\"mapping_rules\".\"target\" = 'organization' or (\"mapping_rules\".\"pagehall_group_id\" is null and not \"mapping_rules\".\"home_organization\" and (\"mapping_rules\".\"built_in_role\" is not null or \"mapping_rules\".\"custom_role_id\" is not null))"
+          "value": "\"mapping_rules\".\"target\" = 'organization' or (\"mapping_rules\".\"lunedo_group_id\" is null and not \"mapping_rules\".\"home_organization\" and (\"mapping_rules\".\"built_in_role\" is not null or \"mapping_rules\".\"custom_role_id\" is not null))"
         }
       },
       "isRLSEnabled": false

@@ -1295,12 +1295,12 @@ CREATE TABLE "mapping_rules" (
 	"organization_id" uuid,
 	"built_in_role" "built_in_role",
 	"custom_role_id" uuid,
-	"pagehall_group_id" uuid,
+	"lunedo_group_id" uuid,
 	"home_organization" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "mapping_rules_target" CHECK (("mapping_rules"."target" = 'organization') = ("mapping_rules"."organization_id" is not null)),
-	CONSTRAINT "mapping_rules_instance" CHECK ("mapping_rules"."target" = 'organization' or ("mapping_rules"."pagehall_group_id" is null and not "mapping_rules"."home_organization" and ("mapping_rules"."built_in_role" is not null or "mapping_rules"."custom_role_id" is not null)))
+	CONSTRAINT "mapping_rules_instance" CHECK ("mapping_rules"."target" = 'organization' or ("mapping_rules"."lunedo_group_id" is null and not "mapping_rules"."home_organization" and ("mapping_rules"."built_in_role" is not null or "mapping_rules"."custom_role_id" is not null)))
 );
 --> statement-breakpoint
 CREATE TABLE "meeting_attendees" (
@@ -2697,7 +2697,7 @@ ALTER TABLE "mapping_rules" ADD CONSTRAINT "mapping_rules_provider_id_identity_p
 ALTER TABLE "mapping_rules" ADD CONSTRAINT "mapping_rules_group_id_provider_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."provider_groups"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "mapping_rules" ADD CONSTRAINT "mapping_rules_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "mapping_rules" ADD CONSTRAINT "mapping_rules_custom_role_id_custom_roles_id_fk" FOREIGN KEY ("custom_role_id") REFERENCES "public"."custom_roles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "mapping_rules" ADD CONSTRAINT "mapping_rules_pagehall_group_id_groups_id_fk" FOREIGN KEY ("pagehall_group_id") REFERENCES "public"."groups"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "mapping_rules" ADD CONSTRAINT "mapping_rules_lunedo_group_id_groups_id_fk" FOREIGN KEY ("lunedo_group_id") REFERENCES "public"."groups"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "meeting_attendees" ADD CONSTRAINT "meeting_attendees_meeting_id_meetings_item_id_fk" FOREIGN KEY ("meeting_id") REFERENCES "public"."meetings"("item_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "meeting_attendees" ADD CONSTRAINT "meeting_attendees_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "meeting_attendees" ADD CONSTRAINT "meeting_attendees_added_by_accounts_id_fk" FOREIGN KEY ("added_by") REFERENCES "public"."accounts"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -3306,7 +3306,7 @@ BEGIN
 		NEW."reminders_queued_at" := NULL;
 	END IF;
 	IF NEW."due_at" IS NOT NULL AND NEW."reminders_queued_at" IS NULL THEN
-		PERFORM pg_notify('pagehall_review_changes', '');
+		PERFORM pg_notify('lunedo_review_changes', '');
 	END IF;
 	RETURN NEW;
 END $$;--> statement-breakpoint
@@ -3344,7 +3344,7 @@ CREATE FUNCTION audit_events_reject_changes() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-	IF TG_OP = 'DELETE' AND current_setting('pagehall.audit_retention', true) = 'on' THEN
+	IF TG_OP = 'DELETE' AND current_setting('lunedo.audit_retention', true) = 'on' THEN
 		RETURN OLD;
 	END IF;
 	RAISE EXCEPTION 'audit_events is append-only: % is not allowed', TG_OP
@@ -3370,7 +3370,7 @@ BEGIN
   IF NEW."portal_path" IS NOT NULL THEN
     RETURN NEW;
   END IF;
-  PERFORM pg_advisory_xact_lock(hashtextextended('pagehall.knowledge-base.paths', 0));
+  PERFORM pg_advisory_xact_lock(hashtextextended('lunedo.knowledge-base.paths', 0));
   SELECT coalesce(nullif(trim(BOTH '-' FROM left(regexp_replace(lower("key"), '[^a-z0-9]+', '-', 'g'), 50)), ''), 'help')
     INTO "base" FROM "spaces" WHERE "id" = NEW."space_id";
   "candidate" := "base";
@@ -3452,7 +3452,7 @@ CREATE FUNCTION portal_domains_changed() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-	PERFORM pg_notify('pagehall_portal_domains', '');
+	PERFORM pg_notify('lunedo_portal_domains', '');
 	RETURN NULL;
 END $$;--> statement-breakpoint
 CREATE FUNCTION search_comments_changed() RETURNS trigger
@@ -3516,7 +3516,7 @@ BEGIN
   INSERT INTO "search_pending_items" ("item_id", "due_at") VALUES ("item", now() + "delay")
   ON CONFLICT ("item_id") DO UPDATE SET "generation" = "search_pending_items"."generation" + 1,
     "due_at" = least("search_pending_items"."due_at", EXCLUDED."due_at"), "attempts" = 0, "updated_at" = now();
-  PERFORM pg_notify('pagehall_search_changes', '');
+  PERFORM pg_notify('lunedo_search_changes', '');
 END $$;--> statement-breakpoint
 CREATE FUNCTION search_mark_space(space uuid) RETURNS void
     LANGUAGE plpgsql
@@ -3527,7 +3527,7 @@ BEGIN
   END IF;
   INSERT INTO "search_pending_spaces" ("space_id") VALUES ("space")
   ON CONFLICT ("space_id") DO UPDATE SET "generation" = "search_pending_spaces"."generation" + 1, "updated_at" = now();
-  PERFORM pg_notify('pagehall_search_changes', '');
+  PERFORM pg_notify('lunedo_search_changes', '');
 END $$;--> statement-breakpoint
 CREATE FUNCTION search_meeting_state_changed() RETURNS trigger
     LANGUAGE plpgsql
@@ -3544,7 +3544,7 @@ DECLARE
   organization uuid;
 BEGIN
   FOR organization IN SELECT DISTINCT organization_id FROM removed ORDER BY organization_id LOOP
-    PERFORM pg_advisory_xact_lock(hashtextextended('pagehall.search.terms:' || organization, 0));
+    PERFORM pg_advisory_xact_lock(hashtextextended('lunedo.search.terms:' || organization, 0));
   END LOOP;
   DELETE FROM search_terms t USING (SELECT DISTINCT organization_id, word FROM removed) r
   WHERE t.organization_id = r.organization_id AND t.word = r.word
@@ -3573,7 +3573,7 @@ BEGIN
     OR ("changed"."level" = 'space' AND "s"."id" = "changed"."scope_id"))
   ON CONFLICT ("item_id") DO UPDATE SET "generation" = "search_pending_items"."generation" + 1,
     "due_at" = least("search_pending_items"."due_at", EXCLUDED."due_at"), "updated_at" = now();
-  PERFORM pg_notify('pagehall_search_changes', '');
+  PERFORM pg_notify('lunedo_search_changes', '');
   RETURN NULL;
 END $$;--> statement-breakpoint
 CREATE FUNCTION search_space_changed() RETURNS trigger
@@ -3790,8 +3790,8 @@ CREATE FUNCTION tree_items_lock_space() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  IF coalesce(current_setting('pagehall.tree_settled_later', true), '') <> 'on' THEN
-    PERFORM pg_advisory_xact_lock_shared(hashtextextended('pagehall.tree:' || NEW."space_id"::text, 0));
+  IF coalesce(current_setting('lunedo.tree_settled_later', true), '') <> 'on' THEN
+    PERFORM pg_advisory_xact_lock_shared(hashtextextended('lunedo.tree:' || NEW."space_id"::text, 0));
   END IF;
   RETURN NEW;
 END;
