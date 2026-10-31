@@ -205,19 +205,19 @@ export class SessionService {
   }
 
   async #touch(session: Session, now: Date): Promise<void> {
-    const touched = await this.#database
-      .update(sessions)
-      .set({ lastUsedAt: now })
-      .where(
-        and(eq(sessions.id, session.id), lt(sessions.lastUsedAt, new Date(now.getTime() - TOUCH_INTERVAL))),
-      )
-      .returning({ id: sessions.id });
-    if (touched.length > 0) {
-      await this.#database
-        .update(accounts)
-        .set({ lastActiveAt: now })
-        .where(eq(accounts.id, session.accountId));
-    }
+    await this.#database.transaction(async (tx) => {
+      await tx.execute(sql`set local synchronous_commit = off`);
+      const touched = await tx
+        .update(sessions)
+        .set({ lastUsedAt: now })
+        .where(
+          and(eq(sessions.id, session.id), lt(sessions.lastUsedAt, new Date(now.getTime() - TOUCH_INTERVAL))),
+        )
+        .returning({ id: sessions.id });
+      if (touched.length > 0) {
+        await tx.update(accounts).set({ lastActiveAt: now }).where(eq(accounts.id, session.accountId));
+      }
+    });
   }
 
   async #expired(session: Session, now: Date, known?: ScopeChain): Promise<boolean> {
