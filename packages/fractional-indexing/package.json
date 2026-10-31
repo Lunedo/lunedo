@@ -1,6 +1,6 @@
 {
   "name": "@lunedo/fractional-indexing",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Order keys between two keys, compatible with the fractional-indexing package that Excalidraw uses",
   "license": "AGPL-3.0-only",

@@ -49,6 +49,8 @@ Searches run in PostgreSQL in a lane of their own, so that many broad searches c
 - A search waits for a free slot for at most `LUNEDO_SEARCH_WAIT_SECONDS` (2 by default) without holding a database connection. After that the API answers `429` with `Retry-After`, and the app says that search is busy and tries once more.
 - Searches use connections of their own (`lunedo-search` in `pg_stat_activity`, one per slot in every API process), without parallel query, and each statement may run at most `LUNEDO_SEARCH_TIMEOUT_SECONDS` (5 by default).
 
+A search with more than 1,000 matches counts and ranks only the 1,000 most recently changed of them; the app shows the number with a plus sign and says that it shows the most recently changed results. On large instances a broad search therefore prefers recently changed pages. Add more words to narrow it to fewer matches and find older ones.
+
 The metrics `lunedo_search_slot_wait_seconds`, `lunedo_search_slots_in_use` and `lunedo_search_rejected_total` show how full the lane is; see [Monitoring](monitoring.md).
 
 Every connection keeps the statements Lunedo uses repeatedly prepared, at most 150 per connection with their plans, so PostgreSQL does not plan them again on every call. Lunedo needs connections that keep their session: directly to PostgreSQL, or through a pooler in session mode such as PgBouncer with `pool_mode = session`. A pooler in transaction mode is not supported, because Lunedo uses notifications (`LISTEN`) and releases prepared statements with `DEALLOCATE`.

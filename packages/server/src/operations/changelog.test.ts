@@ -84,13 +84,18 @@ describe("parseChangelog", () => {
 });
 
 describe("the changelog of the repository", () => {
-  it("follows the format so that every release can be read by the admin area and the update command", () => {
+  it("follows the format so that every release can be read by the admin area and the update command, newest release first", () => {
     const file = new URL("../../../../CHANGELOG.md", import.meta.url);
     const sections = parseChangelog(readFileSync(file, "utf8"));
-    expect(sections[0]?.version).toBe(UNRELEASED);
+    expect(sections.length).toBeGreaterThan(0);
+    expect(sections.slice(1).some((section) => section.version === UNRELEASED)).toBe(false);
     expect(sections.every((section) => Object.values(section.notes).some((notes) => notes.length > 0))).toBe(
       true,
     );
+    const manifest = JSON.parse(readFileSync(new URL("../../../../package.json", import.meta.url), "utf8")) as {
+      version: string;
+    };
+    expect(sections.find((section) => section.version !== UNRELEASED)?.version).toBe(manifest.version);
   });
 });
 

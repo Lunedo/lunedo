@@ -6,7 +6,7 @@ Lunedo is free software under the [GNU Affero General Public License v3.0](LICEN
 
 ## Status
 
-Lunedo is in development and not ready for use. There are no releases yet.
+The first release is 0.1.0. The [changelog](CHANGELOG.md) lists what it offers, and [docs/admin/installation.md](docs/admin/installation.md) explains how to install it.
 
 ## Development
 
