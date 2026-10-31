@@ -97,7 +97,7 @@ Directories that you mount must belong to UID 1000, or the [system check](system
 
 This section is generated from `docs/data/requirements.json`, `packages/server/src/backup/configuration.ts` by `pnpm docs:generate`. Do not edit it by hand; change the sources and run the command again.
 
-Measured on a reference machine with 4 vCPU (12th Gen Intel(R) Core(TM) i5-12500), 7.8 GiB of RAM and 272.5 GB of disk, running Ubuntu 24.04.5 LTS with kernel 6.8.0-147-generic, Docker 29.9.2, Docker Compose 5.6.1 and PostgreSQL 17.11. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. Size, backups and start times were measured on 2026-10-29 with commit `8c70161e`. The load came from one computer, which sent the requests of each person from a client address of its own, in load runs of 15 minutes.
+Measured on a reference machine with 4 vCPU (12th Gen Intel(R) Core(TM) i5-12500), 7.8 GiB of RAM and 272.5 GB of disk, running Ubuntu 24.04.5 LTS with kernel 6.8.0-147-generic, Docker 29.9.2, Docker Compose 5.6.1 and PostgreSQL 17.11. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. Size, backups and start times were measured on 2026-10-31 with commit `8c70161e`. The load came from one computer, which sent the requests of each person from a client address of its own, in load runs of 15 minutes.
 
 ### Scenarios
 
@@ -114,7 +114,8 @@ The targets apply to **typical**; **peak** shows how much room is left. A size m
 |---|---|---|---|---|---|
 | small | peak | 3 | 2026-10-29 | `8c70161e` | nothing |
 | medium | peak | 3 | 2026-10-29 | `8c70161e` | nothing |
-| large | peak | 3 | 2026-10-29 | `8c70161e` | nothing |
+| large | typical | 2 | 2026-10-31 | `da1bd1fa` | 4 min |
+| large | peak | 2 | 2026-10-31 | `da1bd1fa` | 4 min |
 
 ### Sizes
 
@@ -132,7 +133,7 @@ The targets apply to **typical**; **peak** shows how much room is left. A size m
 |---|---|---|---|---|---|---|---|
 | small | 2 vCPU | 2 GiB | 6 GB | 3 vCPU | 3 GiB | 7 GB | 56 GB |
 | medium | 4 vCPU | 2 GiB | 42 GB | more than 4 vCPU; the targets were missed on the reference machine | 3 GiB | 55 GB | 541 GB |
-| large | 4 vCPU | 4 GiB | 107 GB | more than 4 vCPU; the targets were missed on the reference machine | 6 GiB | 139 GB | 1,371 GB |
+| large | 3 vCPU | 5 GiB | 107 GB | more than 4 vCPU; the targets were missed on the reference machine | 7 GiB | 139 GB | 1,371 GB |
 
 The minimum of medium and large is what the reference machine used while it missed the targets, not what keeps these sizes usable.
 
@@ -144,7 +145,8 @@ Median of the load runs; p95 is the time within which 95 % of the requests finis
 |---|---|---|---|---|---|---|---|
 | small | peak | 160 ms / 256 ms | 353 ms / 855 ms | 86 ms / 136 ms | 54 ms / 85 ms | 45 ms / 69 ms | 0 |
 | medium | peak | 271 ms / 1.20 s | 829 ms / 1.84 s | 252 ms / 865 ms | 89 ms / 349 ms | 404 ms / 919 ms | 0 |
-| large | peak | 23.7 s / 32.7 s | 11.4 s / 28.0 s | 9.04 s / 18.5 s | 8.14 s / 14.9 s | 9.71 s / 15.6 s | 58,616 |
+| large | typical | 40 ms / 211 ms | 252 ms / 345 ms | 205 ms / 1.41 s | 27 ms / 139 ms | 23 ms / 97 ms | 32 |
+| large | peak | 32 ms / 90 ms | 250 ms / 356 ms | 201 ms / 814 ms | 35 ms / 168 ms | 22 ms / 61 ms | 52 |
 
 Each cell shows p50 / p95.
 
@@ -162,11 +164,16 @@ Each cell shows p50 / p95.
 | medium | peak | Search (p95) | below 800 ms | 1.41 s | no |
 | medium | peak | Save (p95) | below 500 ms | 375 ms | yes |
 | medium | peak | Errors | 0 | 0 | yes |
-| large | peak | Open a page, API (p95) | below 500 ms | 33.0 s | no |
-| large | peak | Open a page, readable (p95) | below 1.50 s | 29.6 s | no |
-| large | peak | Search (p95) | below 800 ms | 22.6 s | no |
-| large | peak | Save (p95) | below 500 ms | 22.2 s | no |
-| large | peak | Errors | 0 | 58,616 | no |
+| large | typical | Open a page, API (p95) | below 500 ms | 237 ms | yes |
+| large | typical | Open a page, readable (p95) | below 1.50 s | 348 ms | yes |
+| large | typical | Search (p95) | below 800 ms | 1.44 s | no |
+| large | typical | Save (p95) | below 500 ms | 143 ms | yes |
+| large | typical | Errors | 0 | 32 | no |
+| large | peak | Open a page, API (p95) | below 500 ms | 97 ms | yes |
+| large | peak | Open a page, readable (p95) | below 1.50 s | 364 ms | yes |
+| large | peak | Search (p95) | below 800 ms | 844 ms | no |
+| large | peak | Save (p95) | below 500 ms | 214 ms | yes |
+| large | peak | Errors | 0 | 52 | no |
 
 ### Footprint and operations
 
@@ -174,7 +181,7 @@ Each cell shows p50 / p95.
 |---|---|---|---|---|---|---|---|---|---|---|
 | small | 150 MB | 2.0 GB | 1.1 GB | 2.0 GB | 45.5 s | 22.8 s | 9.30 s | 741 MiB | 700 ms | 16 |
 | medium | 1.3 GB | 19.6 GB | 1.1 GB | 19.7 GB | 7 min 25 s | 4 min 52 s | 9.30 s | 826 MiB | 3.50 s | 16 |
-| large | 6.4 GB | 49.2 GB | 1.1 GB | 49.9 GB | 20 min 8 s | 17 min 4 s | 10.0 s | 885 MiB | 8.90 s | 24 |
+| large | 6.4 GB | 49.2 GB | 1.1 GB | 49.9 GB | 20 min 8 s | 17 min 4 s | 10.0 s | 885 MiB | 2.70 s | 29 |
 
 ### Writing through the API
 
