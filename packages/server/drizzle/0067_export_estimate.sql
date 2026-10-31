@@ -1,1 +1,0 @@
-ALTER TABLE "exports" ADD COLUMN "estimated_size" bigint DEFAULT 0 NOT NULL;

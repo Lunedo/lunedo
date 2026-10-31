@@ -190,7 +190,7 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
       filesDir: path.join(staging, "no-files"),
       config: {},
       lunedoVersion: "1.2.3",
-      schemaVersion: "0000_foundation",
+      schemaVersion: "0000_baseline",
       logger,
     });
     await client.send(
@@ -209,7 +209,7 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
       const manifest = await verifyBackup({
         input: source,
         backupKeys,
-        knownSchemaVersions: ["0000_foundation"],
+        knownSchemaVersions: ["0000_baseline"],
       });
       expect(manifest.entries.find((entry) => entry.path === "database.dump")?.size).toBe(dump.length);
     } finally {
@@ -250,7 +250,7 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
         objectStore,
         config: {},
         lunedoVersion: "1.2.3",
-        schemaVersion: "0000_foundation",
+        schemaVersion: "0000_baseline",
         logger,
       }),
     ).rejects.toThrow("the file store broke");

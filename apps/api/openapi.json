@@ -65575,7 +65575,7 @@
                       "sizeBytes": 524288000,
                       "readable": true,
                       "lunedoVersion": "1.0.0",
-                      "schemaVersion": "0094_backup_schedules",
+                      "schemaVersion": "0000_baseline",
                       "scope": "all",
                       "testRestore": {
                         "id": "0192f0e0-1a2b-7c3d-8e4f-5a6b7c8d9e02",
@@ -65588,7 +65588,7 @@
                             "passed": true,
                             "detail": {
                               "entries": 1204,
-                              "schemaVersion": "0094_backup_schedules"
+                              "schemaVersion": "0000_baseline"
                             }
                           },
                           {
@@ -65602,8 +65602,8 @@
                             "check": "schemaVersion",
                             "passed": true,
                             "detail": {
-                              "expected": "0094_backup_schedules",
-                              "appliedMigrations": 95
+                              "expected": "0000_baseline",
+                              "appliedMigrations": 1
                             }
                           },
                           {
@@ -71045,7 +71045,7 @@
                       "passed": true,
                       "detail": {
                         "entries": 1204,
-                        "schemaVersion": "0094_backup_schedules"
+                        "schemaVersion": "0000_baseline"
                       }
                     },
                     {
@@ -71059,8 +71059,8 @@
                       "check": "schemaVersion",
                       "passed": true,
                       "detail": {
-                        "expected": "0094_backup_schedules",
-                        "appliedMigrations": 95
+                        "expected": "0000_baseline",
+                        "appliedMigrations": 1
                       }
                     },
                     {

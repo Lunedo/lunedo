@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
@@ -255,35 +254,6 @@ describe.skipIf(!baseUrl)("notifications", () => {
     expect(sent.mailIds).toHaveLength(1);
     await test.settings.set(mailMethodSetting, {}, "instance", "smtp");
     await test.settings.set(graphMailSetting, {}, "instance", null);
-  });
-
-  it("splits stored preferences of a type into one value per channel", async () => {
-    const scopeId = randomUUID();
-    await test.pool.query(
-      `insert into setting_values (id, level, scope_id, key, value, locked) values
-        (gen_random_uuid(), 'organization', $1, 'notifications.guestExpiring', '{"inApp": false, "email": true}', true),
-        (gen_random_uuid(), 'organization', $1, 'notifications.guestInactive', null, true),
-        (gen_random_uuid(), 'organization', $1, 'notifications.retentionDays', '30', false)`,
-      [scopeId],
-    );
-    const migration = readFileSync(
-      new URL("../../drizzle/0061_watching_and_preferences.sql", import.meta.url),
-      "utf8",
-    );
-    for (const statement of migration.split("--> statement-breakpoint").slice(-3)) {
-      await test.pool.query(statement);
-    }
-    const stored = await test.pool.query<{ key: string; value: unknown; locked: boolean }>(
-      "select key, value, locked from setting_values where scope_id = $1 order by key",
-      [scopeId],
-    );
-    expect(stored.rows).toEqual([
-      { key: "notifications.guestExpiring.email", value: "immediately", locked: true },
-      { key: "notifications.guestExpiring.inApp", value: false, locked: true },
-      { key: "notifications.guestInactive.email", value: null, locked: true },
-      { key: "notifications.guestInactive.inApp", value: null, locked: true },
-      { key: "notifications.retentionDays", value: 30, locked: false },
-    ]);
   });
 
   it("sends e-mail only when a mail server is configured, with the organization's logo and the instance color", async () => {

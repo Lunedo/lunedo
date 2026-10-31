@@ -1,1 +1,0 @@
-ALTER TABLE "identity_provider_credentials" ADD COLUMN "chosen_at" timestamp with time zone;

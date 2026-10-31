@@ -1,8 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { createLogger } from "../logging/logger.js";
 import { createTemporaryDatabase, type TemporaryDatabase, testDatabaseBaseUrl } from "../testing/database.js";
@@ -10,40 +6,23 @@ import { runMigrations } from "./migrate.js";
 import { createDatabasePool, type DatabasePool } from "./pool.js";
 
 const baseUrl = testDatabaseBaseUrl();
-const migrations = fileURLToPath(new URL("../../drizzle", import.meta.url));
 const logger = createLogger({ service: "test", level: "silent" });
 
-function foldersBefore(tag: string): string {
-  const folder = mkdtempSync(path.join(tmpdir(), "lunedo-migrations-"));
-  cpSync(migrations, folder, { recursive: true });
-  const journalFile = path.join(folder, "meta", "_journal.json");
-  const journal = JSON.parse(readFileSync(journalFile, "utf8")) as { entries: { tag: string }[] };
-  const index = journal.entries.findIndex((entry) => entry.tag === tag);
-  if (index < 0) throw new Error(`Unknown migration ${tag}`);
-  journal.entries = journal.entries.slice(0, index);
-  writeFileSync(journalFile, JSON.stringify(journal));
-  return folder;
-}
-
-describe.skipIf(!baseUrl)("content number migration", () => {
+describe.skipIf(!baseUrl)("content numbers", () => {
   let database: TemporaryDatabase | undefined;
   let pool: DatabasePool | undefined;
-  let folder: string | undefined;
 
   afterEach(async () => {
     await pool?.end();
     await database?.drop();
-    if (folder) rmSync(folder, { recursive: true, force: true });
     pool = undefined;
     database = undefined;
-    folder = undefined;
   });
 
-  async function migratedBefore(tag: string): Promise<DatabasePool> {
+  async function migrated(): Promise<DatabasePool> {
     database = await createTemporaryDatabase(baseUrl as string);
     pool = createDatabasePool({ connectionString: database.url, applicationName: "lunedo-test", max: 12 });
-    folder = foldersBefore(tag);
-    await runMigrations(pool, { logger, folder });
+    await runMigrations(pool, { logger });
     return pool;
   }
 
@@ -68,39 +47,8 @@ describe.skipIf(!baseUrl)("content number migration", () => {
     );
   }
 
-  it("numbers existing items in creation order from 1000 and continues after the highest number", async () => {
-    const target = await migratedBefore("0104_content_numbers");
-    const spaceId = await space(target);
-    const ordered = [
-      "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0001",
-      "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0002",
-      "01929b1e-7c3b-7d2e-9f4b-3c2d1e0f0003",
-      "01929b1f-0000-7d2e-9f4b-3c2d1e0f0004",
-    ];
-    await item(target, spaceId, ordered[2] as string, "folder");
-    await item(target, spaceId, ordered[0] as string);
-    await item(target, spaceId, ordered[3] as string, "whiteboard");
-    await item(target, spaceId, ordered[1] as string, "blogPost");
-
-    await runMigrations(target, { logger });
-
-    const numbered = await target.query<{ id: string; number: string }>(
-      "select id, number from tree_items order by number",
-    );
-    expect(numbered.rows.map((row) => row.id)).toEqual(ordered);
-    expect(numbered.rows.map((row) => Number(row.number))).toEqual([1000, 1001, 1002, 1003]);
-
-    const created = randomUUID();
-    await item(target, spaceId, created);
-    const next = await target.query<{ number: string }>("select number from tree_items where id = $1", [
-      created,
-    ]);
-    expect(Number(next.rows[0]?.number)).toBe(1004);
-  });
-
   it("starts at 1000 on an empty instance", async () => {
-    const target = await migratedBefore("0104_content_numbers");
-    await runMigrations(target, { logger });
+    const target = await migrated();
     const spaceId = await space(target);
     const id = randomUUID();
     await item(target, spaceId, id);
@@ -109,8 +57,7 @@ describe.skipIf(!baseUrl)("content number migration", () => {
   });
 
   it("gives concurrently created items unique numbers and never reuses a deleted one", async () => {
-    const target = await migratedBefore("0104_content_numbers");
-    await runMigrations(target, { logger });
+    const target = await migrated();
     const spaceId = await space(target);
     const ids = Array.from({ length: 40 }, () => randomUUID());
     await Promise.all(ids.map((id) => item(target, spaceId, id)));

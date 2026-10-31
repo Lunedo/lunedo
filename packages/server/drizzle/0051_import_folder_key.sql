@@ -1,1 +1,0 @@
-ALTER TABLE "imports" ADD COLUMN "folder_key" text;

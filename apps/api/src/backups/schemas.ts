@@ -344,12 +344,12 @@ export const exampleTestRestore = {
   state: "passed",
   stage: "done",
   checks: [
-    { check: "verify", passed: true, detail: { entries: 1204, schemaVersion: "0094_backup_schedules" } },
+    { check: "verify", passed: true, detail: { entries: 1204, schemaVersion: "0000_baseline" } },
     { check: "restore", passed: true, detail: { database: "lunedo_test_restore_3f0c8a1b9d2e" } },
     {
       check: "schemaVersion",
       passed: true,
-      detail: { expected: "0094_backup_schedules", appliedMigrations: 95 },
+      detail: { expected: "0000_baseline", appliedMigrations: 1 },
     },
     { check: "rows", passed: true, detail: { instance: 1, accounts: 42, spaces: 12, tree_items: 1830 } },
     {
@@ -428,7 +428,7 @@ export const exampleBackupList = {
       sizeBytes: 524_288_000,
       readable: true,
       lunedoVersion: "1.0.0",
-      schemaVersion: "0094_backup_schedules",
+      schemaVersion: "0000_baseline",
       scope: "all",
       testRestore: exampleTestRestore,
     },

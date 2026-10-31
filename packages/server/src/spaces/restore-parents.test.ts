@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
@@ -214,29 +212,6 @@ describe.skipIf(!baseUrl)("restoring below restricted pages", () => {
     });
     expect(await parentOf(below.id)).toBe(old.id);
     expect(await canView(reader, below.id)).toBe(false);
-  });
-
-  it("repairs archived pages that stayed outside the trash entry of their deleted parent", async () => {
-    const { as, page, hr } = await setup();
-    const old = await page("Old salaries", hr.id);
-    const below = await page("Below", old.id);
-    await test.services.archive.archive(as, old.id);
-    const entry = await test.services.trash.deleteItem(as, hr.id);
-    await test.database.execute(sql`
-      update tree_items set trash_entry_id = null where id in (${old.id}, ${below.id})`);
-    await test.database.execute(sql`update trash_entries set descendants = 0 where id = ${entry.id}`);
-
-    const migration = readFileSync(
-      fileURLToPath(new URL("../../drizzle/0049_trash_archived_descendants.sql", import.meta.url)),
-      "utf8",
-    );
-    for (const statement of migration.split("--> statement-breakpoint")) await test.pool.query(statement);
-
-    const repaired = await test.database.execute<{ trash_entry_id: string | null }>(
-      sql`select trash_entry_id from tree_items where id in (${old.id}, ${below.id})`,
-    );
-    expect(repaired.rows.map((row) => row.trash_entry_id)).toEqual([entry.id, entry.id]);
-    expect((await test.services.trash.get(entry.id))?.descendants).toBe(2);
   });
 
   it("deletes the older trash entries of pages below an entry that is deleted for good", async () => {

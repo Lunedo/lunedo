@@ -1,1 +1,0 @@
-ALTER TABLE "api_tokens" ADD COLUMN "unused_noticed_at" timestamp with time zone;

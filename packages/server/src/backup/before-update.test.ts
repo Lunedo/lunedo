@@ -189,7 +189,7 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
     await writeFile(file, "x");
     await expect(
       createBeforeUpdateBackup({
-        sources: sources("0000_foundation"),
+        sources: sources("0000_baseline"),
         database: test.database,
         backupDir: file,
         policy: outboundPolicy([]),
@@ -247,7 +247,7 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
     };
     await expect(
       createBeforeUpdateBackup({
-        sources: { ...sources("0000_foundation"), archiver, diskSpace: NO_SPACE },
+        sources: { ...sources("0000_baseline"), archiver, diskSpace: NO_SPACE },
         database: test.database,
         backupDir,
         policy: outboundPolicy([]),
@@ -264,7 +264,7 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
     const lock = await tryBackupLock(test.pool);
     const output = path.join(backupDir, "manual.ldbak");
     let finished = false;
-    const writing = writeBackupFile(sources("0000_foundation"), output).then(() => {
+    const writing = writeBackupFile(sources("0000_baseline"), output).then(() => {
       finished = true;
     });
     try {
@@ -284,7 +284,7 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
     };
     await expect(
       writeBackupFile(
-        { ...sources("0000_foundation"), archiver, diskSpace: NO_SPACE },
+        { ...sources("0000_baseline"), archiver, diskSpace: NO_SPACE },
         path.join(backupDir, "manual.ldbak"),
       ),
     ).rejects.toThrow("Not enough free space");
@@ -294,7 +294,7 @@ describe.skipIf(!baseUrl)("backup before an update", () => {
     const file = path.join(backupDir, "not-a-directory");
     await writeFile(file, "x");
     const failing = backupBeforeMigrations({
-      sources: sources("0000_foundation"),
+      sources: sources("0000_baseline"),
       database: test.database,
       backupDir: file,
       policy: outboundPolicy([]),

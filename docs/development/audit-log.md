@@ -22,7 +22,7 @@ Events belong to a scope: the instance or an organization. Each scope has its ow
 
 ## Append-only table
 
-Migration `0002_audit_append_only.sql` adds triggers to `audit_events` that reject `UPDATE`, `DELETE` and `TRUNCATE`. Only the retention job may delete: it sets the transaction-local flag `pagehall.audit_retention` to `on`, which the trigger accepts for `DELETE`.
+Database triggers on `audit_events` reject `UPDATE`, `DELETE` and `TRUNCATE`. Only the retention job may delete: it sets the transaction-local flag `pagehall.audit_retention` to `on`, which the trigger accepts for `DELETE`.
 
 ## Retention
 

@@ -1,2 +1,0 @@
-ALTER TABLE "audit_subject_keys" ADD COLUMN "address_digest" text;--> statement-breakpoint
-CREATE INDEX "audit_subject_keys_address_digest_index" ON "audit_subject_keys" USING btree ("address_digest") WHERE "audit_subject_keys"."address_digest" is not null;
