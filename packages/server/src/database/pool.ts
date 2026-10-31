@@ -46,7 +46,7 @@ class ObservedPool extends pg.Pool {
   }
 }
 
-export const MAX_PREPARED_STATEMENTS = 100;
+export const MAX_PREPARED_STATEMENTS = 400;
 export const MAX_PREPARED_PARAMETERS = 100;
 export const IDLE_CONNECTION_MS = 5 * 60 * 1000;
 const MAX_SEEN_STATEMENTS = 1000;
