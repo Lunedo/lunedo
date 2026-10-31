@@ -59,6 +59,7 @@ function data(runs: LoadRun[] = [run(), run()]) {
       vcpus: 4,
       memoryBytes: 8 * GIB,
       diskBytes: 254 * GB,
+      storage: "ZFS on one NVMe SSD",
       operatingSystem: "Ubuntu 24.04.5 LTS",
       kernel: "6.8.0",
       docker: "29.0.0",
@@ -236,6 +237,7 @@ describe("rendered section", () => {
   it("shows the machine, the date, the commit and every size", () => {
     const text = renderRequirements(source(data()));
     assert.match(text, /^Measured on a reference machine with 4 vCPU \(Example CPU\)/);
+    assert.match(text, /of disk \(ZFS on one NVMe SSD\), running/);
     assert.match(text, /Size, backups and start times were measured on 2026-10-28 with commit `01234567`/);
     assert.match(text, /\| small \| peak \| 2 \| 2026-10-28 \| `fedcba98` \|/);
     assert.match(

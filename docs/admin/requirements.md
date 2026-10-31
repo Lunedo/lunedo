@@ -25,6 +25,7 @@ What Lunedo needs to run. The [setup script](installation/script.md) checks the 
 | Rights | The user in `LUNEDO_DATABASE_URL` owns the database or may create tables, types and indexes in it. Lunedo applies its migrations at every start. |
 | Optional right | `CREATEDB` for the monthly test restore of backups, which restores into a temporary database on the same server, for example `ALTER ROLE "lunedo" CREATEDB;`. Without it, a test restore only verifies the backup. See [Backups](backups.md). |
 | Free space | Room for one more copy of the database while a test restore runs. |
+| Storage | An SSD for the database from size medium on; for large, an NVMe SSD is recommended. Every change waits until PostgreSQL has written it to disk, so the database storage should not be shared with write-heavy workloads such as CI runners, other databases or backups during working hours: on the reference machine, another workload writing to the same SSD made page opens take seconds and requests fail. On shared storage, use SSDs with power-loss protection, which confirm writes from their cache. |
 
 ### Database connections
 

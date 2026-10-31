@@ -88,6 +88,7 @@ export interface Requirements {
     readonly vcpus: number;
     readonly memoryBytes: number;
     readonly diskBytes: number;
+    readonly storage: string;
     readonly operatingSystem: string;
     readonly kernel: string;
     readonly docker: string;
@@ -268,6 +269,7 @@ export function parseRequirements(value: unknown): Requirements {
     commit,
     referenceMachine: {
       cpu: text(machine.cpu, "referenceMachine.cpu"),
+      storage: text(machine.storage, "referenceMachine.storage"),
       operatingSystem: text(machine.operatingSystem, "referenceMachine.operatingSystem"),
       kernel: text(machine.kernel, "referenceMachine.kernel"),
       docker: text(machine.docker, "referenceMachine.docker"),
@@ -427,7 +429,7 @@ export function renderRequirements(source: RequirementsSource): string {
     Math.max(...data.sizes.flatMap((entry) => entry.loadRuns.map((run) => run.durationSeconds))) / 60,
   );
   return [
-    `Measured on a reference machine with ${machine.vcpus} vCPU (${machine.cpu}), ${memory(machine.memoryBytes)} of RAM and ${bytes(machine.diskBytes)} of disk, running ${machine.operatingSystem} with kernel ${machine.kernel}, Docker ${machine.docker}, Docker Compose ${machine.compose} and PostgreSQL ${machine.postgres}. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. Size, backups and start times were measured on ${data.measuredAt} with commit \`${data.commit.slice(0, 8)}\`. The load came from one computer, which sent the requests of each person from a client address of its own, in load runs of ${minutes} minutes.`,
+    `Measured on a reference machine with ${machine.vcpus} vCPU (${machine.cpu}), ${memory(machine.memoryBytes)} of RAM and ${bytes(machine.diskBytes)} of disk (${machine.storage}), running ${machine.operatingSystem} with kernel ${machine.kernel}, Docker ${machine.docker}, Docker Compose ${machine.compose} and PostgreSQL ${machine.postgres}. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. Size, backups and start times were measured on ${data.measuredAt} with commit \`${data.commit.slice(0, 8)}\`. The load came from one computer, which sent the requests of each person from a client address of its own, in load runs of ${minutes} minutes.`,
     "### Scenarios",
     "The load runs follow one of two scenarios. Both are assumptions about how people use a wiki, not measured use. In both, five of the people active at the same time edit the same page together.",
     table(
