@@ -6,8 +6,8 @@ import type { DatabasePool } from "../database/pool.js";
 import * as schema from "../database/schema.js";
 
 export const SEARCH_RETRY_AFTER_SECONDS = 2;
-const FIRST_RETRY_MS = 10;
-const LONGEST_RETRY_MS = 200;
+const FIRST_RETRY_MS = 5;
+const LONGEST_RETRY_MS = 50;
 
 export class SearchBusyError extends Error {
   override name = "SearchBusyError";
