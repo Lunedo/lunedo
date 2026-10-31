@@ -74,12 +74,19 @@ Start again with `pnpm dev`; the instance then asks for setup and prints a new s
 
 ## Migration number conflicts
 
-Migrations are numbered in the order they are generated (`packages/server/drizzle/0105_….sql`). When `main` takes a number that your branch also uses:
+Migrations are numbered in the order they are generated (`packages/server/drizzle/0001_….sql`). Each entry in `meta/_journal.json` also records when it was generated (`when`, in milliseconds). At startup the migrator applies only migrations whose `when` is newer than that of the newest migration the database already applied. A migration with an older `when` is skipped without an error, even if the database never ran it.
+
+So when two branches add a migration at the same time, the branch that merges second renumbers its migration and gives it a new `when`:
 
 1. Merge `origin/main` into your branch.
-2. Remove your branch's migration: the SQL file, its snapshot in `packages/server/drizzle/meta/` and its entry in `meta/_journal.json`. Keep the ones from `main`.
-3. Generate it again with `pnpm --filter @lunedo/server db:generate --name <short_description>`; it gets the next free number.
-4. If the development database already applied the old migration, `pnpm dev` refuses to start. Run `pnpm dev:reset`.
+2. Keep a copy of your branch's SQL file if you added statements by hand (functions, triggers, data changes).
+3. Remove your branch's migration: the SQL file, its snapshot in `packages/server/drizzle/meta/` and its entry in `meta/_journal.json`. Keep the ones from `main`.
+4. Generate it again with `pnpm --filter @lunedo/server db:generate --name <short_description>`. It gets the next free number and the current time as `when`. For a migration without schema changes, add `--custom` to get an empty file.
+5. Add your hand-written statements to the new file again.
+6. Run `pnpm migrations:check`. It fails when numbers have gaps or duplicates, when a SQL file or snapshot is missing, or when a `when` is not newer than the one before it. `pnpm verify` and CI run it as well.
+7. If the development database already applied the old migration, `pnpm dev` refuses to start. Run `pnpm dev:reset`.
+
+Never edit `when` by hand to an older value, and never give a migration the `when` of one on `main`.
 
 See [database.md](database.md#migrations) for the rules about migrations.
 

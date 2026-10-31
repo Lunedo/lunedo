@@ -51,6 +51,7 @@ The job "Scope" decides the lane and the areas (`scripts/ci-scope.ts`, run by `s
 | `pnpm shell:check` | Shell scripts, with ShellCheck in Docker. |
 | `pnpm release-jobs:check` | Jobs that may write packages or the repository run only on GitHub-hosted runners and run images by digest. |
 | `pnpm container-users:check` | Job containers and `docker run` calls that mount the workspace or the CI cache run with the runner's user. |
+| `pnpm migrations:check` | Migrations are numbered without gaps or duplicates, each has its SQL file and snapshot, and their `when` timestamps increase. See [Migration number conflicts](environment.md#migration-number-conflicts). |
 | `pnpm typecheck` | TypeScript in every package. |
 | `node --test "scripts/*.test.ts"` | Tests of the repository scripts. |
 

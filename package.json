@@ -35,6 +35,7 @@
     "shell:check": "node scripts/check-shell.ts",
     "release-jobs:check": "node scripts/check-release-jobs.ts",
     "container-users:check": "node scripts/check-container-users.ts",
+    "migrations:check": "node scripts/check-migrations.ts",
     "verify": "node scripts/verify.ts"
   },
   "devDependencies": {

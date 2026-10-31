@@ -108,6 +108,7 @@ jobs:
       - run: pnpm shell:check
       - run: pnpm release-jobs:check
       - run: pnpm container-users:check
+      - run: pnpm migrations:check
       - run: pnpm typecheck
       - name: Script tests
         run: node --test "scripts/*.test.ts"
