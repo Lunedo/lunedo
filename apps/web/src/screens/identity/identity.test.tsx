@@ -494,13 +494,13 @@ describe("setting up a provider as a draft", () => {
   it("links each provider type to its own setup guide", async () => {
     adminApi();
     await renderPath("/settings/instance/sign-in-providers/new");
-    const docs = "https://github.com/lunedo/lunedo/blob/main/docs/admin/identity-providers";
+    const docs = "https://lunedo.org/docs/admin/identity-providers";
     const guides = [
-      [/^Microsoft Entra ID/, "Setup guide: Microsoft Entra ID", `${docs}/entra-id.md`],
-      [/^Google Workspace/, "Setup guide: Google Workspace", `${docs}/google-workspace.md`],
-      [/^Other OIDC provider/, "Setup guide: Other OIDC provider", `${docs}/openid-connect.md`],
-      [/^SAML 2\.0/, "Setup guide: SAML 2.0", `${docs}/saml.md`],
-      [/^LDAP or Active Directory/, "Setup guide: LDAP or Active Directory", `${docs}/ldap.md`],
+      [/^Microsoft Entra ID/, "Setup guide: Microsoft Entra ID", `${docs}/entra-id/`],
+      [/^Google Workspace/, "Setup guide: Google Workspace", `${docs}/google-workspace/`],
+      [/^Other OIDC provider/, "Setup guide: Other OIDC provider", `${docs}/openid-connect/`],
+      [/^SAML 2\.0/, "Setup guide: SAML 2.0", `${docs}/saml/`],
+      [/^LDAP or Active Directory/, "Setup guide: LDAP or Active Directory", `${docs}/ldap/`],
     ] as const;
     for (const [choice, label, url] of guides) {
       await userEvent.click(await screen.findByRole("button", { name: choice }));

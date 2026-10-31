@@ -92,7 +92,7 @@ describe("the system check", () => {
     expect(row.textContent).toContain("not in LUNEDO_TRUSTED_PROXIES");
     expect(row.textContent).toContain("Warning");
     expect(within(row).getByRole("link").getAttribute("href")).toContain(
-      "reverse-proxy.md#forwarded-headers-and-lunedo_trusted_proxies",
+      "reverse-proxy/#forwarded-headers-and-lunedo_trusted_proxies",
     );
   });
 
