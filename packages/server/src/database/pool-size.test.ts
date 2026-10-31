@@ -50,8 +50,8 @@ describe("the default pool size", () => {
     expect(apiPoolSize(25, 2)).toBe(13);
   });
 
-  it("runs one search at once per four CPUs, at least two and at most four", () => {
-    expect([1, 4, 7, 8, 12, 16, 64].map(defaultSearchSlots)).toEqual([2, 2, 2, 2, 3, 4, 4]);
+  it("runs one search at once less than there are CPUs, at least one and at most four", () => {
+    expect([0, 1, 2, 3, 4, 5, 8, 64].map(defaultSearchSlots)).toEqual([1, 1, 1, 2, 3, 4, 4, 4]);
   });
 
   it("counts the pools, notification and job queue connections of every process", () => {
@@ -60,8 +60,8 @@ describe("the default pool size", () => {
     );
   });
 
-  it("keeps one container up to five CPUs below the PostgreSQL default limit with room for tools", () => {
-    for (let cpus = 1; cpus <= 5; cpus++) {
+  it("keeps one container up to four CPUs below the PostgreSQL default limit with room for tools", () => {
+    for (let cpus = 1; cpus <= 4; cpus++) {
       expect(connectionsOfAllRoles(defaults(cpus)), `${cpus} CPUs`).toBeLessThanOrEqual(
         POSTGRES_DEFAULT_LIMIT - RESERVED_FOR_ADMINISTRATORS - ROOM_FOR_TOOLS,
       );

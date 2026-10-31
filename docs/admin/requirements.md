@@ -38,13 +38,13 @@ Add up for every container that uses the same database:
 - collaboration server: pool size + 1
 - every API process: pool size + 2 + search slots
 
-The sum, plus a few connections for backups and `psql`, must stay below `max_connections` of PostgreSQL. With the defaults, one container on up to 5 CPUs stays below the PostgreSQL default of 100, for example 74 connections on 4 CPUs; on 8 CPUs it needs 138. The PostgreSQL container of the setup script sets `max_connections` to 200. Raise `max_connections` before you raise the pool size or the number of API processes, or run more containers.
+The sum, plus a few connections for backups and `psql`, must stay below `max_connections` of PostgreSQL. With the defaults, one container on up to 4 CPUs stays below the PostgreSQL default of 100, for example 78 connections on 4 CPUs; on 8 CPUs it needs 154. The PostgreSQL container of the setup script sets `max_connections` to 200. Raise `max_connections` before you raise the pool size or the number of API processes, or run more containers.
 
 ### Searches at once
 
 Searches run in PostgreSQL in a lane of their own, so that many broad searches cannot slow down opening pages:
 
-- At most `LUNEDO_SEARCH_SLOTS` searches run at the same time, counted for all API processes and containers that use the same database: by default a quarter of the CPUs of the container, at least 2 and at most 4. When PostgreSQL runs on another machine, set it to a quarter of that machine's CPUs.
+- At most `LUNEDO_SEARCH_SLOTS` searches run at the same time, counted for all API processes and containers that use the same database: by default one less than the CPUs of the container, at least 1 and at most 4. When PostgreSQL runs on another machine, set it to one less than that machine's CPUs.
 - A search waits for a free slot for at most `LUNEDO_SEARCH_WAIT_SECONDS` (2 by default) without holding a database connection. After that the API answers `429` with `Retry-After`, and the app says that search is busy and tries once more.
 - Searches use connections of their own (`lunedo-search` in `pg_stat_activity`, one per slot in every API process), without parallel query, and each statement may run at most `LUNEDO_SEARCH_TIMEOUT_SECONDS` (5 by default).
 

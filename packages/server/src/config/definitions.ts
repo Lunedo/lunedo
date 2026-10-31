@@ -138,7 +138,7 @@ export const configSettings: readonly ConfigSetting[] = [
       "LUNEDO_SEARCH_SLOTS",
       positiveInt.max(64).optional(),
       "Searches that run in PostgreSQL at once, for all API processes and containers together. Further searches wait without holding a database connection.",
-      { defaultText: "a quarter of the number of CPUs, at least 2 and at most 4" },
+      { defaultText: "one less than the number of CPUs, at least 1 and at most 4" },
     ),
     setting(
       "LUNEDO_SEARCH_WAIT_SECONDS",
