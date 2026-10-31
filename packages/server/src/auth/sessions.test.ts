@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { accounts } from "../accounts/schema.js";
 import type { Database, Transaction } from "../database/database.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -58,14 +59,26 @@ describe.skipIf(!baseUrl)("resolving sessions", () => {
 
   it("records one use for requests of a session that arrive at the same moment", async () => {
     const { account, token } = await signedIn("touch@example.org");
-    let touches = 0;
+    let recorded = 0;
     const counting = new Proxy(test.database, {
       get(target, property, receiver) {
         if (property === "transaction") {
-          return (...args: Parameters<typeof target.transaction>) => {
-            touches += 1;
-            return target.transaction(...args);
-          };
+          return (run: (tx: Transaction) => Promise<unknown>) =>
+            target.transaction((tx) =>
+              run(
+                new Proxy(tx, {
+                  get(inner, name, innerReceiver) {
+                    if (name === "update") {
+                      return (table: Parameters<typeof inner.update>[0]) => {
+                        if (table === accounts) recorded += 1;
+                        return inner.update(table);
+                      };
+                    }
+                    return Reflect.get(inner, name, innerReceiver);
+                  },
+                }),
+              ),
+            );
         }
         return Reflect.get(target, property, receiver);
       },
@@ -73,9 +86,9 @@ describe.skipIf(!baseUrl)("resolving sessions", () => {
     const later = serviceAt(() => new Date(Date.now() + 5 * MINUTE), counting);
     const resolved = await Promise.all(Array.from({ length: 12 }, () => later.resolve(token)));
     expect(resolved.every((session) => session?.accountId === account.id)).toBe(true);
-    expect(touches).toBe(1);
+    expect(recorded).toBe(1);
     await later.resolve(token);
-    expect(touches).toBe(1);
+    expect(recorded).toBe(1);
   });
 
   it("writes the last use without waiting for the write-ahead log", async () => {
@@ -98,13 +111,27 @@ describe.skipIf(!baseUrl)("resolving sessions", () => {
       },
     });
     await serviceAt(() => new Date(Date.now() + 5 * MINUTE), observing).resolve(token);
-    expect(seen).toEqual(["off"]);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((value) => value === "off")).toBe(true);
     const [outside] = (
       await test.database.execute<{ value: string }>(
         sql`select current_setting('synchronous_commit') as value`,
       )
     ).rows;
     expect(outside?.value).toBe("on");
+  });
+
+  it("never deadlocks with a change that locks the account before it removes sessions", async () => {
+    const { account, token } = await signedIn("touch-lock@example.org");
+    const later = serviceAt(() => new Date(Date.now() + 5 * MINUTE));
+    let resolving: Promise<unknown> = Promise.resolve();
+    await test.database.transaction(async (tx) => {
+      await tx.execute(sql`select id from accounts where id = ${account.id} for update`);
+      resolving = later.resolve(token);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await tx.delete(sessions).where(eq(sessions.accountId, account.id));
+    });
+    await expect(resolving).resolves.not.toBeNull();
   });
 
   it("records the last use at most once a minute", async () => {

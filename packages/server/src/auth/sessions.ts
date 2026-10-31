@@ -205,18 +205,20 @@ export class SessionService {
   }
 
   async #touch(session: Session, now: Date): Promise<void> {
-    await this.#database.transaction(async (tx) => {
+    const touched = await this.#database.transaction(async (tx) => {
       await tx.execute(sql`set local synchronous_commit = off`);
-      const touched = await tx
+      return tx
         .update(sessions)
         .set({ lastUsedAt: now })
         .where(
           and(eq(sessions.id, session.id), lt(sessions.lastUsedAt, new Date(now.getTime() - TOUCH_INTERVAL))),
         )
         .returning({ id: sessions.id });
-      if (touched.length > 0) {
-        await tx.update(accounts).set({ lastActiveAt: now }).where(eq(accounts.id, session.accountId));
-      }
+    });
+    if (touched.length === 0) return;
+    await this.#database.transaction(async (tx) => {
+      await tx.execute(sql`set local synchronous_commit = off`);
+      await tx.update(accounts).set({ lastActiveAt: now }).where(eq(accounts.id, session.accountId));
     });
   }
 
