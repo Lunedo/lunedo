@@ -110,6 +110,22 @@ describe("database pool", () => {
       });
     });
 
+    it("never breaks an open transaction when it forgets a statement the server never prepared", async () => {
+      await withClient(async (client) => {
+        const broken = "select $1::int as value from table_that_does_not_exist";
+        for (let round = 0; round < 2; round++) await expect(client.query(broken, [1])).rejects.toThrow();
+        await client.query("begin");
+        for (let index = 0; index < MAX_PREPARED_STATEMENTS; index++) {
+          for (let round = 0; round < 2; round++) {
+            await client.query(`select $1::int + ${index} as value`, [1]);
+          }
+        }
+        expect((await client.query<{ one: number }>("select 1 as one")).rows[0]?.one).toBe(1);
+        await client.query("commit");
+        expect(await preparedStatements(client)).toHaveLength(MAX_PREPARED_STATEMENTS);
+      });
+    });
+
     it("keeps answering when a statement is released inside a failed transaction", async () => {
       await withClient(async (client) => {
         const text = (index: number) => `select $1::int + ${index} as value`;

@@ -70,15 +70,23 @@ export function prepareRepeatedStatements(client: pg.PoolClient): void {
   const query = client.query;
   const seen = new Map<string, true>();
   const prepared = new Map<string, true>();
+  const connection = () => (client as unknown as { connection: ParsedStatements }).connection;
   const release = (name: string) => {
     prepared.delete(name);
+    if (connection().submittedNamedStatements[name] !== undefined) {
+      prepared.set(name, true);
+      return;
+    }
+    if (connection().parsedStatements[name] === undefined) return;
     Reflect.apply(query, client, [
       `deallocate ${name}`,
       (error: Error | null) => {
-        if (error) return;
-        const connection = (client as unknown as { connection: ParsedStatements }).connection;
-        delete connection.parsedStatements[name];
-        delete connection.submittedNamedStatements[name];
+        if (error) {
+          prepared.set(name, true);
+          return;
+        }
+        delete connection().parsedStatements[name];
+        delete connection().submittedNamedStatements[name];
       },
     ]);
   };
