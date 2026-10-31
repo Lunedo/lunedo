@@ -46,18 +46,42 @@ class ObservedPool extends pg.Pool {
   }
 }
 
-export const MAX_PREPARED_STATEMENTS = 500;
+export const MAX_PREPARED_STATEMENTS = 100;
+export const MAX_PREPARED_PARAMETERS = 100;
 export const IDLE_CONNECTION_MS = 5 * 60 * 1000;
+const MAX_SEEN_STATEMENTS = 1000;
 
 type QueryText = { text: string; name?: string | undefined; [key: string]: unknown };
+type ParsedStatements = {
+  parsedStatements: Record<string, string>;
+  submittedNamedStatements: Record<string, string>;
+};
 
 function statementName(text: string): string {
   return `lunedo_${createHash("sha1").update(text).digest("hex").slice(0, 24)}`;
 }
 
+function touch<T>(map: Map<string, T>, key: string, value: T): void {
+  map.delete(key);
+  map.set(key, value);
+}
+
 export function prepareRepeatedStatements(client: pg.PoolClient): void {
   const query = client.query;
-  const prepared = new Set<string>();
+  const seen = new Map<string, true>();
+  const prepared = new Map<string, true>();
+  const release = (name: string) => {
+    prepared.delete(name);
+    Reflect.apply(query, client, [
+      `deallocate ${name}`,
+      (error: Error | null) => {
+        if (error) return;
+        const connection = (client as unknown as { connection: ParsedStatements }).connection;
+        delete connection.parsedStatements[name];
+        delete connection.submittedNamedStatements[name];
+      },
+    ]);
+  };
   client.query = function (this: pg.PoolClient, ...args: unknown[]) {
     const [first, values] = args;
     const parameters = Array.isArray(values) ? values : (first as { values?: unknown[] } | null)?.values;
@@ -67,11 +91,26 @@ export function prepareRepeatedStatements(client: pg.PoolClient): void {
         : typeof first === "object" && first !== null && typeof (first as QueryText).text === "string"
           ? (first as QueryText)
           : null;
-    if (config && !config.name && parameters && parameters.length > 0) {
+    if (
+      config &&
+      !config.name &&
+      parameters &&
+      parameters.length > 0 &&
+      parameters.length <= MAX_PREPARED_PARAMETERS
+    ) {
       const name = statementName(config.text);
-      if (prepared.has(name) || prepared.size < MAX_PREPARED_STATEMENTS) {
-        prepared.add(name);
+      if (prepared.has(name)) {
+        touch(prepared, name, true);
         args[0] = { ...config, name };
+      } else if (seen.has(name)) {
+        const oldest = prepared.size >= MAX_PREPARED_STATEMENTS ? prepared.keys().next().value : undefined;
+        if (oldest !== undefined) release(oldest);
+        prepared.set(name, true);
+        args[0] = { ...config, name };
+      } else {
+        touch(seen, name, true);
+        const forgotten = seen.size > MAX_SEEN_STATEMENTS ? seen.keys().next().value : undefined;
+        if (forgotten !== undefined) seen.delete(forgotten);
       }
     }
     return Reflect.apply(query, this, args);

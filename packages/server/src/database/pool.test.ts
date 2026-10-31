@@ -1,7 +1,9 @@
+import type { PoolClient } from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   createDatabasePool,
   IDLE_CONNECTION_MS,
+  MAX_PREPARED_PARAMETERS,
   MAX_PREPARED_STATEMENTS,
   type PoolAcquireEvent,
   pingDatabase,
@@ -50,46 +52,81 @@ describe("database pool", () => {
       await expect(pingDatabase(pool)).resolves.toBeUndefined();
     });
 
-    it("prepares parameterized statements once per connection and leaves others alone", async () => {
+    async function withClient(run: (client: PoolClient) => Promise<void>) {
       const one = createDatabasePool({ connectionString: url ?? "", applicationName: "lunedo-test", max: 1 });
       const client = await one.connect();
       try {
+        await run(client);
+      } finally {
+        client.release();
+        await one.end();
+      }
+    }
+
+    async function preparedStatements(client: PoolClient) {
+      const result = await client.query<{ statement: string }>(
+        "select statement from pg_prepared_statements where name like 'lunedo%' order by statement",
+      );
+      return result.rows.map((row) => row.statement);
+    }
+
+    it("prepares a parameterized statement from its second use and leaves others alone", async () => {
+      await withClient(async (client) => {
         for (const value of [1, 2, 3]) {
           const result = await client.query<{ value: number }>("select $1::int + 1 as value", [value]);
           expect(result.rows[0]?.value).toBe(value + 1);
         }
-        await client.query({ text: "select $1::text as word", values: ["kept"] });
+        await client.query({ text: "select $1::text as once", values: ["once"] });
         await client.query("select 1");
         await client.query("begin; select 2; commit");
-        const prepared = await client.query<{ statement: string }>(
-          "select statement from pg_prepared_statements where name like 'lunedo%' order by statement",
-        );
-        expect(prepared.rows.map((row) => row.statement)).toEqual([
-          "select $1::int + 1 as value",
-          "select $1::text as word",
-        ]);
-      } finally {
-        client.release();
-        await one.end();
-      }
+        const many = Array.from({ length: MAX_PREPARED_PARAMETERS + 1 }, (_, index) => `$${index + 1}::int`);
+        for (let round = 0; round < 3; round++) {
+          await client.query(
+            `select ${many.join(" + ")} as total`,
+            many.map(() => 1),
+          );
+        }
+        expect(await preparedStatements(client)).toEqual(["select $1::int + 1 as value"]);
+      });
     });
 
-    it("stops preparing new statements at the limit and keeps answering", async () => {
-      const one = createDatabasePool({ connectionString: url ?? "", applicationName: "lunedo-test", max: 1 });
-      const client = await one.connect();
-      try {
+    it("keeps at most the limit per connection and releases the least recently used", async () => {
+      await withClient(async (client) => {
+        const text = (index: number) => `select $1::int + ${index} as value`;
         for (let index = 0; index < MAX_PREPARED_STATEMENTS + 5; index++) {
-          const result = await client.query<{ value: number }>(`select $1::int + ${index} as value`, [1]);
-          expect(result.rows[0]?.value).toBe(index + 1);
+          for (let round = 0; round < 2; round++) {
+            const result = await client.query<{ value: number }>(text(index), [1]);
+            expect(result.rows[0]?.value).toBe(index + 1);
+          }
         }
-        const count = await client.query<{ count: string }>(
-          "select count(*) from pg_prepared_statements where name like 'lunedo%'",
-        );
-        expect(Number(count.rows[0]?.count)).toBe(MAX_PREPARED_STATEMENTS);
-      } finally {
-        client.release();
-        await one.end();
-      }
+        const kept = await preparedStatements(client);
+        expect(kept).toHaveLength(MAX_PREPARED_STATEMENTS);
+        expect(kept).not.toContain(text(0));
+        expect(kept).toContain(text(MAX_PREPARED_STATEMENTS + 4));
+        for (let round = 0; round < 3; round++) {
+          expect((await client.query<{ value: number }>(text(0), [1])).rows[0]?.value).toBe(1);
+        }
+        expect(await preparedStatements(client)).toContain(text(0));
+      });
+    });
+
+    it("keeps answering when a statement is released inside a failed transaction", async () => {
+      await withClient(async (client) => {
+        const text = (index: number) => `select $1::int + ${index} as value`;
+        for (let index = 0; index < MAX_PREPARED_STATEMENTS; index++) {
+          for (let round = 0; round < 2; round++) await client.query(text(index), [1]);
+        }
+        await client.query("begin");
+        await expect(client.query("select $1::int / 0", [1])).rejects.toThrow();
+        await client.query(text(MAX_PREPARED_STATEMENTS), [1]).catch(() => null);
+        await client.query(text(MAX_PREPARED_STATEMENTS), [1]).catch(() => null);
+        await client.query("rollback");
+        for (let index = 0; index <= MAX_PREPARED_STATEMENTS; index++) {
+          for (let round = 0; round < 2; round++) {
+            expect((await client.query<{ value: number }>(text(index), [1])).rows[0]?.value).toBe(index + 1);
+          }
+        }
+      });
     });
 
     it("turns off just-in-time compilation on every connection", async () => {

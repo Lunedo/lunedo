@@ -50,6 +50,8 @@ Searches run in PostgreSQL in a lane of their own, so that many broad searches c
 
 The metrics `lunedo_search_slot_wait_seconds`, `lunedo_search_slots_in_use` and `lunedo_search_rejected_total` show how full the lane is; see [Monitoring](monitoring.md).
 
+Every connection keeps the statements Lunedo uses repeatedly prepared, at most 100 per connection with their plans, so PostgreSQL does not plan them again on every call; count a few MB of PostgreSQL memory per connection for this. Lunedo needs connections that keep their session: directly to PostgreSQL, or through a pooler in session mode such as PgBouncer with `pool_mode = session`. A pooler in transaction mode is not supported, because Lunedo uses notifications (`LISTEN`) and releases prepared statements with `DEALLOCATE`.
+
 Limits that protect the memory of a process count per API process: diagram sanitizing and uploads, Word and PDF files created at once and password checks.
 
 Migrations only go forward. When several processes start at the same time, a PostgreSQL advisory lock lets one of them migrate while the others wait. Readiness (`/health/ready`) answers `503` while the schema is behind the code. When migrations are pending, the first process takes a backup before it migrates; see [Backups before updates](updates.md#backups-before-updates).
