@@ -299,7 +299,7 @@ install_lunedo() {
     exit 0
   fi
 
-  [ -f "$0" ] || fail "Download the script first and run it from the file, for example: curl -fsSLO https://github.com/lunedo/lunedo/releases/latest/download/install.sh && bash install.sh"
+  [ -f "$0" ] || fail "Download the script first and run it from the file, for example: curl -fsSLO https://lunedo.org/install.sh && bash install.sh"
   check_requirements
 
   instance_url="${instance_url:-$(ask "Address people open, for example https://wiki.example.org" "http://localhost:$port")}"

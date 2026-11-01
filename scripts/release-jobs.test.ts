@@ -43,7 +43,13 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      packages: read
     steps:
+      - uses: docker/login-action@0000000000000000000000000000000000000000 # v4.6.0
+        with:
+          registry: ghcr.io
+          username: \${{ github.actor }}
+          password: \${{ secrets.GITHUB_TOKEN }}
       - run: |
           docker run --rm --pull always "$IMAGE@$DIGEST" release-notes --json > lunedo-versions.json
 `;
@@ -79,6 +85,28 @@ describe("release jobs", () => {
 
   it("accepts GitHub-hosted jobs that run the image by digest", () => {
     assert.deepEqual(releaseJobProblems({ "image.yml": isolated }), []);
+  });
+
+  it("reads the registries a job logs in to", () => {
+    const jobs = workflowJobs(isolated);
+    assert.deepEqual(jobs[1]?.registryLogins, ["ghcr.io"]);
+    assert.deepEqual(jobs[0]?.registryLogins, []);
+  });
+
+  it("refuses a job that runs the image without logging in to ghcr.io", () => {
+    const withoutLogin = isolated.replace(/ {6}- uses: docker\/login-action@[\s\S]*?GITHUB_TOKEN \}\}\n/, "");
+    assert.notEqual(withoutLogin, isolated);
+    const problems = releaseJobProblems({ "image.yml": withoutLogin });
+    assert.equal(problems.length, 1);
+    assert.match(problems[0] ?? "", /job version-file runs an image without logging in to ghcr\.io/);
+  });
+
+  it("refuses a job that logs in to ghcr.io without packages: read", () => {
+    const withoutPermission = isolated.replace("      packages: read\n", "");
+    assert.notEqual(withoutPermission, isolated);
+    const problems = releaseJobProblems({ "image.yml": withoutPermission });
+    assert.equal(problems.length, 1);
+    assert.match(problems[0] ?? "", /packages: read/);
   });
 
   it("accepts a matrix of GitHub-hosted runners and refuses one with a self-hosted runner", () => {
