@@ -39,10 +39,10 @@ Scrape the address inside the network, not the public address of the reverse pro
 | `lunedo_mail_undelivered_total` | counter | E-mails given up after the last attempt. |
 | `lunedo_mail_last_success_timestamp_seconds` | gauge | Time of the last delivered e-mail, as a Unix timestamp. |
 | `lunedo_mail_last_failure_timestamp_seconds` | gauge | Time of the last failed attempt. Missing until one fails. |
-| `lunedo_storage_used_bytes` | gauge | Bytes used in the file store: on the volume for local storage, the running total of stored files for S3. |
-| `lunedo_storage_size_bytes` | gauge | Size of the volume, or the configured limit for S3. |
+| `lunedo_storage_used_bytes` | gauge | Bytes used in the file store: on the volume for local storage, the running total of stored files for S3. Missing for S3 without a limit. |
+| `lunedo_storage_size_bytes` | gauge | Size of the volume, or the configured limit for S3. Missing for S3 without a limit. |
 | `lunedo_storage_usage_ratio` | gauge | Used share from 0 to 1. Missing for S3 without a limit. |
-| `lunedo_storage_level` | gauge | Active storage warning level: 0 none, 1 warning, 2 large writes paused, 3 critical. See [storage.md](storage.md). |
+| `lunedo_storage_level` | gauge | Active storage warning level: 0 none, 1 warning, 2 large writes paused, 3 critical. Always present. See [storage.md](storage.md). |
 | `lunedo_database_size_bytes` | gauge | Size of the Lunedo database. |
 | `lunedo_backup_last_success_timestamp_seconds` | gauge | Time of the last successful backup. |
 | `lunedo_backup_failures_total` | counter | Backups that failed. |
@@ -52,7 +52,7 @@ Scrape the address inside the network, not the public address of the reverse pro
 | `lunedo_maintenance_mode` | gauge | 1 while [maintenance mode](maintenance-mode.md) is on. |
 | `lunedo_update_available` | gauge | 1 when a newer release is available. Only exposed while the update check is on. |
 
-Values that are not known are left out instead of reported as 0, for example the storage usage of S3 without a limit. The values are read from the database at most every 10 seconds.
+Values that are not known are left out instead of reported as 0, for example `lunedo_storage_used_bytes`, `lunedo_storage_size_bytes` and `lunedo_storage_usage_ratio` for S3 without a limit. The values are read from the database at most every 10 seconds.
 
 ### Values of each process
 

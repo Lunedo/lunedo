@@ -39,7 +39,7 @@ Until a target is set up, backups before updates go to `LUNEDO_BACKUP_DIR` (by d
 | **Monthly backup** | **No monthly backups** | A day of the month. The backup of that day is kept as a monthly one; in shorter months the last day is used. A day that is both a weekly and a monthly day counts as monthly. |
 
 - A day whose backup was due while the worker was down gets one backup when the worker is back, not one per missed day.
-- Only one backup runs at a time across all workers. A scheduled backup that would overlap a running backup is skipped and listed as skipped. **Back up now** while a backup or test restore runs is refused with the message "A backup or test restore is already running". `backup create` on the command line waits for the running backup instead.
+- Only one backup runs at a time across all workers. A scheduled backup that would overlap a running backup is skipped and listed as skipped. **Back up now** while a backup runs is refused with the message "A backup or test restore is already running"; a running test restore does not block it. `backup create` on the command line waits for the running backup instead.
 - **Back up now** starts a manual backup to the same target. Manual backups are kept until they are deleted.
 
 ### Free space before a backup

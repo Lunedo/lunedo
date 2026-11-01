@@ -31,7 +31,7 @@ What Lunedo needs to run. The [setup script](installation/script.md) checks the 
 
 A container runs the worker, the collaboration server and one API process per CPU, at most 8 (`LUNEDO_API_PROCESSES` sets another number). Requests are spread over the API processes, so the API uses more than one CPU without a proxy in front of several containers.
 
-Each process has its own pool of database connections. Without `LUNEDO_DATABASE_POOL_SIZE`, the worker and the collaboration server use twice the number of CPUs of the container plus 2, at least 6 and at most 24, and this number is divided among the API processes, at least 8 each. With `LUNEDO_DATABASE_POOL_SIZE`, every process, each API process included, uses that number. Every process also holds one connection for notifications; the worker holds up to four more for the job queue and every API process one.
+Each process has its own pool of database connections. Without `LUNEDO_DATABASE_POOL_SIZE`, the worker and the collaboration server use twice the number of CPUs of the container plus 2, at least 6 and at most 24. A single API process uses the same number; with several API processes, it is divided among them, at least 8 each. With `LUNEDO_DATABASE_POOL_SIZE`, every process, each API process included, uses that number. Every process also holds one connection for notifications; the worker holds up to four more for the job queue and every API process one.
 
 Add up for every container that uses the same database:
 
@@ -50,7 +50,7 @@ Searches run in PostgreSQL in a lane of their own, so that many broad searches c
 - Searches use connections of their own (`lunedo-search` in `pg_stat_activity`, one per slot in every API process), without parallel query, and each statement may run at most `LUNEDO_SEARCH_TIMEOUT_SECONDS` (5 by default).
 - Searches in knowledge base portals, also by visitors who are not signed in, use the same lane. When no slot becomes free in time, the portal answers `503` and asks to search again, and its start page leaves out the frequent searches.
 
-A search with more than 1,000 matches counts and ranks only the 1,000 most recently changed of them; the app shows the number with a plus sign and says that it shows the most recently changed results. On large instances a broad search therefore prefers recently changed pages. Add more words to narrow it to fewer matches and find older ones.
+A search with more than 1,000 matches, counted as matching sections of pages and files rather than as results, counts and ranks only the 1,000 most recently changed of them; the app shows the number with a plus sign and says that it shows the most recently changed results. On large instances a broad search therefore prefers recently changed pages. Add more words to narrow it to fewer matches and find older ones.
 
 The metrics `lunedo_search_slot_wait_seconds`, `lunedo_search_slots_in_use` and `lunedo_search_rejected_total` show how full the lane is; see [Monitoring](monitoring.md).
 
