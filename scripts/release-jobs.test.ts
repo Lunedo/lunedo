@@ -81,6 +81,47 @@ describe("release jobs", () => {
     assert.deepEqual(releaseJobProblems({ "image.yml": isolated }), []);
   });
 
+  it("accepts a matrix of GitHub-hosted runners and refuses one with a self-hosted runner", () => {
+    const matrix = (second: string) => `name: Image
+jobs:
+  build-release:
+    runs-on: \${{ matrix.runner }}
+    permissions:
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ${second}
+    steps:
+      - run: echo build
+`;
+    assert.deepEqual(releaseJobProblems({ "image.yml": matrix("ubuntu-24.04-arm") }), []);
+    const problems = releaseJobProblems({ "image.yml": matrix("[self-hosted, linux]") });
+    assert.equal(problems.length, 1);
+    assert.match(
+      problems[0] ?? "",
+      /job build-release has packages: write but runs on "\[self-hosted, linux\]"/,
+    );
+  });
+
+  it("refuses a matrix runner without any runner in the matrix", () => {
+    const problems = releaseJobProblems({
+      "image.yml": `name: Image
+jobs:
+  build-release:
+    runs-on: \${{ matrix.runner }}
+    permissions:
+      packages: write
+    steps:
+      - run: echo build
+`,
+    });
+    assert.equal(problems.length, 1);
+  });
+
   it("accepts the workflows of the repository", () => {
     const workflows: Record<string, string> = {};
     for (const file of readdirSync(".github/workflows")) {
