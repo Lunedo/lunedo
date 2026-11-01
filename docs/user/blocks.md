@@ -5,7 +5,7 @@ A page, blog post or template is made of blocks: paragraphs, headings, lists, ta
 ## Inserting blocks
 
 - Type `/` at the start of a line or after a space (not inside a code block). The menu groups the blocks under **Text**, **Lists**, **Blocks** and **In the text**. Keep typing to filter: the menu matches the name, the description and a few keywords, for example `/toc` or `/divider`. With nothing typed yet, **Recently used** shows the last three blocks you inserted.
-- The toolbar has buttons for the common blocks and an **Insert** menu with all blocks and inline elements.
+- The toolbar has buttons for the common blocks and an **Insert** menu with the other blocks and inline elements.
 - Some blocks have a typing shortcut, shown at the right of the menu entry, for example `#` for a heading or `-` for a bulleted list.
 - Paste or drop files into the editor to upload them. Images that can be previewed become image blocks, other files become file blocks.
 

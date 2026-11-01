@@ -1,6 +1,6 @@
 # Static website
 
-Checked against Cloudflare, nginx and GitHub documentation, October 2026.
+Checked against Cloudflare, nginx and GitHub documentation, November 2026.
 
 A public knowledge base can be downloaded as a static website: a ZIP file with plain HTML, CSS and JavaScript files that any web server can serve. The Lunedo instance stays the place where articles are edited. After changes, download a new ZIP and upload it again, by hand or with your own script ([Knowledge base export](../../api/knowledge-base-export.md) shows how to do this through the API).
 
@@ -40,9 +40,9 @@ All links are relative, so the website works under any domain and in a subfolder
 
 ## Publishing on Cloudflare Pages
 
-In the dashboard, open **Workers & Pages**, choose **Create application** and the option to upload your files by drag and drop. Name the project, drag the ZIP file or the unpacked folder into the upload area and deploy. Each new upload replaces the website.
+In the dashboard, open **Workers & Pages**, choose **Create application** and the option to upload your files by drag and drop. Name the project, drag the ZIP file or the unpacked folder into the upload area and deploy. Each new upload replaces the website. An upload in the dashboard takes at most 1,000 files of up to 25 MiB each; upload larger websites with Wrangler.
 
-With Wrangler, which takes only the unpacked folder:
+With Wrangler, which takes only the unpacked folder and up to 20,000 files:
 
 ```sh
 unzip "IT Help 2026-10-20.zip" -d site
@@ -50,6 +50,8 @@ npx wrangler pages deploy site --project-name=it-help
 ```
 
 Cloudflare Pages reads `_redirects` and `404.html` by itself and serves `/1040-set-up-the-vpn-connection` for `1040-set-up-the-vpn-connection.html`.
+
+`_redirects` holds two rules for each redirected address, one with and one without `.html`. Cloudflare Pages takes at most 2,000 such rules. The HTML redirect pages are part of the website in any case.
 
 ## Any web server
 

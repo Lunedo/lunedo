@@ -24,7 +24,7 @@ Deleted content passes through two stages before it is deleted for good:
 
 After the second stage the content and all its versions are deleted for good. The **Removed for good in** column of the trash shows how many days are left.
 
-Both times are set per organization under **Settings › Organization › Content › Pages and trash** (section **Trash**) and per space under **Space settings › Content › Pages and trash**. A space inherits the organization value unless it sets its own, and the organization can lock the value. Each time lies between 1 and 3650 days. Instance administrators set a shortest allowed time for both stages under **Settings › Instance › People and sign-in › Policies** (section **Trash**, default 1 day); organizations and spaces cannot go below it.
+Both times are set per organization under **Settings › Organization › Content › Pages and trash** (section **Trash**) and per space under **Space settings › Content › Pages and trash**. A space inherits the organization value unless it sets its own, and the organization can lock the value. Each time lies between 1 and 3650 days. Instance administrators set a shortest allowed time for each stage under **Settings › Instance › People and sign-in › Policies** (section **Trash**, default 1 day each); organizations and spaces cannot go below it.
 
 ## Restore from the trash of a space
 

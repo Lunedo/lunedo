@@ -66,10 +66,10 @@ Space admins open the settings from the space menu. The settings are grouped:
 
 | Group | Page | What it holds |
 |---|---|---|
-| | **General** | Name, key, description and who can read the space |
+| | **General** | Name, key, description, who can read the space, archiving or deleting the space |
 | Access | **Permissions** | Who has which role |
 | Access | **Access** | Give people access, decide on access requests, review restricted pages |
-| Content | **Pages and trash** | Publish or live mode for new pages, trash periods, deleting the space |
+| Content | **Pages and trash** | Publish or live mode for new pages, trash periods |
 | Content | **Page status** | The status values pages can have; see [Publishing and page status](spaces-and-pages/publishing-and-page-status.md) |
 | Content | **Templates** | Templates of the space; see [Templates](templates.md) |
 | Content | **Export** | Whether people may export; see [Export](export.md) |
@@ -80,7 +80,7 @@ Knowledge bases have additional pages for their portal; see [Knowledge bases](kn
 
 ### Deleting a space
 
-**Delete space** in the danger zone of **Pages and trash** moves the space with all its pages to second-stage recovery. Type the name of the space to confirm. Nobody can open the space or its pages afterwards, and links to its pages stop working. The people who were space admins can restore it from **Deleted spaces** in the list of spaces until that period ends; organization administrators can too, unless the space is confidential. See [Trash and archive](spaces-and-pages/trash-and-archive.md) for the periods and for archiving a space instead.
+**Delete space** in the danger zone of **General** moves the space with all its pages to second-stage recovery. Type the name of the space to confirm. Nobody can open the space or its pages afterwards, and links to its pages stop working. The people who were space admins can restore it from **Deleted spaces** in the list of spaces until that period ends; organization administrators can too, unless the space is confidential. See [Trash and archive](spaces-and-pages/trash-and-archive.md) for the periods and for archiving a space instead.
 
 ## Your personal space
 

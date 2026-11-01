@@ -81,7 +81,7 @@ Images inside the sections `steps`, `symptom` and `resolution` (`FRAMED_SECTIONS
 
 ## Static website
 
-`StaticSiteBuilder` in `site/static-site.ts` builds the ZIP for the export format `site`. It reads every published original and translation of an enabled language, keeps only those that `PortalReader.article` returns for an anonymous reader without fallback, and renders them with the same renderer. File names are `<number>-<slug>.html` with the portal number, translations in `<language>/`. Earlier slugs come from `article_titles`; each one and the bare number get an HTML redirect page and a line in `_redirects`. The search index is a serialized MiniSearch index per language. The build fails with the reason `notPublic` when the audience is no longer public.
+`StaticSiteBuilder` in `site/static-site.ts` builds the ZIP for the export format `site`. It reads every published original and translation of an enabled language, keeps only those that `PortalReader.article` returns for an anonymous reader without fallback, and renders them with the same renderer. File names are `<number>-<slug>.html` with the portal number, translations in `<language>/`. Earlier slugs come from `article_titles`; each one and the bare number get an HTML redirect page and two lines in `_redirects`, with and without `.html`. The search index is a serialized MiniSearch index per language. The build fails with the reason `notPublic` when the audience is no longer public.
 
 ## Background jobs
 

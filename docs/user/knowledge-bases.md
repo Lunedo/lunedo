@@ -21,7 +21,7 @@ A knowledge base contains only articles, areas and topics:
 
 - **Articles** are pages. They always use publish mode: readers see the last published version while authors work on a draft. Live mode is not offered. See [Publishing and page status](spaces-and-pages/publishing-and-page-status.md).
 - **Areas and topics** are folders, nested to any depth, for example Network › VPN › Windows. The folders at the top level are **areas**, the folders inside them **topics**, in the app and in the portal. In every other respect they are one kind of folder.
-- Articles are placed in an area, in a topic or at the top level, never below another article. Articles and folders keep their kind; they cannot be converted.
+- Articles are placed in an area, in a topic or at the top level, never below another article. Translations are the only exception: they sit below the article they translate; see [Knowledge base translations](knowledge-bases/knowledge-base-translations.md). Articles and folders keep their kind; they cannot be converted.
 
 Blog posts, meeting series, whiteboards and links cannot be created in a knowledge base or moved or copied into it. A page in live mode or a page with subpages cannot be moved or copied into a knowledge base; switch it to publish mode or move its subpages first.
 
