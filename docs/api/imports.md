@@ -21,7 +21,7 @@ API tokens need the organization scope `spaces` with `manage` for every step tha
 | 7. Follow the progress and read the report | `GET /api/v1/imports/{importId}`, `…/report`, `…/report/entries`, `…/report/export` | any organization scope |
 | 8. Map people and groups, then accept or discard | `POST …/people/mappings`, `PUT …/groups/{groupKey}`, `POST …/accept`, `POST …/discard` | spaces: manage |
 
-`source` is `confluence-xml`, `confluence-csv`, `confluence-cloud`, `confluence-dc`, `markdown` or `word`. `GET /api/v1/organizations/{organizationId}/imports` lists the imports the caller runs or reviews.
+`source` is `confluence-xml`, `confluence-csv`, `confluence-cloud`, `confluence-dc`, `markdown` or `word`. `GET /api/v1/organizations/{organizationId}/imports` lists the imports the caller runs or reviews, and held imports that wait for another administrator to take over. A draft is listed only for the person who started it.
 
 ## Uploading a file
 
@@ -59,7 +59,7 @@ Uploads above the instance's upload limit (**Largest export to upload**, default
 
 ## States
 
-`state` of an import is `draft`, `analyzing` (the export is read), `ready`, `running`, `held` (the person who started it lost the permission, and another administrator has to take over), `stopping` or `discarding`, `review` (the quarantine space waits for a decision), and at the end `accepted`, `discarded`, `stopped` or `failed`. A re-import that a newer re-import of the same space replaced ends in `superseded`. `phase` names the step a running import is in.
+`state` of an import is `draft`, `analyzing` (the export is read), `ready`, `running`, `held` (the person who started it lost the permission, and another administrator has to take over), `stopping` or `discarding`, `review` (the quarantine space waits for a decision), `accepting`, and at the end `accepted`, `discarded`, `stopped` or `failed`. A re-import that a newer re-import of the same space replaced ends in `superseded`. `phase` names the step a running import is in.
 
 Discarding and stopping need the key of the space typed as `confirmation`.
 

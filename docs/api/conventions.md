@@ -32,13 +32,14 @@ Errors are Problem Details (RFC 9457) with the media type `application/problem+j
   "type": "urn:lunedo:problem:invalidInput",
   "title": "The request is not valid",
   "status": 400,
-  "detail": "The request is not valid",
+  "detail": "The request body is not valid",
   "code": "invalidInput",
-  "fields": ["title"]
+  "fields": ["body.title"]
 }
 ```
 
 - `type` is stable. Branch on it or on `code`, which repeats its last part. `title` and `detail` are for people and can change.
+- For invalid input, `fields` names each field with the part of the request it is in: `body.`, `query.` or `params.`, followed by its path, such as `body.title`.
 - Some problems carry more fields, for example `fields` for invalid input, `denials` for `forbidden`, `retryAfterSeconds` for `rateLimited` and `busy`, and `problems` for `invalidDocument`.
 - The reference lists the problems each route can return.
 
@@ -73,7 +74,7 @@ Lists return one page at a time:
 
 - Pass `nextCursor` as the `cursor` query parameter to get the next page, until `nextCursor` is `null`.
 - `limit` sets the page size. For most lists it is 1 to 200, default 50; the reference names the routes with other limits, such as the page tree (default 200).
-- The cursor is opaque. Do not build or change it; a changed cursor is refused with `invalidInput` naming the field `cursor` (`invalidCursor` on some routes).
+- The cursor is opaque. Do not build or change it; a changed cursor is refused with `invalidInput` naming the field `cursor` (`invalidCursor` on some routes). A cursor longer than 2,000 characters is refused with `invalidInput` naming `query.cursor`.
 
 ```sh
 CURSOR=""

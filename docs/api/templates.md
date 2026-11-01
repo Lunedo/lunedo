@@ -48,7 +48,7 @@ A page is created from a template with `POST /api/v1/spaces/{spaceId}/items` and
 | `POST …/templates/export` | Sends the template file: `application/json` without files, `application/zip` with files |
 | `POST /api/v1/instance/templates/built-in/export` | Sends built-in templates in a language: `{ "language": "de", "templateIds": null }` |
 
-An export removes everything that points into the instance: links to pages and spaces, mentions, includes, live diagram references, whiteboard blocks, template buttons, reports bound to pages or spaces, and people. The template's own images and external links stay.
+An export removes everything that points into the instance: links to pages and spaces, mentions, comments, includes, live diagram references, whiteboard blocks, template buttons for templates other than the built-in ones, reports bound to pages or spaces, links from roadmap bars to pages, meeting topics and the links of decisions to them, unsupported macros, people, and files that are not the template's own or are larger than 5 MiB. Drawings lose the images they contain. The template's own images and external links stay.
 
 ## Importing
 

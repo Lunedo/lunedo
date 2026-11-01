@@ -12,7 +12,7 @@ Permissions are named as in the reference. `space.view`, `item.view` and similar
 | `GET /api/v1/spaces/{spaceId}` | One space | `space.view` |
 | `GET /api/v1/space-keys/{key}` | Finds a space by its key | signed in or token |
 | `POST /api/v1/organizations/{organizationId}/spaces` | Creates a space; `type: "knowledgeBase"` creates a knowledge base | `organization.spaces.create` |
-| `PATCH /api/v1/spaces/{spaceId}` | Changes name and description | `space.manage` |
+| `PATCH /api/v1/spaces/{spaceId}` | Changes name, description and `discoverable` (whether members of the organization can find the space and ask for access; not for personal spaces) | `space.manage` |
 | `PUT /api/v1/spaces/{spaceId}/key` | Changes the key | `space.manage` |
 | `POST /api/v1/spaces/{spaceId}/visibility/preview`, `PUT …/visibility` | Previews and changes who can read the space | `space.manage` |
 | `GET`, `POST /api/v1/spaces/{spaceId}/permissions`, `POST …/permissions/preview` | Lists, previews and changes roles in the space | `space.manage` |

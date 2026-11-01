@@ -66,7 +66,7 @@ Names are stored with the event, so renaming something later does not change old
 1. the readable columns `time`, `actor`, `action`, `target`, `scope` and `changes`, with names in place of IDs. `action` holds the event type, such as `role.assigned`. `actor` holds `setupAssistant` for the setup assistant.
 2. the raw columns `occurredAt`, `name`, `scopeType`, `scopeId`, `actorType`, `actorId`, `targetType`, `targetId`, `fields`, `clientIp`, `userAgent`, `requestId`, `sequence` and `id`.
 
-Cells that start with `=`, `+`, `-`, `@`, a tab or a carriage return get a leading apostrophe, so spreadsheets do not run them as formulas. Every export is itself recorded in the audit log as `audit.exported` with its filters.
+Cells that start with `=`, `+`, `-`, `@`, a tab or a carriage return get a leading apostrophe, so spreadsheets do not run them as formulas. Every export is itself recorded in the audit log as `audit.exported` with its scope and the filters `from`, `to`, `actorId`, `targetType`, `targetId` and `name`.
 
 ```sh
 curl -s -H "Authorization: Bearer $TOKEN" -o audit.csv \

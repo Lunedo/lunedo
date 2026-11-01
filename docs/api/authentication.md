@@ -18,7 +18,7 @@ There are two kinds of tokens:
 | Personal token | Your own account | **Settings › My account › Sign-in and security**, section **API tokens** |
 | Service account token | A service account of an organization | **Settings › Organization › Integrations and security › Service accounts** |
 
-Organization administrators with the integrations area see and revoke all tokens that reach their organization under **Settings › Organization › Integrations and security › API tokens**. See [Service accounts](../admin/service-accounts.md).
+Organization administrators with the integrations area see and revoke, under **Settings › Organization › Integrations and security › API tokens**, the tokens limited to their organization and the tokens of accounts whose home organization it is, including its service accounts. See [Service accounts](../admin/service-accounts.md).
 
 Tokens are created, changed and revoked only in the interface. The routes behind these screens serve the web client, need a signed-in session and are not part of `/api/docs`. A token cannot create, list or revoke tokens.
 
@@ -54,7 +54,7 @@ What a token may do with content (spaces, pages, articles) is its content level.
 - An account that may only read a knowledge base cannot write to it, whatever the level of its token.
 - The level and the knowledge bases can be changed later in the token list with **Change rights**. Changing them needs a recent sign-in.
 
-Creating a token is recorded in the audit log with its level, every change of the level as `apiToken.levelChanged`, and every publication with a token as `page.publishedWithToken`.
+Creating a token is recorded in the audit log with its level, every change of the level as `apiToken.levelChanged`, and every publication with a token as `page.published` with the token's ID in `credentialId`.
 
 ## Lifetime
 
@@ -70,7 +70,7 @@ Creating a token is recorded in the audit log with its level, every change of th
 Some routes refuse tokens with `sessionRequired`:
 
 - routes that need a recent sign-in, such as merging or anonymizing accounts (`POST /api/v1/instance/accounts/{accountId}/merge`, `…/anonymize`) and appointing oneself space admin;
-- routes that act for the person at the screen, such as access requests, **Shared with me**, announcements and following a blog.
+- routes that act for the person at the screen, such as asking for access, withdrawing or reading one's own access requests, **Shared with me**, announcements and following a blog.
 
 The reference at `/api/docs` names this for each such route. Tokens also never open collaboration connections; scripts change pages through `PUT /api/v1/pages/{pageId}/content` instead (see [Document format](document-format.md)).
 
@@ -80,9 +80,10 @@ The reference at `/api/docs` names this for each such route. Tokens also never o
 |---|---|---|---|
 | `invalidApiToken` | 401 | The token is malformed, unknown, revoked or expired, or its account is not active. The answer carries `WWW-Authenticate: Bearer error="invalid_token"`. | Check the token; create a new one if it was revoked or expired. |
 | `ambiguousCredentials` | 400 | The request carries a session cookie and a token. | Send only the token. |
-| `forbidden` with `tokenScope` | 403 | The scopes, the content level or the knowledge base limit of the token do not cover the request. | Create a token with the needed scope or level. |
+| `forbidden` with `tokenScope` | 403 | The scopes or the content level of the token do not cover the request. | Create a token with the needed scope or level. |
 | `forbidden` | 403 | The account itself lacks the permission. | Ask for the role. |
 | `sessionRequired` | 403 | The route is not available to tokens. | Use the interface. |
+| `notFound` | 404 | The space or page lies outside the knowledge bases the token is limited to. | Use a token that reaches that knowledge base. |
 | `rateLimited` | 429 | The token sent more requests per minute than the instance setting **Requests per token** allows, 600 by default (see [Service accounts](../admin/service-accounts.md#tokens-and-reminders)). | Wait for `Retry-After` seconds. |
 
-Rejected tokens are recorded in the audit log as `apiToken.rejected`, at most ten times per minute per client address. Successful use is not recorded.
+Unknown, revoked and expired tokens and tokens of inactive accounts are recorded in the audit log as `apiToken.rejected`, at most ten times per minute per client address. Malformed tokens are not recorded. Successful use is not recorded.
