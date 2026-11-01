@@ -26,7 +26,7 @@ This page lists what a Confluence import takes over and what it falls back to. I
 | Space permissions and space roles | Space roles; see [Permissions](#permissions) | App accounts, site administrators (`all-product-admins`) and permissions without access to the space get no role |
 | Page states | Page statuses | |
 | Templates of the space | Templates | |
-| Likes | 👍 reactions (exports) | Not read through the API, listed in the report once |
+| Likes | 👍 reactions (exports) | Not read through the API; for Confluence Cloud the report says so once |
 | Watchers | Counted in the report | Not imported |
 | Macros | See [Macros](#macros) and [Diagrams](#diagrams) | Unsupported-macro blocks, listed in the report |
 | Content properties of apps | | Not imported |
