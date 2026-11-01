@@ -940,6 +940,43 @@ describe("page tree", () => {
     );
   });
 
+  it("offers in the Move dialog only spaces of the same organization", async () => {
+    const sibling = {
+      ...space(),
+      id: "01929b1e-0000-7000-8000-0000000000f1",
+      key: "HR",
+      name: "Human Resources",
+    };
+    const foreign = {
+      ...space(),
+      id: "01929b1e-0000-7000-8000-0000000000f2",
+      key: "ELSE",
+      name: "Elsewhere",
+      organizationId: "01929b1e-0000-7000-8000-0000000000f3",
+    };
+    const personal = {
+      ...space(),
+      id: "01929b1e-0000-7000-8000-0000000000f4",
+      key: "PERS",
+      name: "Private notes",
+      organizationId: null,
+    };
+    const { tree } = await renderTree({
+      "GET /api/v1/spaces": () => ({
+        body: { items: [space(), sibling, foreign, personal], nextCursor: null },
+      }),
+      [`POST /api/v1/items/${NETWORK}/move/preview`]: () => ({ body: moveImpact({}) }),
+    });
+    const network = within(tree).getByRole("treeitem", { name: "Network" });
+    await userEvent.click(within(network).getByRole("button", { name: "Actions for Network" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Move…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Move Network" });
+    await userEvent.click(await within(dialog).findByRole("combobox", { name: "Space" }));
+    expect(await screen.findByRole("option", { name: /Human Resources/ })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: /Elsewhere/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /Private notes/ })).toBeNull();
+  });
+
   it("copies an item only after the person confirms that more people can read the copy", async () => {
     const { tree, requests } = await renderTree({
       "GET /api/v1/spaces": () => ({ body: { items: [space()], nextCursor: null } }),

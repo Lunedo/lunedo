@@ -255,11 +255,11 @@ describe.skipIf(!baseUrl)("Confluence imports: resolving people, groups and perm
         },
         test.services.spacePermissions.holders,
       );
-      const impact = await test.services.tree.moveImpact(as(w.alice), secret, {
+      const impact = await test.services.tree.moveImpact(SYSTEM, secret, {
         spaceId: council.id,
         parentId: null,
       });
-      await test.services.tree.move(as(w.alice), secret, {
+      await test.services.tree.move(SYSTEM, secret, {
         spaceId: council.id,
         parentId: null,
         confirmation: impact.confirmation ?? "",

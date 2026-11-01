@@ -109,6 +109,8 @@ Create items with **Create in this space** at the top of the tree, or with **New
 Drag an item to its new place, or choose **Move…** in its menu and pick the space, the place below and the position. Children move along. A move by drag and drop can be undone for 5 seconds.
 
 - Moving within a space needs the editor role; moving to another space needs the editor role in both spaces.
+- Content stays within its organization: the dialog offers only spaces of the same organization, and a move between an organization and a personal space is refused.
+- A move to another space is refused while pages below are restricted so that you cannot open them. Someone who can open them moves the content instead.
 - When the new place gives other people access, because other roles or restrictions apply there, the dialog shows who gains or loses access and asks you to confirm.
 - An item can never be moved below itself. When someone else moved the same item at the same moment, the move is refused and you try again, so two people moving items never break the tree.
 

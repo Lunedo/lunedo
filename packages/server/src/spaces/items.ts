@@ -1020,6 +1020,24 @@ export class TreeService {
       if (overview.rows[0]) {
         throw new SpaceError("overviewPage", "The overview page of a space stays in its space");
       }
+      const organizations = await tx.execute<{ same: boolean }>(sql`
+        select (select organization_id from spaces where id = ${sourceSpaceId})
+          is not distinct from (select organization_id from spaces where id = ${targetSpaceId}) as same`);
+      if (!organizations.rows[0]?.same) {
+        throw new SpaceError("otherOrganization", "Content can only be moved within its organization");
+      }
+      const hidden = await tx.execute<{ count: number }>(sql`
+        select count(*)::int as count from tree_items t join spaces s on s.id = t.space_id
+        where t.space_id = ${sourceSpaceId} and ${itemId}::uuid = any(t.path)
+          and not ${this.#authorization.itemFilter(actor, sql`t`, sql`s`)}`);
+      const count = hidden.rows[0]?.count ?? 0;
+      if (count > 0) {
+        throw new SpaceError(
+          "hiddenContent",
+          `${count} ${count === 1 ? "page below is" : "pages below are"} restricted so that you cannot open ${count === 1 ? "it" : "them"}. Ask someone who can open ${count === 1 ? "it" : "them"} to move the content, or move only pages you can open.`,
+          { pages: count },
+        );
+      }
       const holders = await guestHolders(tx, itemId, sourceSpaceId, targetSpaceId);
       if (holders.length > 0) {
         const organization = await tx.execute<{ organization_id: string | null }>(

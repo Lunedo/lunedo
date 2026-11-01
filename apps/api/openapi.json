@@ -147932,7 +147932,7 @@
       "post": {
         "operationId": "items.move",
         "summary": "Move an item",
-        "description": "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces. When the move changes who can access the content, through roles or inherited view restrictions, it is refused with the change unless the request carries the confirmation of a preview of exactly that change.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "description": "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces, stays within the organization and is refused while pages below are restricted so that the caller cannot open them. When the move changes who can access the content, through roles or inherited view restrictions, it is refused with the change unless the request carries the confirmation of a preview of exactly that change.\n\nRequires the permission `item.edit` on the item in `itemId`.",
         "tags": [
           "Pages"
         ],
@@ -148597,7 +148597,7 @@
             }
           },
           "409": {
-            "description": "`confidentialSharing`: The content is shared too broadly for a confidential space. `itemMoved`: The item was moved at the same moment. `knowledgeBaseContent`: A knowledge base holds only articles and categories. `knowledgeBaseMode`: Articles always use publish mode. `knowledgeBasePlacement`: Articles and categories are placed in categories. `moveChangesAccess`: The move changes who can access the content. `moveIntoDescendant`: An item cannot be moved below itself. `overviewPage`: The overview page of a space stays a page in its space.",
+            "description": "`confidentialSharing`: The content is shared too broadly for a confidential space. `hiddenContent`: Pages below are restricted so that the caller cannot open them. `itemMoved`: The item was moved at the same moment. `knowledgeBaseContent`: A knowledge base holds only articles and categories. `knowledgeBaseMode`: Articles always use publish mode. `knowledgeBasePlacement`: Articles and categories are placed in categories. `moveChangesAccess`: The move changes who can access the content. `moveIntoDescendant`: An item cannot be moved below itself. `otherOrganization`: Content stays within its organization. `overviewPage`: The overview page of a space stays a page in its space.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -148610,6 +148610,14 @@
                       "title": "The content is shared too broadly for a confidential space",
                       "status": 409,
                       "code": "confidentialSharing"
+                    }
+                  },
+                  "hiddenContent": {
+                    "value": {
+                      "type": "urn:lunedo:problem:hiddenContent",
+                      "title": "Pages below are restricted so that the caller cannot open them",
+                      "status": 409,
+                      "code": "hiddenContent"
                     }
                   },
                   "itemMoved": {
@@ -148658,6 +148666,14 @@
                       "title": "An item cannot be moved below itself",
                       "status": 409,
                       "code": "moveIntoDescendant"
+                    }
+                  },
+                  "otherOrganization": {
+                    "value": {
+                      "type": "urn:lunedo:problem:otherOrganization",
+                      "title": "Content stays within its organization",
+                      "status": 409,
+                      "code": "otherOrganization"
                     }
                   },
                   "overviewPage": {
@@ -148719,7 +148735,7 @@
       "post": {
         "operationId": "items.previewMove",
         "summary": "Preview a move",
-        "description": "Shows who would gain or lose access to the item and its children if it moved to the place, through roles in the space and through view restrictions it inherits there. When access changes, the answer carries a confirmation to send with the move. Needs edit permission in both spaces. Nothing is changed.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "description": "Shows who would gain or lose access to the item and its children if it moved to the place, through roles in the space and through view restrictions it inherits there. When access changes, the answer carries a confirmation to send with the move. Needs edit permission in both spaces. Moving into a space of another organization, or into a personal space from an organization, is refused, and so is moving to another space while pages below are restricted so that the caller cannot open them. Nothing is changed.\n\nRequires the permission `item.edit` on the item in `itemId`.",
         "tags": [
           "Pages"
         ],
@@ -149050,7 +149066,7 @@
             }
           },
           "409": {
-            "description": "`confidentialSharing`: The content is shared too broadly for a confidential space. `knowledgeBaseContent`: A knowledge base holds only articles and categories. `knowledgeBaseMode`: Articles always use publish mode. `knowledgeBasePlacement`: Articles and categories are placed in categories. `moveIntoDescendant`: An item cannot be moved below itself. `overviewPage`: The overview page of a space stays a page in its space.",
+            "description": "`confidentialSharing`: The content is shared too broadly for a confidential space. `hiddenContent`: Pages below are restricted so that the caller cannot open them. `knowledgeBaseContent`: A knowledge base holds only articles and categories. `knowledgeBaseMode`: Articles always use publish mode. `knowledgeBasePlacement`: Articles and categories are placed in categories. `moveIntoDescendant`: An item cannot be moved below itself. `otherOrganization`: Content stays within its organization. `overviewPage`: The overview page of a space stays a page in its space.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -149063,6 +149079,14 @@
                       "title": "The content is shared too broadly for a confidential space",
                       "status": 409,
                       "code": "confidentialSharing"
+                    }
+                  },
+                  "hiddenContent": {
+                    "value": {
+                      "type": "urn:lunedo:problem:hiddenContent",
+                      "title": "Pages below are restricted so that the caller cannot open them",
+                      "status": 409,
+                      "code": "hiddenContent"
                     }
                   },
                   "knowledgeBaseContent": {
@@ -149095,6 +149119,14 @@
                       "title": "An item cannot be moved below itself",
                       "status": 409,
                       "code": "moveIntoDescendant"
+                    }
+                  },
+                  "otherOrganization": {
+                    "value": {
+                      "type": "urn:lunedo:problem:otherOrganization",
+                      "title": "Content stays within its organization",
+                      "status": 409,
+                      "code": "otherOrganization"
                     }
                   },
                   "overviewPage": {
@@ -286479,7 +286511,7 @@
             "maximum": 9007199254740991
           },
           "pages": {
-            "description": "Number of pages that give access to groups or through broad links, for `confidentialSharing`; number of pages that would lose the status, for `statusInUse`.",
+            "description": "Number of pages that give access to groups or through broad links, for `confidentialSharing`; number of pages that would lose the status, for `statusInUse`; number of pages the caller cannot open, for `hiddenContent`.",
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991

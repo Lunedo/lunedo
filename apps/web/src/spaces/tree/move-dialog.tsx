@@ -171,10 +171,12 @@ function MoveForm({
               setTargetSpaceId(value);
               setParent({ value: ROOT, label: t("move.topLevel") });
             }}
-            options={(spaces.data?.items ?? [space]).map((entry) => ({
-              value: entry.id,
-              label: spaceDisplayName(t, entry),
-            }))}
+            options={(spaces.data?.items ?? [space])
+              .filter((entry) => entry.id === space.id || entry.organizationId === space.organizationId)
+              .map((entry) => ({
+                value: entry.id,
+                label: spaceDisplayName(t, entry),
+              }))}
           />
         )}
       </Field>

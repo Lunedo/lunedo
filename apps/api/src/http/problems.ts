@@ -357,6 +357,7 @@ export const problems = {
   notCopyable: { status: 409, title: "Only pages, folders and whiteboards can be copied" },
   neverPublished: { status: 409, title: "The page has never been published" },
   otherOrganization: { status: 409, title: "Content stays within its organization" },
+  hiddenContent: { status: 409, title: "Pages below are restricted so that the caller cannot open them" },
   restrictedParentInTrash: {
     status: 409,
     title: "The content was below a restricted page that is in the trash",
@@ -636,7 +637,7 @@ export const problemSchema = z
       .int()
       .optional()
       .describe(
-        "Number of pages that give access to groups or through broad links, for `confidentialSharing`; number of pages that would lose the status, for `statusInUse`.",
+        "Number of pages that give access to groups or through broad links, for `confidentialSharing`; number of pages that would lose the status, for `statusInUse`; number of pages the caller cannot open, for `hiddenContent`.",
       ),
     sections: z
       .array(
