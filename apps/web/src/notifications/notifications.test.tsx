@@ -426,6 +426,7 @@ describe("the notifications page", () => {
         body: {
           id: REQUEST,
           requester: FELIX,
+          target: "space",
           spaceId: SPACE,
           spaceName: "People",
           itemId: null,

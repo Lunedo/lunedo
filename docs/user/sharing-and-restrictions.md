@@ -39,7 +39,7 @@ A share link lets people open one page without being added to the access list. I
 
 1. In the **Share** dialog, open **Share links** and select **Create link**.
 2. Under **Who can open it**, choose one of:
-   - **Only the people and groups you choose** (up to 100 people or groups; they sign in to open it, even when they are not in the space)
+   - **Only the people and groups you choose** (up to 100 people or groups; they sign in to open it, even when they are not in the space). Groups come from the page's organization; for a page of a personal space, from an organization you are a member of.
    - **Signed-in members of the organization** (not for pages of personal spaces)
    - **Everyone signed in to this instance** (includes people of other organizations on the instance)
    - **Anyone with the link, without signing in** (only when the organization allows it)

@@ -65,7 +65,7 @@
         "generic": "Profile and groups of this provider update at every sign-in. It has no directory Lunedo could synchronize with in the background; with a SCIM connection, the provider sends changes at once.",
         "google": "Google Workspace is only used to sign in. Turn on group synchronization in the settings to read groups and synchronize them in the background.",
         "entraId": "This provider is only read at sign-in.",
-        "saml": "Profile and groups of this provider update at every sign-in. SAML has no directory Lunedo could synchronize with in the background.",
+        "saml": "Profile and groups of this provider update at every sign-in. Lunedo synchronizes a SAML provider in the background only for Microsoft Entra ID with access to Microsoft Graph.",
         "ldap": "This directory is only read at sign-in."
       },
       "filter": "Filter runs",
@@ -275,7 +275,7 @@
       "caExpiringAction": "Upload the new CA certificate of the directory in the provider's connection settings before then, or Lunedo can no longer connect to the directory.",
       "openSettings": "Open settings",
       "noGraphTitle": "{name} cannot read groups through Microsoft Graph",
-      "noGraph": "Entra ID leaves out the groups of people in more than 150 groups. Without access to Microsoft Graph, these accounts lose their groups and the access the rules give. Add the client ID of an app registration and its credential."
+      "noGraph": "Entra ID leaves out the groups of people in more than 150 groups. Without access to Microsoft Graph, Lunedo cannot read them: new accounts of these people get no groups, and existing ones keep their earlier groups without updates. Add the client ID of an app registration and its credential."
     },
     "tabs": {
       "mapping": "Group mapping",
@@ -1507,6 +1507,8 @@
     "shareBeyondOwnAccessBelow": "Your own role in the space does not cover {count, plural, one {# page} other {# pages}} below. Share only this page, choose a lower role, or ask a space admin.",
     "ownShare": "You cannot change access that you hold yourself or through one of your groups. Ask someone else who can share the page.",
     "confidentialSharing": "The content gives access to groups or through broad links. Remove these entries, then move it into the confidential space.",
+    "hiddenContent": "Pages below are restricted so that you cannot open or edit them. Ask someone who can edit them to move the content.",
+    "hiddenContentPages": "{count, plural, one {# page below is} other {# pages below are}} restricted so that you cannot open or edit {count, plural, one {it} other {them}}. Ask someone who can edit {count, plural, one {it} other {them}} to move the content.",
     "confidentialSharingPages": "{count, plural, one {# page gives} other {# pages give}} access to groups or through broad links. Remove the groups from their shares, links and restrictions and revoke the broad links, then move again.",
     "restrictedParentInTrash": "This page was below a restricted page. Restore it together with the pages above it, or ask a space or organization administrator.",
     "restrictedParentInTrashAsk": "This page was below a restricted page. Ask a space or organization administrator to restore the pages above it first.",
@@ -1672,7 +1674,7 @@
     "templateFromRestrictedPage": "The page is restricted. Confirm that everyone who can use the templates of this space may see its content, then save again.",
     "notCopyable": "Only pages, folders and whiteboards can be copied. Copy a page or folder instead.",
     "neverPublished": "The page has never been published, so it has no content to copy. Publish it first, then copy it.",
-    "otherOrganization": "Content can only be copied within its organization. Choose a space of the same organization.",
+    "otherOrganization": "Content can only be copied or moved within its organization. Choose a space of the same organization.",
     "invalidVisibility": "Choose who can read the space.",
     "knowledgeBaseConfidential": "A knowledge base cannot be confidential. Create it without the confidential option.",
     "invalidAudience": "Only knowledge bases have an audience. Choose a visibility for this space instead.",
@@ -3759,7 +3761,7 @@
     "graphErrors": {
       "graphMailboxNotAllowed": {
         "cause": "The app may not send as this mailbox: Exchange Online blocked it.",
-        "action": "Add the mailbox to the management scope or the application access policy of the app, then test again. Changes in Exchange Online can take up to an hour."
+        "action": "Add the mailbox to the management scope or the application access policy of the app, then test again. Changes in Exchange Online can take between 30 minutes and 2 hours."
       },
       "graphPermissionMissing": {
         "cause": "The app has no permission to send e-mail.",
@@ -9915,7 +9917,7 @@
       "checkFailedAction": "Check the address and the token, then test the connection again.",
       "required": "Test the connection first, then continue.",
       "allowSites": "Allow other sites in the import settings of the instance",
-      "askToAllowSites": "Instance administrators allow other sites under Settings › Instance › Pages and trash › Imports.",
+      "askToAllowSites": "Instance administrators allow other sites under Settings › Instance › People and sign-in › Policies, section Imports.",
       "deletedTitle": "Enter the token again",
       "deleted": "Lunedo deleted the token of this draft on {when}, because the draft was left alone for a week or because its importer lost the permission to import. Test the connection again to continue.",
       "sitePlaceholder": "example.atlassian.net",

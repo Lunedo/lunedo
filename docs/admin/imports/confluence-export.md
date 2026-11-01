@@ -1,6 +1,6 @@
 # Importing a Confluence export file
 
-Checked against Atlassian documentation, October 2026.
+Checked against Atlassian documentation, November 2026.
 
 Lunedo reads the XML and CSV space exports of Confluence Cloud, the XML space exports of Confluence Data Center and Server, and XML site backups. For an overview of all sources and the import settings, see [Imports](../imports.md).
 
@@ -13,7 +13,7 @@ In Confluence Cloud, open the space, then **Space settings › General › Expor
 
 ## Site backups
 
-A site backup (in Confluence Cloud under Confluence administration › **Data management › Backup manager**, in Data Center under General Configuration › **Backup & Restore**) contains every space of the site, including personal spaces. Upload it like a space export. After reading it, the step **Source** lists its spaces; choose the one to import, and Lunedo reads the backup again for that space.
+A site backup (in Confluence Cloud under Confluence administration › **Data management › Backup manager**, in Data Center under General Configuration › **Backup and restore**) contains every space of the site, including personal spaces. Upload it like a space export. After reading it, the step **Source** lists its spaces; choose the one to import, and Lunedo reads the backup again for that space.
 
 Each import takes one space into a new space. Import further spaces of the same backup one after another. Permissions of the whole site, such as who may use Confluence, are not taken over.
 

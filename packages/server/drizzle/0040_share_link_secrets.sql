@@ -1,1 +1,0 @@
-ALTER TABLE "share_links" ADD COLUMN "secret" "bytea";

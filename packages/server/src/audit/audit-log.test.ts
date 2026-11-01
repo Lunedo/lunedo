@@ -215,7 +215,7 @@ describe.skipIf(!databaseUrl)("AuditLog", () => {
     });
     await expect(
       database.transaction(async (tx) => {
-        await tx.execute(sql`select set_config('pagehall.audit_retention', 'on', true)`);
+        await tx.execute(sql`select set_config('lunedo.audit_retention', 'on', true)`);
         await tx.update(auditEvents).set({ name: "auth.changed" }).where(ofScope);
       }),
     ).rejects.toMatchObject({

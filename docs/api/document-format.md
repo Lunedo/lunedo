@@ -7,7 +7,7 @@ The content of pages, blog posts, articles and templates is a document in ProseM
 | Route | What it does | Permission |
 |---|---|---|
 | `GET /api/v1/pages/{pageId}/content` | The content readers see as JSON: the published version in publish mode, the current content in live mode | read the page |
-| `GET /api/v1/pages/{pageId}/markdown` | The same content as GitHub-flavored Markdown | read the page |
+| `GET /api/v1/pages/{pageId}/markdown` | The same content as JSON with GitHub-flavored Markdown in `markdown`, and `itemId`, `revision` and `updatedAt` | read the page |
 | `PUT /api/v1/pages/{pageId}/content` | Replaces the content with `{ "document": … }` | edit the page |
 
 - `GET …/content` returns `document`, `schemaVersion`, `revision` (it rises with every save), `updatedAt`, `updatedBy`, the `version` readers see and `references`: the names of mentioned people and the titles of linked pages, as far as the caller may see them.
@@ -173,7 +173,7 @@ A valid document is stored normalized: missing attributes get their defaults and
 
 Unknown nodes, marks and attributes are never stored; they are refused, not dropped. A document that fails validation is refused with `400` and the problem `invalidDocument`. Its `problems` list names up to 50 problems, each with:
 
-- `path`: the position in the document, such as `content.2.content.0`,
+- `path`: the position in the document, such as `.content[2].content[0]`,
 - `code`: the kind of problem, such as `unknownNode`, `unknownMark`, `unknownAttribute`, `missingAttribute`, `invalidAttribute`, `invalidContent`, `emptyText`, `tooDeep`, `tooLarge` or `tooManyNodes`,
 - `message`: an explanation for people.
 
@@ -185,7 +185,7 @@ Unknown nodes, marks and attributes are never stored; they are refused, not drop
   "detail": "The document does not match the editor schema",
   "code": "invalidDocument",
   "problems": [
-    { "path": "content.1.type", "code": "unknownNode", "message": "Unknown node chart" }
+    { "path": ".content[1].type", "code": "unknownNode", "message": "Unknown node chart" }
   ]
 }
 ```

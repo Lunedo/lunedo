@@ -89,6 +89,10 @@ jobs:
             exit 1
           fi
           minor="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          if ! [ -s "docs/releases/$version.md" ]; then
+            echo "::error::docs/releases/$version.md is missing in $TAG; it is the text of the GitHub release. Nothing is published."
+            exit 1
+          fi
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
             echo "::error::The tag $TAG points to a commit that is not on main; nothing is published."
             exit 1
@@ -102,37 +106,38 @@ jobs:
             echo "latest=$latest"
           } >> "$GITHUB_OUTPUT"
 
-  publish-image:
-    name: Publish image
+  build-release:
+    name: Build ${{ matrix.image }} for ${{ matrix.arch }}
     needs: release
-    runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
-    outputs:
-      digest: ${{ steps.push.outputs.digest }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - image: lunedo
+            file: docker/Dockerfile
+            arch: amd64
+            runner: ubuntu-24.04
+          - image: lunedo
+            file: docker/Dockerfile
+            arch: arm64
+            runner: ubuntu-24.04-arm
+          - image: render
+            file: docker/render.Dockerfile
+            arch: amd64
+            runner: ubuntu-24.04
+          - image: render
+            file: docker/render.Dockerfile
+            arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Derive the tags
-        id: tags
-        env:
-          VERSION: ${{ needs.release.outputs.version }}
-          MINOR: ${{ needs.release.outputs.minor }}
-          LATEST: ${{ needs.release.outputs.latest }}
-        run: |
-          {
-            echo "tags<<EOF"
-            echo "$IMAGE:$VERSION"
-            if [ "$LATEST" = true ]; then
-              echo "$IMAGE:$MINOR"
-              echo "$IMAGE:latest"
-            fi
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
           version: v0.37.2
@@ -145,41 +150,44 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          file: docker/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
+          file: ${{ matrix.file }}
+          platforms: linux/${{ matrix.arch }}
+          outputs: type=image,name=${{ matrix.image == 'render' && env.RENDER_IMAGE || env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           build-args: VERSION=${{ needs.release.outputs.version }}
+      - name: Keep the digest for the manifest
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+          NAME: ${{ matrix.image }}-${{ matrix.arch }}
+        run: |
+          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::The build reported no image digest."
+            exit 1
+          fi
+          mkdir -p digests
+          printf '%s' "$DIGEST" > "digests/$NAME"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: digest-${{ matrix.image }}-${{ matrix.arch }}
+          path: digests/${{ matrix.image }}-${{ matrix.arch }}
+          if-no-files-found: error
+          retention-days: 1
 
-  publish-render:
-    name: Publish render image
-    needs: release
+  publish-image:
+    name: Publish the images
+    needs: [release, build-release]
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 15
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.manifest.outputs.digest }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          persist-credentials: false
-      - name: Derive the tags
-        id: tags
-        env:
-          VERSION: ${{ needs.release.outputs.version }}
-          MINOR: ${{ needs.release.outputs.minor }}
-          LATEST: ${{ needs.release.outputs.latest }}
-        run: |
-          {
-            echo "tags<<EOF"
-            echo "$RENDER_IMAGE:$VERSION"
-            if [ "$LATEST" = true ]; then
-              echo "$RENDER_IMAGE:$MINOR"
-              echo "$RENDER_IMAGE:latest"
-            fi
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+          pattern: digest-*
+          path: digests
+          merge-multiple: true
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
           version: v0.37.2
@@ -188,18 +196,37 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          file: docker/render.Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
-          build-args: VERSION=${{ needs.release.outputs.version }}
+      - name: Publish one manifest for amd64 and arm64 per image
+        id: manifest
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+          MINOR: ${{ needs.release.outputs.minor }}
+          LATEST: ${{ needs.release.outputs.latest }}
+        run: |
+          publish() {
+            local repository="$1" name="$2" tags=()
+            tags=(--tag "$repository:$VERSION")
+            if [ "$LATEST" = true ]; then
+              tags+=(--tag "$repository:$MINOR" --tag "$repository:latest")
+            fi
+            docker buildx imagetools create "${tags[@]}" "$repository@$(cat "digests/$name-amd64")" "$repository@$(cat "digests/$name-arm64")"
+          }
+          publish "$IMAGE" lunedo
+          publish "$RENDER_IMAGE" render
+          digest="$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)"
+          for platform in linux/amd64 linux/arm64; do
+            for repository in "$IMAGE" "$RENDER_IMAGE"; do
+              if ! docker buildx imagetools inspect "$repository:$VERSION" --format '{{json .Manifest}}' | jq -e --arg p "$platform" '[.manifests[] | "\(.platform.os)/\(.platform.architecture)"] | index($p)' > /dev/null; then
+                echo "::error::$repository:$VERSION has no image for $platform."
+                exit 1
+              fi
+            done
+          done
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
   version-file:
     name: Attach the version file to the release
-    needs: [release, publish-image, publish-render]
+    needs: [release, publish-image]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -207,9 +234,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
-      - name: Read the release notes from the published image
+      - name: Read the version file from the published image
         env:
           TAG: ${{ github.ref_name }}
           DIGEST: ${{ needs.publish-image.outputs.digest }}
@@ -218,16 +244,21 @@ jobs:
             echo "::error::The publish job reported no image digest."
             exit 1
           fi
-          previous="$(git describe --tags --abbrev=0 --match 'v*' "$TAG^" 2>/dev/null || echo v0.0.0)"
           docker run --rm --pull always "$IMAGE@$DIGEST" release-notes --json > lunedo-versions.json
-          docker run --rm --pull always "$IMAGE@$DIGEST" release-notes --since "${previous#v}" > release-notes.txt
       - name: Attach it to the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           LATEST: ${{ needs.release.outputs.latest }}
         run: |
-          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "Lunedo ${TAG#v}" --notes-file release-notes.txt --latest="$LATEST"
+          notes="docs/releases/${TAG#v}.md"
+          if ! [ -s "$notes" ]; then
+            echo "::error::$notes is missing in $TAG."
+            exit 1
+          fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$notes"
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "Lunedo ${TAG#v}" --notes-file "$notes" --latest="$LATEST"
           fi
           gh release upload "$TAG" lunedo-versions.json scripts/install.sh --repo "$GITHUB_REPOSITORY" --clobber

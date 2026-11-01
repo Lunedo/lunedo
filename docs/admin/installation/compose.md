@@ -130,7 +130,7 @@ Without `LUNEDO_MASTER_KEYS` and `LUNEDO_BACKUP_KEY`, back up the secrets direct
    docker compose up -d --wait
    ```
 
-4. Read the setup link from the log and open it; see [Setup assistant](../setup-assistant.md#setup-code).
+4. Read the setup link from the log and open it; see [Setup assistant](../setup-assistant.md#setup-code). With `LUNEDO_SETUP_CODE` set, Lunedo prints no link: open `/setup` under the instance address and enter your code.
 5. Put a [reverse proxy with TLS](../reverse-proxy.md) in front of Lunedo.
 
 Updates with your own Compose file are described in [Updates](../updates.md#with-your-own-compose-file).

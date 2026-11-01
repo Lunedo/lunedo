@@ -1,6 +1,6 @@
 # Monitoring with Zabbix
 
-Checked against Zabbix documentation, October 2026.
+Checked against Zabbix documentation, November 2026.
 
 Zabbix reads the metrics of Lunedo with an HTTP agent item and splits them with Prometheus preprocessing; no template is needed. [monitoring.md](../monitoring.md) lists every metric and explains the token.
 

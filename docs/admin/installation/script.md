@@ -21,14 +21,23 @@ The setup script installs Lunedo with Docker Compose on one Linux host and later
 
 The script works through these steps:
 
-1. It checks Docker, Compose, the free disk space and the port, and lists everything that is missing before it stops.
-2. It asks the questions above and checks the answers.
-3. It writes `compose.yml` and `.env` and generates the secrets: the database password, the master key, the backup key, the metrics token and the setup code.
-4. It prints the setup link with the code.
-5. It downloads the images and starts Lunedo, waiting up to `LUNEDO_READY_TIMEOUT` seconds (600 by default) for `/health/ready`. When no version was given, it records the release the `latest` image belongs to in `compose.yml`, so that a restart never updates by accident.
-6. It prints the next steps: the setup link, the reverse proxy and keeping the keys safe.
+1. It asks for the installation directory and stops if Lunedo is already installed there.
+2. It checks Docker, Compose, the free disk space and the port, and lists everything that is missing before it stops.
+3. It asks the other questions and checks the answers.
+4. It writes `compose.yml` and `.env` and generates the secrets: the database password, the master key, the backup key, the metrics token and the setup code.
+5. It prints the setup link with the code.
+6. It downloads the images and starts Lunedo, waiting up to `LUNEDO_READY_TIMEOUT` seconds (600 by default) for `/health/ready`. When no version was given, it records the release the `latest` image belongs to in `compose.yml`, so that a restart never updates by accident.
+7. It writes `.lunedo-install` and prints the next steps: the setup link, the reverse proxy and keeping the keys safe.
 
 If Lunedo does not become ready in time, the script prints the last log lines. Fix the cause and start it with `cd /opt/lunedo && docker compose up -d`.
+
+In that case the script has not written `.lunedo-install`. Until it exists, `./lunedo update` refuses the directory as not installed with the setup script, `./lunedo version` prints nothing, and running the script again does not write it either. Once Lunedo runs, read the version of its image and write the file with the installation method and that version; the next update completes it:
+
+```sh
+cd /opt/lunedo
+docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' "$(sed -n 's/^    image: \(.*lunedo.*\)$/\1/p' compose.yml | head -n 1)"
+printf 'method=script\nversion=%s\n' '<version>' > .lunedo-install
+```
 
 The script prints no secret except the setup code. Running it again in an existing installation directory changes nothing: it says that Lunedo is installed there and, in a terminal, offers to update it instead.
 

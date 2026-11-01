@@ -101,7 +101,7 @@ export class MemberDetailService {
       left join identity_providers mp on mp.id = mg.provider_id
       left join lateral (
         select p.id, p.name from provider_grants pg
-        join mapping_rules r on r.pagehall_group_id = pg.group_id
+        join mapping_rules r on r.lunedo_group_id = pg.group_id
         join identity_providers p on p.id = r.provider_id
         join identities i on i.provider_id = p.id and i.account_id = pg.account_id
         where pg.account_id = gm.account_id and pg.kind = 'groupMember' and pg.group_id = g.id

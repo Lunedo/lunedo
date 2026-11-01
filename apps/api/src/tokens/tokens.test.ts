@@ -168,6 +168,173 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     expect(afterwards.json()).toMatchObject({ type: "urn:lunedo:problem:invalidApiToken" });
   });
 
+  it("creates a service account token only for spaces the creator can reach with the same role", async () => {
+    const { account: creator, client: creatorClient } = await member("integrations-only@lunedo.test");
+    await assign(owner, await customRole("Integrations only", { integrationsAndApi: "manage" }), creator.id);
+    const created = await creatorClient.post(`/api/v1/organizations/${organizationId}/service-accounts`, {
+      name: "Board sync",
+      description: "Reads the board space",
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const serviceAccountId = created.json().id as string;
+    const board = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+      name: "Board",
+      key: "BRDSYNC",
+      visibility: "private",
+      grants: [{ principalKind: "account", principalId: serviceAccountId, role: "editor" }],
+    });
+    expect(board.statusCode, board.body).toBe(201);
+    const boardId = board.json().id as string;
+    const create = (body: object) =>
+      creatorClient.post(`/api/v1/service-accounts/${serviceAccountId}/tokens`, { name: "Board", ...body });
+
+    const hidden = await create({ scopes: { organization: { spaces: "view" } } });
+    expect(hidden.statusCode, hidden.body).toBe(403);
+    expect(hidden.json()).toMatchObject({ code: "forbidden", denials: ["roleExceedsOwnPermissions"] });
+
+    const grant = await owner.post(`/api/v1/spaces/${boardId}/permissions/grants`, {
+      holders: [{ principalKind: "account", principalId: creator.id }],
+      role: "reader",
+    });
+    expect(grant.statusCode, grant.body).toBeLessThan(300);
+    const reading = await create({ scopes: { organization: { spaces: "view" } } });
+    expect(reading.statusCode, reading.body).toBe(201);
+
+    const writing = await create({ scopes: { organization: { spaces: "manage" } }, contentLevel: "publish" });
+    expect(writing.statusCode, writing.body).toBe(403);
+    expect(writing.json()).toMatchObject({ denials: ["roleExceedsOwnPermissions"] });
+    const readOnly = await create({ scopes: { organization: { spaces: "manage" } }, contentLevel: "read" });
+    expect(readOnly.statusCode, readOnly.body).toBe(201);
+    const raised = await creatorClient.put(
+      `/api/v1/service-accounts/${serviceAccountId}/tokens/${readOnly.json().apiToken.id}/content-access`,
+      { contentLevel: "publish", knowledgeBaseIds: null },
+    );
+    expect(raised.statusCode, raised.body).toBe(403);
+    expect(raised.json()).toMatchObject({ denials: ["roleExceedsOwnPermissions"] });
+  });
+
+  it("refuses a service account token that reaches pages through shares or restriction lists beyond its creator", async () => {
+    const { account: creator, client: creatorClient } = await member("page-reach@lunedo.test");
+    await assign(
+      owner,
+      await customRole("Integrations for pages", { integrationsAndApi: "manage" }),
+      creator.id,
+    );
+    const created = await creatorClient.post(`/api/v1/organizations/${organizationId}/service-accounts`, {
+      name: "Page sync",
+      description: "Reads shared pages",
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const serviceAccountId = created.json().id as string;
+    const create = () =>
+      creatorClient.post(`/api/v1/service-accounts/${serviceAccountId}/tokens`, {
+        name: "Pages",
+        scopes: { organization: { spaces: "view" } },
+      });
+    const newSpace = async (key: string, grants: object[]) => {
+      const response = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+        name: key,
+        key,
+        visibility: "private",
+        grants,
+      });
+      expect(response.statusCode, response.body).toBe(201);
+      return response.json().id as string;
+    };
+    const newPage = async (spaceId: string, title: string) => {
+      const response = await owner.post(`/api/v1/spaces/${spaceId}/items`, {
+        kind: "page",
+        title,
+        parentId: null,
+        mode: "live",
+      });
+      expect(response.statusCode, response.body).toBe(201);
+      return response.json().id as string;
+    };
+    const access = async (pageId: string, changes: object[]) => {
+      const response = await owner.post(`/api/v1/pages/${pageId}/access`, { changes });
+      expect(response.statusCode, response.body).toBe(200);
+    };
+
+    const hidden = await newSpace("SHRPRV", []);
+    const shared = await newPage(hidden, "Supplier contracts");
+    await access(shared, [
+      { action: "share", holderKind: "account", holderId: serviceAccountId, role: "reader" },
+    ]);
+    const viaShare = await create();
+    expect(viaShare.statusCode, viaShare.body).toBe(403);
+    expect(viaShare.json()).toMatchObject({ denials: ["roleExceedsOwnPermissions"] });
+    await access(shared, [{ action: "share", holderKind: "account", holderId: creator.id, role: "reader" }]);
+    expect((await create()).statusCode).toBe(201);
+
+    const team = await newSpace("RSTPRV", [
+      { principalKind: "account", principalId: serviceAccountId, role: "reader" },
+      { principalKind: "account", principalId: creator.id, role: "reader" },
+    ]);
+    const restricted = await newPage(team, "Salary bands");
+    await access(restricted, [
+      { action: "restrict", kind: "view" },
+      { action: "share", holderKind: "account", holderId: serviceAccountId, role: "reader" },
+    ]);
+    const viaList = await create();
+    expect(viaList.statusCode, viaList.body).toBe(403);
+    expect(viaList.json()).toMatchObject({ denials: ["roleExceedsOwnPermissions"] });
+  });
+
+  it("keeps a token limited to knowledge bases out of the organization's spaces list and trash", async () => {
+    const help = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+      name: "Help",
+      key: "HLPKBT",
+      type: "knowledgeBase",
+      audience: "signedIn",
+      grants: [],
+    });
+    expect(help.statusCode, help.body).toBe(201);
+    const wiki = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+      name: "Team wiki",
+      key: "WIKKBT",
+      visibility: "organization",
+      grants: [],
+    });
+    expect(wiki.statusCode, wiki.body).toBe(201);
+    const page = await owner.post(`/api/v1/spaces/${wiki.json().id}/items`, {
+      kind: "page",
+      title: "Old travel policy",
+      parentId: null,
+      mode: "live",
+    });
+    expect(page.statusCode, page.body).toBe(201);
+    expect((await owner.delete(`/api/v1/items/${page.json().id}`)).statusCode).toBeLessThan(300);
+    const trash = await owner.get(`/api/v1/organizations/${organizationId}/trash`);
+    const entry = (trash.json() as { id: string; title: string }[]).find(
+      (item) => item.title === "Old travel policy",
+    );
+    expect(entry).toBeDefined();
+    const { token } = await personalToken(
+      owner,
+      { organization: { spaces: "manage" } },
+      { organizationId, contentLevel: "publish", knowledgeBaseIds: [help.json().id] },
+    );
+
+    const bot = new TestClient(test.app);
+    expect((await bot.get(`/api/v1/spaces/${help.json().id}`, bearer(token))).statusCode).toBe(200);
+    for (const path of [
+      `/organizations/${organizationId}/trash`,
+      `/organizations/${organizationId}/spaces`,
+    ]) {
+      const response = await bot.get(`/api/v1${path}`, bearer(token));
+      expect(response.statusCode, path).toBe(403);
+      expect(response.json()).toMatchObject({ denials: ["tokenScope"] });
+    }
+    const restore = await bot.post(
+      `/api/v1/organizations/${organizationId}/trash/${entry?.id}/restore`,
+      undefined,
+      bearer(token),
+    );
+    expect(restore.statusCode).toBe(403);
+    expect((await owner.get(`/api/v1/items/${page.json().id}`)).statusCode).toBe(404);
+  });
+
   it("refuses service account management without the integrations area", async () => {
     const { client } = await member("no.integrations@lunedo.test");
     const response = await client.post(`/api/v1/organizations/${organizationId}/service-accounts`, {

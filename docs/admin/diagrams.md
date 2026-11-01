@@ -38,6 +38,6 @@ Where no browser can render, for example in an export of a diagram that was impo
 | Opening the draw.io editor | 60 seconds |
 | Saving the image from the draw.io editor | 30 seconds |
 
-The organization's **Largest file to upload** applies as for every attachment (see [Storage](storage.md)).
+The organization's **Largest file to upload** applies as for every attachment (see [Upload size](reverse-proxy.md#upload-size)).
 
 The diagram routes of the API are described in [Diagrams and whiteboards in the API](../api/diagrams-and-whiteboards.md).

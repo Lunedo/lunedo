@@ -1,6 +1,6 @@
 # Importing through the Confluence API
 
-Checked against Atlassian documentation, October 2026.
+Checked against Atlassian documentation, November 2026.
 
 Instead of an export file, Lunedo can read a space directly from Confluence Cloud or from Confluence Data Center and Server 7.9 or newer. No export is needed. Lunedo only reads; nothing changes in Confluence. For an overview of all sources, see [Imports](../imports.md).
 
@@ -9,7 +9,7 @@ Lunedo reads the same content an XML export contains, into the same records, so 
 ## Confluence Cloud
 
 1. In the step **Source**, choose **Confluence Cloud**.
-2. In the step **Connection**, enter the **Site address** (such as `example.atlassian.net`), **Your Atlassian e-mail address** and the **API token**. Create the token at `https://id.atlassian.com/manage-profile/security/api-tokens` with **Create API token** (a token without scopes; scoped tokens only work through `api.atlassian.com`, which Lunedo does not use).
+2. In the step **Connection**, enter the **Site address** (such as `example.atlassian.net`), **Your Atlassian e-mail address** and the **API token**. Create the token at `https://id.atlassian.com/manage-profile/security/api-tokens` with **Create API token** (a token without scopes; scoped tokens only work through `api.atlassian.com`, which Lunedo does not use). Atlassian API tokens expire after at most 365 days; you choose the expiry when you create one.
 3. Choose **Test connection**. Lunedo reads the account the token belongs to and refuses a wrong token at once. Nothing is stored before the test succeeds.
 
 Address rules:
@@ -48,7 +48,7 @@ The step **Selection** lists the spaces the token can read. Choose one or more.
 - Blog posts come only with the whole space.
 - **Page history** imports every version and takes noticeably longer.
 
-Confluence lists only what the token can read. Content that refuses to be read later is skipped and listed in the report. Space permissions and roles are read only with a token of a space administrator; otherwise the report says so. Likes and watchers are not read through the API; the report says so once per import.
+Confluence lists only what the token can read. Content that refuses to be read later is skipped and listed in the report. Space permissions and roles are read only with a token of a space administrator; otherwise the report says so. Likes and watchers are not read through the API. For Confluence Cloud the report says so once per import; for Data Center it does not.
 
 ## Tokens
 

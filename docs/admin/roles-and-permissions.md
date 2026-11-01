@@ -70,7 +70,7 @@ The account actions (deactivate, reactivate, end sessions, reset the second fact
 | The instance owner | Nobody. The instance owner cannot be deactivated or anonymized; ownership must be transferred first. |
 | An account with an instance role | Someone with at least the same instance areas. Deactivating and anonymizing it: only the instance owner. |
 | An owner of any organization | An owner of that organization, or the instance owner. |
-| Any other account | Instance administrators with Accounts and Manage, or administrators of its home organization who hold at least the target's areas there. |
+| Any other account | Instance administrators with Accounts and Manage, or administrators of its home organization who hold at least the target's areas there and in every other organization where the target holds more than the member role. |
 
 All rows apply together: an account that holds an instance role and owns an organization needs an actor who passes both rows.
 

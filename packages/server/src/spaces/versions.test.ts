@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { type DocumentJson, editorSchemaVersion } from "@lunedo/editor-schema";
 import { applyDocument } from "@lunedo/editor-schema/yjs";
 import { sql } from "drizzle-orm";
@@ -453,23 +451,6 @@ describe.skipIf(!baseUrl)("publish and live modes with versions", () => {
         ]);
         expect(await seen(context, page.id)).toBe(true);
       }
-    });
-
-    it("computes the stored visibility of existing items when the database is migrated", async () => {
-      const context = await setup();
-      const branch = await hiddenBranch(context);
-      await test.pool.query("update tree_items set reader_visible = true where space_id = $1", [
-        context.space.id,
-      ]);
-      const migration = readFileSync(
-        fileURLToPath(new URL("../../drizzle/0034_reader_visibility.sql", import.meta.url)),
-        "utf8",
-      );
-      const backfill = migration.split("--> statement-breakpoint")[1] ?? "";
-      expect(backfill).toContain("reader_visible");
-      await test.pool.query(backfill);
-      expect((await readerPaths(context, branch)).view).toEqual([false, false, false]);
-      expect(await seen(context, branch.target.id)).toBe(true);
     });
 
     it("keeps deleted, restored and archived pages hidden while their ancestor is unpublished", async () => {

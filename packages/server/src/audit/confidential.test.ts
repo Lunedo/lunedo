@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
@@ -213,26 +212,5 @@ describe.skipIf(!baseUrl)("audit entries about confidential spaces", () => {
     );
     expect(items.every((entry) => entry.peopleHidden)).toBe(true);
     expectNoPeople(items, people);
-  });
-
-  it("marks events recorded before the marking existed", async () => {
-    const { org, council, page, scope, people } = await setup();
-    await test.database.execute(sql`delete from audit_confidential_events where space_id = ${council.id}`);
-    const migration = readFileSync(
-      new URL("../../drizzle/0054_audit_confidential_events.sql", import.meta.url),
-      "utf8",
-    );
-    const backfill = migration.split("--> statement-breakpoint").at(-1) ?? "";
-    expect(backfill).toContain("INSERT INTO");
-    await test.pool.query(backfill);
-    const { items } = await test.services.auditReader.list(
-      accountPrincipal(org.owner),
-      { scope },
-      { limit: 1000 },
-    );
-    const confidential = aboutCouncil(items, council.id, page.id);
-    expect(confidential.length).toBeGreaterThanOrEqual(3);
-    expect(confidential.every((entry) => entry.peopleHidden)).toBe(true);
-    expectNoPeople(confidential, people);
   });
 });

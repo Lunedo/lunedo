@@ -45,7 +45,7 @@ Unknown, hidden and unpublished articles all return `null` and the same 404 page
 
 ## Domain list
 
-`PortalService.isPortalDomain` keeps the set of allowed domains in memory on each API node. `enableDomainCache` listens on the PostgreSQL channel `pagehall_portal_domains` and drops the set whenever a domain is allowed or removed on any node, and again after the listener reconnects. The next request loads it again. A failed load is not cached, so the next request tries again.
+`PortalService.isPortalDomain` keeps the set of allowed domains in memory on each API node. `enableDomainCache` listens on the PostgreSQL channel `lunedo_portal_domains` and drops the set whenever a domain is allowed or removed on any node, and again after the listener reconnects. The next request loads it again. A failed load is not cached, so the next request tries again.
 
 ## Sign-in on own domains
 
@@ -70,6 +70,7 @@ Documents with live parts are rendered on every request for the person reading a
 - Includes and excerpts resolve only published articles of the same knowledge base that the reader can read. Other spaces and pages stay hidden. A translation includes the published translation of the included article in its language where one exists. Includes are limited in depth and to 50 per article.
 - Embeds follow the embed services the organization allows; other embeds appear as a link.
 - Links to readable articles of the same knowledge base show the current published title. Links to articles the reader cannot read (restricted, unpublished, in the trash or archived) and to pages outside the knowledge base show "No access" without title or number.
+- Text links to an address of the instance that names a page by its number (`/spaces/<key>/pages/<number>/…`) point to the portal article when the reader can read it in the same knowledge base. Otherwise the link is removed and only its text stays. Such links count as live parts. Text links to other item addresses of the instance are removed in the same way.
 - Child page lists, attachment lists, reports and label lists are removed before rendering. Images and files appear only when they belong to an article with the same readers. `data-*` attributes that carry IDs of people, pages, spaces or files are stripped from the HTML. Mentions show the current name of members of the organization; anonymized people and people who left are not named.
 - Links to articles and files are stored with the placeholder `/__portal__` (`PORTAL_BASE_PLACEHOLDER`) and replaced by the portal base when the page is built (`site/views.ts`).
 - Search indexes in the portal and in the static website never contain the stored titles of linked pages.
@@ -80,14 +81,14 @@ Images inside the sections `steps`, `symptom` and `resolution` (`FRAMED_SECTIONS
 
 ## Static website
 
-`StaticSiteBuilder` in `site/static-site.ts` builds the ZIP for the export format `site`. It reads every published original and translation of an enabled language, keeps only those that `PortalReader.article` returns for an anonymous reader without fallback, and renders them with the same renderer. File names are `<number>-<slug>.html` with the portal number, translations in `<language>/`. Earlier slugs come from `article_titles`; each one and the bare number get an HTML redirect page and a line in `_redirects`. The search index is a serialized MiniSearch index per language. The build fails with the reason `notPublic` when the audience is no longer public.
+`StaticSiteBuilder` in `site/static-site.ts` builds the ZIP for the export format `site`. It reads every published original and translation of an enabled language, keeps only those that `PortalReader.article` returns for an anonymous reader without fallback, and renders them with the same renderer. File names are `<number>-<slug>.html` with the portal number, translations in `<language>/`. Earlier slugs come from `article_titles`; each one and the bare number get an HTML redirect page and two lines in `_redirects`, with and without `.html`. The search index is a serialized MiniSearch index per language. The build fails with the reason `notPublic` when the audience is no longer public.
 
 ## Background jobs
 
 | Job | Trigger | Work |
 |---|---|---|
 | `portal.render-article` | publishing an article | stores the rendering of the published version |
-| `knowledge-bases.queue-reviews` | `NOTIFY` on `pagehall_review_changes`, start of a node, reconnect of the listener | schedules a reminder job for each pending lead and due reminder |
+| `knowledge-bases.queue-reviews` | `NOTIFY` on `lunedo_review_changes`, start of a node, reconnect of the listener | schedules a reminder job for each pending lead and due reminder |
 | `knowledge-bases.remind-review` | scheduled for the moment the reminder is due | sends one reminder; idempotency key from article, kind, due date and lead days |
 | `knowledge-bases.check-reviews` | hourly at minute 17 | safety net: queues pending reminders again and sends overdue reminders whose job was lost |
 | `knowledge-bases.prune-removed-articles` | daily at 03:43 | deletes the records of removed articles (`article_sync`) after 90 days; the article sync of the API reports removed articles from them |

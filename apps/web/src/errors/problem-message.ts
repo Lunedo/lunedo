@@ -55,6 +55,9 @@ export function problemMessage(t: TFunction, error: unknown): string {
   if (error.code === "statusInUse" && problem.pages) {
     return t("problems.statusInUsePages", { count: problem.pages });
   }
+  if (error.code === "hiddenContent" && problem.pages) {
+    return t("problems.hiddenContentPages", { count: problem.pages });
+  }
   if (error.code === "confidentialSharing" && problem.pages) {
     return t("problems.confidentialSharingPages", { count: problem.pages });
   }

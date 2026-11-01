@@ -435,6 +435,26 @@ describe.skipIf(!baseUrl)("placeholders and anonymization", () => {
     expect(kept.rows[0]).toEqual({ invitations: 1, refusals: 1, keys: 1 });
   });
 
+  it("lets only owners of the organization or the instance owner anonymize an organization owner", async () => {
+    const org = await organization();
+    const second = await account(org.id, `${randomUUID()}@other.example`, "Second Owner");
+    await test.services.roles.assign(accountPrincipal(org.owner), {
+      scope: "organization",
+      organizationId: org.id,
+      role: { builtIn: "owner" },
+      principal: { kind: "account", id: second.id },
+    });
+    const anonymize = (actor: string) =>
+      test.services.accountLifecycle.anonymize(accountPrincipal(actor), second.id, {
+        reason: "Left the company",
+        confirmation: "Second Owner",
+      });
+
+    await expect(anonymize(administrator)).rejects.toMatchObject({ decision: { denials: ["ownerOnly"] } });
+    expect(await state(second.id)).toMatchObject({ state: "active" });
+    await expect(anonymize(ownerId)).resolves.toMatchObject({ endedMemberships: 1 });
+  });
+
   it("refuses to anonymize the instance owner or the own account", async () => {
     await expect(
       test.services.accountLifecycle.anonymize(accountPrincipal(administrator), ownerId, {

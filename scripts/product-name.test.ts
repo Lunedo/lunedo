@@ -25,22 +25,12 @@ describe("findFormerName", () => {
     ]);
   });
 
-  it("allows applied migrations and their snapshots but no later ones", () => {
-    const content = `'${former}'`;
-    assert.deepEqual(findFormerName(content, "packages/server/drizzle/0048_reimport.sql"), []);
-    assert.deepEqual(findFormerName(content, "packages/server/drizzle/meta/0096_snapshot.json"), []);
-    assert.deepEqual(findFormerName(content, "packages/server/drizzle/0097_rename_kept_decision.sql"), []);
-    assert.equal(findFormerName(content, "packages/server/drizzle/0098_next.sql").length, 1);
-    assert.equal(findFormerName(content, "packages/server/drizzle/meta/_journal.json").length, 1);
-  });
-
-  it("allows the database names only as whole names", () => {
-    const file = "packages/server/src/search/indexer.ts";
-    assert.deepEqual(findFormerName(`const CHANNEL = "${former}_search_changes";`, file), []);
-    assert.deepEqual(findFormerName(`lock(\`${former}.tree:\${id}\`)`, file), []);
-    assert.deepEqual(findFormerName(`${former}_group_id`, "packages/server/src/identity/schema.ts"), []);
-    assert.equal(findFormerName(`"${former}_search_changes" and ${Former}`, file).length, 1);
-    assert.equal(findFormerName(`${former}.other`, file).length, 1);
+  it("finds the former name in migrations and database names", () => {
+    assert.equal(findFormerName(`'${former}'`, "packages/server/drizzle/0000_baseline.sql").length, 1);
+    assert.equal(
+      findFormerName(`"${former}_search_changes"`, "packages/server/src/search/indexer.ts").length,
+      1,
+    );
   });
 
   it("allows the test site name only in the fixture guard and the fixture script tests", () => {

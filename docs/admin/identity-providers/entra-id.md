@@ -1,6 +1,6 @@
 # Microsoft Entra ID
 
-Checked against Microsoft Entra documentation, October 2026.
+Checked against Microsoft Entra documentation, November 2026.
 
 People sign in with their Microsoft work account. Lunedo connects to one Entra ID tenant, through OpenID Connect or through SAML 2.0. Prefer OpenID Connect: with one app registration, Lunedo signs people in, reads their groups and synchronizes account status in the background. Use SAML when your organization requires it.
 
@@ -78,7 +78,7 @@ The identifier is the tenant ID and the object ID of the person, as with OpenID 
 
 SAML assertions from Entra ID carry at most 150 groups. For people in more groups, Entra ID sends a link instead, and Lunedo reads the groups through Microsoft Graph. With Graph access, Lunedo also reads group names, searches groups by name in the rule dialog and synchronizes accounts in the background.
 
-The provider lists the Graph credentials under **Credentials for Microsoft Graph**, apart from **Lunedo's signing certificate**, and each has its own add action. Without Graph access, the provider shows the warning that it cannot read groups through Microsoft Graph: accounts in more than 150 groups lose their groups and what the rules give them.
+The provider lists the Graph credentials under **Credentials for Microsoft Graph**, apart from **Lunedo's signing certificate**, and each has its own add action. Without Graph access, the provider shows the warning that it cannot read groups through Microsoft Graph. Lunedo does not read the groups of people in more than 150 groups. A new account of such a person gets no groups; an existing account keeps the groups stored at an earlier sign-in, and they are not updated.
 
 For the SAML settings that every SAML provider shares, such as metadata refresh, signed responses and encrypted assertions, see [SAML](saml.md).
 

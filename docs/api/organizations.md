@@ -69,19 +69,7 @@ Nobody can give a role more than they hold themselves.
 
 "Session only" routes need a signed-in session with a recent confirmation of identity and refuse API tokens; use the interface for them. See [Accounts](../admin/accounts.md).
 
-## Accounts
-
-These routes act on another account. They are open to instance administrators with the area Accounts and Manage, and to administrators with Members and groups and Manage in the account's home organization; the [rank rules](../admin/roles-and-permissions.md#who-may-act-on-whom) apply.
-
-| Route | What it does | Permission |
-|---|---|---|
-| `POST /api/v1/accounts/{accountId}/deactivate` | Deactivates an account and ends its sessions | `account.deactivate`, session only |
-| `POST /api/v1/accounts/{accountId}/reactivate` | Lets a deactivated account sign in again; revoked tokens and ended memberships stay as they are | `account.reactivate`, session only |
-| `POST /api/v1/accounts/{accountId}/sessions/end`, `POST …/sessions/{sessionId}/end` | Ends all sessions, or one session, of the account | `account.sessions.end`, session only |
-| `POST /api/v1/accounts/{accountId}/second-factor/reset` | Removes the second factor; the account sets up a new one at the next sign-in. Refused with `managedAccount` for accounts managed through OIDC or SAML | `account.secondFactor.reset`, session only |
-| `PUT /api/v1/accounts/{accountId}/home-organization` | Makes another organization the account is a member of its home organization: `{ "organizationId": … }` | `account.homeOrganization.change` |
-
-### Managing provider
+## Managing provider
 
 `managedBy` names the identity provider that manages an account, or is `null` for a local account (see [Managed accounts](../admin/identity-providers.md#managed-accounts)):
 
@@ -92,7 +80,7 @@ These routes act on another account. They are open to instance administrators wi
 | `source` | `identity` when an identity of the provider is linked, `domain` when the account's e-mail domain is assigned to it |
 | `since` | Since when the provider manages the account |
 
-Accounts managed through `oidc` or `saml` sign in only through the provider and have no password or second factor in Lunedo; `POST /api/v1/accounts/{accountId}/second-factor/reset` refuses them with `managedAccount`.
+Accounts managed through `oidc` or `saml` sign in only through the provider and have no password or second factor in Lunedo.
 
 ## Service accounts
 

@@ -9,27 +9,6 @@ export interface NameAllowance {
 
 export const nameAllowances: readonly NameAllowance[] = [
   {
-    files:
-      /^packages\/server\/drizzle\/(?:(?:00[0-8]\d|009[0-7])_[a-z0-9_]+\.sql|meta\/(?:00[0-8]\d|009[0-7])_snapshot\.json)$/,
-    reason: "Migrations that are already applied are never edited, so they keep the names they created.",
-  },
-  {
-    tokens: [`mapping_rules_${former}_group_id_groups_id_fk`, `${former}_group_id`],
-    reason: "Column and foreign key of the mapping rules, created by an applied migration.",
-  },
-  {
-    tokens: [`${former}.audit_retention`, `${former}.tree_settled_later`],
-    reason: "Transaction settings that database triggers read.",
-  },
-  {
-    tokens: [`${former}.tree`, `${former}.search.terms`, `${former}.knowledge-base.paths`],
-    reason: "Advisory lock keys that database triggers take as well.",
-  },
-  {
-    tokens: [`${former}_search_changes`, `${former}_review_changes`, `${former}_portal_domains`],
-    reason: "Notification channels that database triggers raise.",
-  },
-  {
     files: /^packages\/server\/src\/imports\/testing\/confluence-cloud\/(?:fixture-guard|prepare)\.test\.ts$/,
     tokens: [`${former}-test`],
     reason: "Real name of the external Confluence test site, which the fixtures must not contain.",

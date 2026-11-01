@@ -1,6 +1,6 @@
 # OpenID Connect
 
-Checked against Keycloak and Authentik documentation, October 2026.
+Checked against Keycloak and Authentik documentation, November 2026.
 
 Use **Other OIDC provider** for identity providers that speak OpenID Connect, such as Keycloak, Authentik, Okta or Zitadel. People sign in at the provider; profile and groups update at every sign-in. Generic OIDC providers have no directory Lunedo could synchronize with in the background; with [SCIM](scim.md), the provider can send changes at once.
 

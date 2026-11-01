@@ -77,7 +77,7 @@ let masterKeys: KeyRing;
 let filesDir: string;
 let archivePath: string;
 const databaseDump = Buffer.from("PGDMP fake database dump with marker-database-content");
-const schemaVersion = "0000_foundation";
+const schemaVersion = "0000_baseline";
 const knownSchemaVersions = [schemaVersion];
 
 beforeEach(async () => {

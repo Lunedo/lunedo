@@ -22,7 +22,7 @@ export function lastReviewedAt(item: SQL): SQL {
       and (r.interval_months > 0 or (r.interval_months is null and kb.review_interval_months is not null)))`;
 }
 
-export const REVIEW_CHANGES_CHANNEL = "pagehall_review_changes";
+export const REVIEW_CHANGES_CHANNEL = "lunedo_review_changes";
 export const SOON_DAYS = 30;
 export const UNDO_SECONDS = 120;
 export const MAX_SOURCES = 20;

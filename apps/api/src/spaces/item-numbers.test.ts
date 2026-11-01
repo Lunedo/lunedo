@@ -319,6 +319,10 @@ describe.skipIf(!databaseBaseUrl)("item lookup by number", () => {
     const requests = await owner.get(`/api/v1/spaces/${team}/access-requests`);
     expect(requests.statusCode, requests.body).toBe(200);
     expect(requests.body).toContain(hidden.id);
+    const mine = await outsider.client.get("/api/v1/access-requests/mine");
+    expect(mine.statusCode, mine.body).toBe(200);
+    expect(mine.body).not.toContain(hidden.id);
+    expect(mine.body).not.toContain(team);
     for (const malformed of ["0", "-4", "12a", "1e3", "99999999999999999"]) {
       expect((await outsider.client.get(`/api/v1/items/by-number/${malformed}`)).statusCode, malformed).toBe(
         404,

@@ -18,7 +18,7 @@ A token can be limited to selected knowledge bases; it then reaches no other spa
 
 | Route | What it does | Permission |
 |---|---|---|
-| `GET /api/v1/spaces/{spaceId}/articles` | Original articles the caller can read, most recently changed first; filters `categoryId`, `topLevel=true`, `type` | read the knowledge base |
+| `GET /api/v1/spaces/{spaceId}/articles` | Original articles the caller can read, most recently changed first; filters `categoryId`, `topLevel=true`, `type` (`howTo`, `troubleshooting`, or `none` for articles without a type) | read the knowledge base |
 | `GET /api/v1/articles/{itemId}` | One article with its sections; `draft=true` returns the draft to its editors | read the article |
 | `GET /api/v1/spaces/{spaceId}/article-changes` | New, changed and removed articles since `changedSince` | read the knowledge base |
 | `POST /api/v1/spaces/{spaceId}/articles` | Creates an article, or a translation with `translationOf` and `language` | write drafts |

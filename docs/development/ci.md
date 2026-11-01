@@ -51,6 +51,7 @@ The job "Scope" decides the lane and the areas (`scripts/ci-scope.ts`, run by `s
 | `pnpm shell:check` | Shell scripts, with ShellCheck in Docker. |
 | `pnpm release-jobs:check` | Jobs that may write packages or the repository run only on GitHub-hosted runners and run images by digest. |
 | `pnpm container-users:check` | Job containers and `docker run` calls that mount the workspace or the CI cache run with the runner's user. |
+| `pnpm migrations:check` | Migrations are numbered without gaps or duplicates, each has its SQL file and snapshot, and their `when` timestamps increase. See [Migration number conflicts](environment.md#migration-number-conflicts). |
 | `pnpm typecheck` | TypeScript in every package. |
 | `node --test "scripts/*.test.ts"` | Tests of the repository scripts. |
 
@@ -63,7 +64,7 @@ The job "Scope" decides the lane and the areas (`scripts/ci-scope.ts`, run by `s
 
 ### Installation, update and reverse proxies
 
-The job builds the image under test and the previous version: the newest release tag, or, before the first release, the image of the commit before this change. Then it runs three scripts:
+The job builds the image under test and the previous version: the newest release tag, or, before the first release, the image of the commit before this change. When that commit predates the migration baseline `0000_baseline`, which no installation can update from, it takes the commit that added the baseline. Then it runs three scripts:
 
 - `scripts/install-update-check.sh` installs the previous version with the setup script, adds synthetic content, updates to the image under test with one command, runs the setup script again, checks that an update to a version that does not start stops with the rollback, and follows the documented rollback.
 - `scripts/reverse-proxy-check.sh`: CI starts each reverse proxy example in front of a test instance and checks a page, a WebSocket connection to `/collab` and a large upload.
@@ -124,11 +125,12 @@ Every PostgreSQL used by tests in CI runs with `fsync=off`, `synchronous_commit=
 
 ## Releases
 
-A release tag such as `v1.4.2` publishes `ghcr.io/lunedo/lunedo` and `ghcr.io/lunedo/render`, creates the GitHub release with the release notes that the published image reads from `CHANGELOG.md`, and attaches `lunedo-versions.json` and `install.sh` to it. The format of `CHANGELOG.md` is described in [changelog.md](changelog.md).
+A release tag such as `v1.4.2` publishes `ghcr.io/lunedo/lunedo` and `ghcr.io/lunedo/render`, creates the GitHub release with the text of `docs/releases/<version>.md` from the tagged commit, and attaches `lunedo-versions.json` and `install.sh` to it. The format of `CHANGELOG.md` is described in [changelog.md](changelog.md).
 
-- The job "Check the release tag" refuses a tag that is not a release version or whose commit is not on `main`.
+- The job "Check the release tag" refuses a tag that is not a release version, whose commit is not on `main` or that has no `docs/releases/<version>.md`.
 - The images always get the tag `1.4.2`. `1.4` and `latest`, and the GitHub release as the latest one, move only when the tag is the highest release version, so a patch for an older line never moves them back.
-- The jobs that hold `packages: write` or `contents: write` run only on GitHub-hosted `ubuntu-24.04`, never on `RUNNER_LABELS`, because self-hosted runners also run the code of pull requests. The job that reads the release notes runs the image by the digest the publish job reported, with `--pull always`. `pnpm release-jobs:check` enforces both.
+- Each image is built natively per architecture, amd64 on `ubuntu-24.04` and arm64 on `ubuntu-24.04-arm`, and pushed by digest; the job "Publish the images" joins both into one manifest per image, gives it the tags and fails when an architecture is missing.
+- The jobs that hold `packages: write` or `contents: write` run only on GitHub-hosted runners (`ubuntu-24.04`, `ubuntu-24.04-arm`), never on `RUNNER_LABELS`, because self-hosted runners also run the code of pull requests. A job with `runs-on: ${{ matrix.runner }}` passes only when every `runner` of its matrix is such a runner. The job that reads the release notes runs the image by the digest the publish job reported, with `--pull always`. `pnpm release-jobs:check` enforces both.
 - The workflows rely on a tag ruleset for `v*` in the repository settings, so that only maintainers create, move or delete release tags.
 
 ## Dependabot

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+import type { Readable } from "node:stream";
 import { type DocumentJson, extractSections, type NodeJson, plainText, slugify } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import MiniSearch from "minisearch";
@@ -13,6 +14,7 @@ import type { FileService } from "../../files/files.js";
 import type { OrganizationService } from "../../organizations/organizations.js";
 import { SpaceError } from "../../spaces/common.js";
 import { migrated } from "../../spaces/documents.js";
+import { MAX_PREVIEW_BYTES, SvgRejectedError, sanitizeSvg } from "../../whiteboards/svg.js";
 import type { ArticleAddresses, ArticleRenderer } from "../articles.js";
 import { brandValues, interfaceLanguage, type PortalConfig, type PortalService } from "../portals.js";
 import type { PortalArticle, PortalArticleSummary, PortalCategory, PortalReader } from "../reader.js";
@@ -69,6 +71,77 @@ interface SiteFile {
   attachmentId: string;
   extension: string;
   display: boolean;
+}
+
+const PASSIVE_EXTENSIONS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".avif",
+  ".bmp",
+  ".ico",
+  ".tif",
+  ".tiff",
+  ".heic",
+  ".heif",
+  ".svg",
+  ".pdf",
+  ".txt",
+  ".csv",
+  ".md",
+  ".json",
+  ".zip",
+  ".gz",
+  ".tgz",
+  ".tar",
+  ".7z",
+  ".rar",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+  ".odt",
+  ".ods",
+  ".odp",
+  ".rtf",
+  ".mp3",
+  ".mp4",
+  ".m4a",
+  ".mov",
+  ".webm",
+  ".ogg",
+  ".wav",
+  ".flac",
+  ".drawio",
+  ".excalidraw",
+]);
+
+function passiveExtension(extension: string): string {
+  return PASSIVE_EXTENSIONS.has(extension) ? extension : `${extension}.txt`;
+}
+
+async function passiveSvg(content: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of content) {
+    const part = Buffer.from(chunk);
+    size += part.length;
+    if (size > MAX_PREVIEW_BYTES) {
+      content.destroy();
+      return Buffer.alloc(0);
+    }
+    chunks.push(part);
+  }
+  try {
+    return Buffer.from(sanitizeSvg(Buffer.concat(chunks).toString("utf8")), "utf8");
+  } catch (error) {
+    if (error instanceof SvgRejectedError) return Buffer.alloc(0);
+    throw error;
+  }
 }
 
 interface FileInfo {
@@ -280,7 +353,9 @@ export class StaticSiteBuilder {
     const fileOf = (attachmentId: string, display: boolean) => {
       const info = names.get(attachmentId);
       if (!info) return null;
-      const extension = display ? (info?.displayExtension ?? "") : extensionOf(info?.name ?? "");
+      const extension = passiveExtension(
+        display ? (info?.displayExtension ?? "") : extensionOf(info?.name ?? ""),
+      );
       const key = `${attachmentId}${display ? "-display" : ""}`;
       files.set(key, { attachmentId, extension, display });
       return `files/${key}${extension}`;
@@ -581,7 +656,8 @@ export class StaticSiteBuilder {
           const shown = file.display
             ? ((await this.#displayVersions.apply(content, "display")) ?? content)
             : content;
-          return this.#files.read(shown.fileId);
+          const data = await this.#files.read(shown.fileId);
+          return file.extension === ".svg" ? passiveSvg(data) : data;
         },
       });
     }

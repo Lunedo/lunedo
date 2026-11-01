@@ -1,6 +1,12 @@
 # E-mail
 
-Lunedo sends e-mail for password resets, e-mail address changes, use of recovery codes, invitations, self-registration and test mails. These mails belong to a flow the person started and do not depend on preferences. Reminders and notices, such as expiring access or a new sign-in, are notifications; e-mail is one of their channels, see [Notifications](notifications.md#e-mail).
+Lunedo sends some e-mail directly, without regard to preferences:
+
+- password resets, e-mail address changes, use of recovery codes, invitations (also portal invitations of a knowledge base), self-registration and test mails, which belong to a flow the person started;
+- notices about the person's own account: an administrator reset the second factor, the account now signs in through an identity provider, or it became a local account and needs a password;
+- mails to addresses outside Lunedo: the notice of an emergency sign-in to the **Further e-mail addresses**, see [Emergency sign-in](identity-providers.md#emergency-sign-in), and the warnings about backups and the file store, and their test mail, to the [operations contacts](notifications.md#operations-contacts).
+
+Reminders and notices, such as expiring access or a new sign-in, are notifications; e-mail is one of their channels, see [Notifications](notifications.md#e-mail).
 
 Without a mail server, notifications stay in the app and nobody can reset a password by e-mail. The system status then shows the warning `notConfigured`, see [Troubleshooting](#troubleshooting).
 
@@ -26,7 +32,7 @@ A recent sign-in means that you confirmed your identity within the time set by *
 
 For Microsoft 365, Microsoft Graph is recommended; see [Microsoft 365](email/microsoft-365.md). For Google Workspace, see [Google Workspace](email/google-workspace.md).
 
-The method is the instance setting `mail.method`. The setup assistant offers SMTP; setup through configuration reads the `LUNEDO_SMTP_*` variables once, when the instance is set up, see [Setup through configuration](setup-through-configuration.md). There are no variables for Microsoft Graph. After the setup, the settings page is the place to change e-mail.
+The method is the instance setting `mail.method`. The setup assistant does not set up e-mail; when no mail server is set, its last screen links to the e-mail settings. Setup through configuration reads the `LUNEDO_SMTP_*` variables once, when the instance is set up, see [Setup through configuration](setup-through-configuration.md). There are no variables for Microsoft Graph. After the setup, the settings page is the place to change e-mail.
 
 ### Changing the method
 
@@ -74,7 +80,7 @@ User name, password or API key and the sender stay as you enter them.
 
 TLS connections need at least TLS 1.2, and certificates are always verified.
 
-The password is stored with envelope encryption and never returned. A test mail can be sent with settings before they are saved; without a new password it uses the stored one. A successful test means that the server accepted the mail. Many servers reject it later and send a non-delivery report to the sender address, which Lunedo cannot see.
+The password is stored with envelope encryption and never returned. A test mail can be sent with settings before they are saved; without a new password it uses the stored one, but only while server, port and user name stay the same. With OAuth2, the stored client secret or key is used only while server, port, mailbox and the app (tenant, client and Microsoft cloud, the service account, or token endpoint and client) stay the same; otherwise enter it again. A successful test means that the server accepted the mail. Many servers reject it later and send a non-delivery report to the sender address, which Lunedo cannot see.
 
 ### SMTP with OAuth2
 

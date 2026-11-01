@@ -234,6 +234,45 @@ describe.skipIf(!baseUrl)("meeting series", () => {
       );
       expect(owned.rows[0]?.owner_id).toBe(context.editorId);
     });
+    it("writes a topic into a meeting only for people who can open and edit that meeting", async () => {
+      for (const kind of ["edit", "view"] as const) {
+        const context = await setup();
+        const created = await series(context);
+        await test.services.pageAccess.change(context.lead, created.firstMeetingId, [
+          { action: "restrict", kind },
+        ]);
+        const before = JSON.stringify(await content(created.firstMeetingId));
+        const expected = kind === "view" ? "meetingNotFound" : "meetingNotEditable";
+        for (const input of [
+          { title: "Injected", meetingId: created.firstMeetingId, description: "Written by the editor" },
+          { title: "Injected", description: "Written by the editor" },
+          { title: "Injected", meetingId: created.firstMeetingId, oneOff: true },
+        ]) {
+          await expect(test.services.topics.create(context.editor, created.id, input)).rejects.toMatchObject({
+            code: expected,
+          });
+        }
+        if (kind === "view") {
+          await expect(
+            test.services.topics.create(context.editor, created.id, {
+              title: "Injected",
+              meetingId: created.firstMeetingId,
+            }),
+          ).rejects.toMatchObject({ code: "meetingNotFound" });
+        }
+        expect(JSON.stringify(await content(created.firstMeetingId))).toBe(before);
+        const topics = await test.database.execute<{ count: number }>(
+          sql`select count(*)::int as count from tree_items where parent_id = ${created.id} and title = 'Injected'`,
+        );
+        expect(topics.rows[0]?.count).toBe(0);
+        await test.services.topics.create(context.lead, created.id, {
+          title: "Allowed",
+          meetingId: created.firstMeetingId,
+          description: "Written by the lead",
+        });
+        expect(JSON.stringify(await content(created.firstMeetingId))).toContain("Written by the lead");
+      }
+    });
   });
 
   describe("schedules", () => {

@@ -1,1 +1,0 @@
-CREATE INDEX "search_chunks_updated_index" ON "search_chunks" USING btree ("content_updated_at","id");

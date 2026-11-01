@@ -286,9 +286,14 @@ export const accessRequestSchema = z
         email: z.string().nullable().describe("E-mail address, when the caller may see it."),
       })
       .describe("Who asks."),
-    spaceId: uuid("The space."),
+    target: extensibleEnum(["space", "page"], "Whether the request is for a whole space or for a page."),
+    spaceId: uuid("The space.")
+      .nullable()
+      .describe("The space, or null when the requester cannot see the page the request is for."),
     spaceName: z.string().describe("Name of the space; empty when the requester cannot see it."),
-    itemId: uuid("The page, or null for the whole space.").nullable(),
+    itemId: uuid("The page.")
+      .nullable()
+      .describe("The page; null for the whole space and when the requester cannot see the page."),
     number: itemNumber("Number of the page in the addresses of the app.")
       .nullable()
       .describe(
@@ -301,7 +306,7 @@ export const accessRequestSchema = z
       "`satisfied` means the person got access another way.",
     ),
     role: z.enum(spaceRoleValues).nullable().describe("The role given when approved."),
-    decidedBy: person.nullable().describe("Who decided."),
+    decidedBy: person.nullable().describe("Who decided; null when the requester cannot see the page."),
     decidedAt: timestamp("When it was decided.").nullable(),
     createdAt: timestamp("When it was sent."),
   })
@@ -314,6 +319,7 @@ export const exampleAccessRequest = {
     name: "Mia Kranz",
     email: "mia.kranz@example.org",
   },
+  target: "space",
   spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
   spaceName: "IT Operations",
   itemId: null,

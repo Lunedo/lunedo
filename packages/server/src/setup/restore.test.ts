@@ -20,7 +20,7 @@ import { parseKeyInput, RESTART_CHANNEL, SetupRestoreService, type StartRestoreI
 
 const baseUrl = testDatabaseBaseUrl();
 const logger = createLogger({ service: "test", level: "silent" });
-const schemaVersion = "0000_foundation";
+const schemaVersion = "0000_baseline";
 
 class FakeDatabase implements DatabaseArchiver {
   restored: Buffer | undefined;

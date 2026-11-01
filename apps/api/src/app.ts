@@ -106,6 +106,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     requestContexts.set(request, requestContext);
     enterRequestContext(requestContext);
     reply.header("x-request-id", request.id);
+    reply.header("x-frame-options", "SAMEORIGIN");
     if (clientBuild) reply.header(CLIENT_BUILD_HEADER, clientBuild);
   });
   fastify.addHook("onRequestAbort", async (request) => endRequestCache(request));

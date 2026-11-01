@@ -108,6 +108,7 @@ jobs:
       - run: pnpm shell:check
       - run: pnpm release-jobs:check
       - run: pnpm container-users:check
+      - run: pnpm migrations:check
       - run: pnpm typecheck
       - name: Script tests
         run: node --test "scripts/*.test.ts"
@@ -311,7 +312,11 @@ jobs:
           else
             base="$(git merge-base HEAD origin/main)"
             if [ "$base" = "$(git rev-parse HEAD)" ]; then base="$(git rev-parse HEAD~1)"; fi
-            echo "No release exists yet. Installing the image of $base, the commit before this change, then updating to the build under test."
+            if ! git cat-file -e "$base:packages/server/drizzle/0000_baseline.sql" 2>/dev/null; then
+              base="$(git log --diff-filter=A --format=%H -- packages/server/drizzle/0000_baseline.sql | tail -n 1)"
+              echo "The commit before this change predates the migration baseline, which no installation can update from."
+            fi
+            echo "No release exists yet. Installing the image of $base, then updating to the build under test."
             path="$RUNNER_TEMP/previous-${{ github.run_id }}-${{ github.run_attempt }}"
             git worktree prune
             rm -rf "$path"

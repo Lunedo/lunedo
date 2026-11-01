@@ -509,10 +509,26 @@
                       "additionalProperties": false,
                       "description": "Who asks."
                     },
-                    "spaceId": {
+                    "target": {
                       "type": "string",
-                      "format": "uuid",
-                      "description": "The space."
+                      "description": "Whether the request is for a whole space or for a page. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "space",
+                        "page"
+                      ]
+                    },
+                    "spaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "The space."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The space, or null when the requester cannot see the page the request is for."
                     },
                     "spaceName": {
                       "type": "string",
@@ -522,13 +538,14 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid"
+                          "format": "uuid",
+                          "description": "The page."
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The page, or null for the whole space."
+                      "description": "The page; null for the whole space and when the requester cannot see the page."
                     },
                     "number": {
                       "anyOf": [
@@ -612,7 +629,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Who decided."
+                      "description": "Who decided; null when the requester cannot see the page."
                     },
                     "decidedAt": {
                       "anyOf": [
@@ -635,6 +652,7 @@
                   "required": [
                     "id",
                     "requester",
+                    "target",
                     "spaceId",
                     "spaceName",
                     "itemId",
@@ -657,6 +675,7 @@
                     "name": "Mia Kranz",
                     "email": "mia.kranz@example.org"
                   },
+                  "target": "space",
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                   "spaceName": "IT Operations",
                   "itemId": null,
@@ -909,10 +928,26 @@
                       "additionalProperties": false,
                       "description": "Who asks."
                     },
-                    "spaceId": {
+                    "target": {
                       "type": "string",
-                      "format": "uuid",
-                      "description": "The space."
+                      "description": "Whether the request is for a whole space or for a page. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "space",
+                        "page"
+                      ]
+                    },
+                    "spaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "The space."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The space, or null when the requester cannot see the page the request is for."
                     },
                     "spaceName": {
                       "type": "string",
@@ -922,13 +957,14 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid"
+                          "format": "uuid",
+                          "description": "The page."
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The page, or null for the whole space."
+                      "description": "The page; null for the whole space and when the requester cannot see the page."
                     },
                     "number": {
                       "anyOf": [
@@ -1012,7 +1048,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Who decided."
+                      "description": "Who decided; null when the requester cannot see the page."
                     },
                     "decidedAt": {
                       "anyOf": [
@@ -1035,6 +1071,7 @@
                   "required": [
                     "id",
                     "requester",
+                    "target",
                     "spaceId",
                     "spaceName",
                     "itemId",
@@ -1057,6 +1094,7 @@
                     "name": "Mia Kranz",
                     "email": "mia.kranz@example.org"
                   },
+                  "target": "space",
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                   "spaceName": "IT Operations",
                   "itemId": null,
@@ -1522,10 +1560,26 @@
                         "additionalProperties": false,
                         "description": "Who asks."
                       },
-                      "spaceId": {
+                      "target": {
                         "type": "string",
-                        "format": "uuid",
-                        "description": "The space."
+                        "description": "Whether the request is for a whole space or for a page. New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "space",
+                          "page"
+                        ]
+                      },
+                      "spaceId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "The space."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The space, or null when the requester cannot see the page the request is for."
                       },
                       "spaceName": {
                         "type": "string",
@@ -1535,13 +1589,14 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "format": "uuid"
+                            "format": "uuid",
+                            "description": "The page."
                           },
                           {
                             "type": "null"
                           }
                         ],
-                        "description": "The page, or null for the whole space."
+                        "description": "The page; null for the whole space and when the requester cannot see the page."
                       },
                       "number": {
                         "anyOf": [
@@ -1625,7 +1680,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Who decided."
+                        "description": "Who decided; null when the requester cannot see the page."
                       },
                       "decidedAt": {
                         "anyOf": [
@@ -1648,6 +1703,7 @@
                     "required": [
                       "id",
                       "requester",
+                      "target",
                       "spaceId",
                       "spaceName",
                       "itemId",
@@ -1673,6 +1729,7 @@
                       "name": "Mia Kranz",
                       "email": "mia.kranz@example.org"
                     },
+                    "target": "space",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                     "spaceName": "IT Operations",
                     "itemId": null,
@@ -65575,7 +65632,7 @@
                       "sizeBytes": 524288000,
                       "readable": true,
                       "lunedoVersion": "1.0.0",
-                      "schemaVersion": "0094_backup_schedules",
+                      "schemaVersion": "0000_baseline",
                       "scope": "all",
                       "testRestore": {
                         "id": "0192f0e0-1a2b-7c3d-8e4f-5a6b7c8d9e02",
@@ -65588,7 +65645,7 @@
                             "passed": true,
                             "detail": {
                               "entries": 1204,
-                              "schemaVersion": "0094_backup_schedules"
+                              "schemaVersion": "0000_baseline"
                             }
                           },
                           {
@@ -65602,8 +65659,8 @@
                             "check": "schemaVersion",
                             "passed": true,
                             "detail": {
-                              "expected": "0094_backup_schedules",
-                              "appliedMigrations": 95
+                              "expected": "0000_baseline",
+                              "appliedMigrations": 1
                             }
                           },
                           {
@@ -71045,7 +71102,7 @@
                       "passed": true,
                       "detail": {
                         "entries": 1204,
-                        "schemaVersion": "0094_backup_schedules"
+                        "schemaVersion": "0000_baseline"
                       }
                     },
                     {
@@ -71059,8 +71116,8 @@
                       "check": "schemaVersion",
                       "passed": true,
                       "detail": {
-                        "expected": "0094_backup_schedules",
-                        "appliedMigrations": 95
+                        "expected": "0000_baseline",
+                        "appliedMigrations": 1
                       }
                     },
                     {
@@ -147875,7 +147932,7 @@
       "post": {
         "operationId": "items.move",
         "summary": "Move an item",
-        "description": "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces. When the move changes who can access the content, through roles or inherited view restrictions, it is refused with the change unless the request carries the confirmation of a preview of exactly that change.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "description": "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces, stays within the organization, never involves a personal space and is refused while pages below are restricted so that the caller cannot open or edit them. When the move changes who can access the content, through roles or inherited view restrictions, it is refused with the change unless the request carries the confirmation of a preview of exactly that change.\n\nRequires the permission `item.edit` on the item in `itemId`.",
         "tags": [
           "Pages"
         ],
@@ -148540,7 +148597,7 @@
             }
           },
           "409": {
-            "description": "`confidentialSharing`: The content is shared too broadly for a confidential space. `itemMoved`: The item was moved at the same moment. `knowledgeBaseContent`: A knowledge base holds only articles and categories. `knowledgeBaseMode`: Articles always use publish mode. `knowledgeBasePlacement`: Articles and categories are placed in categories. `moveChangesAccess`: The move changes who can access the content. `moveIntoDescendant`: An item cannot be moved below itself. `overviewPage`: The overview page of a space stays a page in its space.",
+            "description": "`confidentialSharing`: The content is shared too broadly for a confidential space. `hiddenContent`: Pages below are restricted so that the caller cannot open or edit them. `itemMoved`: The item was moved at the same moment. `knowledgeBaseContent`: A knowledge base holds only articles and categories. `knowledgeBaseMode`: Articles always use publish mode. `knowledgeBasePlacement`: Articles and categories are placed in categories. `moveChangesAccess`: The move changes who can access the content. `moveIntoDescendant`: An item cannot be moved below itself. `otherOrganization`: Content stays within its organization. `overviewPage`: The overview page of a space stays a page in its space.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -148553,6 +148610,14 @@
                       "title": "The content is shared too broadly for a confidential space",
                       "status": 409,
                       "code": "confidentialSharing"
+                    }
+                  },
+                  "hiddenContent": {
+                    "value": {
+                      "type": "urn:lunedo:problem:hiddenContent",
+                      "title": "Pages below are restricted so that the caller cannot open or edit them",
+                      "status": 409,
+                      "code": "hiddenContent"
                     }
                   },
                   "itemMoved": {
@@ -148601,6 +148666,14 @@
                       "title": "An item cannot be moved below itself",
                       "status": 409,
                       "code": "moveIntoDescendant"
+                    }
+                  },
+                  "otherOrganization": {
+                    "value": {
+                      "type": "urn:lunedo:problem:otherOrganization",
+                      "title": "Content stays within its organization",
+                      "status": 409,
+                      "code": "otherOrganization"
                     }
                   },
                   "overviewPage": {
@@ -148662,7 +148735,7 @@
       "post": {
         "operationId": "items.previewMove",
         "summary": "Preview a move",
-        "description": "Shows who would gain or lose access to the item and its children if it moved to the place, through roles in the space and through view restrictions it inherits there. When access changes, the answer carries a confirmation to send with the move. Needs edit permission in both spaces. Nothing is changed.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "description": "Shows who would gain or lose access to the item and its children if it moved to the place, through roles in the space and through view restrictions it inherits there. When access changes, the answer carries a confirmation to send with the move. Needs edit permission in both spaces. Moving into a space of another organization or into or out of a personal space is refused, and so is moving to another space while pages below are restricted so that the caller cannot open or edit them. Nothing is changed.\n\nRequires the permission `item.edit` on the item in `itemId`.",
         "tags": [
           "Pages"
         ],
@@ -148993,7 +149066,7 @@
             }
           },
           "409": {
-            "description": "`confidentialSharing`: The content is shared too broadly for a confidential space. `knowledgeBaseContent`: A knowledge base holds only articles and categories. `knowledgeBaseMode`: Articles always use publish mode. `knowledgeBasePlacement`: Articles and categories are placed in categories. `moveIntoDescendant`: An item cannot be moved below itself. `overviewPage`: The overview page of a space stays a page in its space.",
+            "description": "`confidentialSharing`: The content is shared too broadly for a confidential space. `hiddenContent`: Pages below are restricted so that the caller cannot open or edit them. `knowledgeBaseContent`: A knowledge base holds only articles and categories. `knowledgeBaseMode`: Articles always use publish mode. `knowledgeBasePlacement`: Articles and categories are placed in categories. `moveIntoDescendant`: An item cannot be moved below itself. `otherOrganization`: Content stays within its organization. `overviewPage`: The overview page of a space stays a page in its space.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -149006,6 +149079,14 @@
                       "title": "The content is shared too broadly for a confidential space",
                       "status": 409,
                       "code": "confidentialSharing"
+                    }
+                  },
+                  "hiddenContent": {
+                    "value": {
+                      "type": "urn:lunedo:problem:hiddenContent",
+                      "title": "Pages below are restricted so that the caller cannot open or edit them",
+                      "status": 409,
+                      "code": "hiddenContent"
                     }
                   },
                   "knowledgeBaseContent": {
@@ -149038,6 +149119,14 @@
                       "title": "An item cannot be moved below itself",
                       "status": 409,
                       "code": "moveIntoDescendant"
+                    }
+                  },
+                  "otherOrganization": {
+                    "value": {
+                      "type": "urn:lunedo:problem:otherOrganization",
+                      "title": "Content stays within its organization",
+                      "status": 409,
+                      "code": "otherOrganization"
                     }
                   },
                   "overviewPage": {
@@ -156733,7 +156822,7 @@
       "post": {
         "operationId": "meetings.createTopic",
         "summary": "Add a running topic",
-        "description": "Creates a topic and adds it to the upcoming meeting.\n\nRequires the permission `item.edit` on the item in `seriesId`.",
+        "description": "Creates a topic and adds it to the upcoming meeting. Naming a meeting needs read access to it; a description, which goes into the notes of that meeting, and a topic for one meeting only need edit permission on it.\n\nRequires the permission `item.edit` on the item in `seriesId`.",
         "tags": [
           "Meetings"
         ],
@@ -157313,7 +157402,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `meetingNotEditable`: The meeting notes cannot be edited.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -157334,6 +157423,14 @@
                       "title": "Not allowed",
                       "status": 403,
                       "code": "forbidden"
+                    }
+                  },
+                  "meetingNotEditable": {
+                    "value": {
+                      "type": "urn:lunedo:problem:meetingNotEditable",
+                      "title": "The meeting notes cannot be edited",
+                      "status": 403,
+                      "code": "meetingNotEditable"
                     }
                   }
                 }
@@ -238877,10 +238974,26 @@
                         "additionalProperties": false,
                         "description": "Who asks."
                       },
-                      "spaceId": {
+                      "target": {
                         "type": "string",
-                        "format": "uuid",
-                        "description": "The space."
+                        "description": "Whether the request is for a whole space or for a page. New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "space",
+                          "page"
+                        ]
+                      },
+                      "spaceId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "The space."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The space, or null when the requester cannot see the page the request is for."
                       },
                       "spaceName": {
                         "type": "string",
@@ -238890,13 +239003,14 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "format": "uuid"
+                            "format": "uuid",
+                            "description": "The page."
                           },
                           {
                             "type": "null"
                           }
                         ],
-                        "description": "The page, or null for the whole space."
+                        "description": "The page; null for the whole space and when the requester cannot see the page."
                       },
                       "number": {
                         "anyOf": [
@@ -238980,7 +239094,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Who decided."
+                        "description": "Who decided; null when the requester cannot see the page."
                       },
                       "decidedAt": {
                         "anyOf": [
@@ -239003,6 +239117,7 @@
                     "required": [
                       "id",
                       "requester",
+                      "target",
                       "spaceId",
                       "spaceName",
                       "itemId",
@@ -239028,6 +239143,7 @@
                       "name": "Mia Kranz",
                       "email": "mia.kranz@example.org"
                     },
+                    "target": "space",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                     "spaceName": "IT Operations",
                     "itemId": null,
@@ -239257,10 +239373,26 @@
                       "additionalProperties": false,
                       "description": "Who asks."
                     },
-                    "spaceId": {
+                    "target": {
                       "type": "string",
-                      "format": "uuid",
-                      "description": "The space."
+                      "description": "Whether the request is for a whole space or for a page. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "space",
+                        "page"
+                      ]
+                    },
+                    "spaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "The space."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The space, or null when the requester cannot see the page the request is for."
                     },
                     "spaceName": {
                       "type": "string",
@@ -239270,13 +239402,14 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid"
+                          "format": "uuid",
+                          "description": "The page."
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The page, or null for the whole space."
+                      "description": "The page; null for the whole space and when the requester cannot see the page."
                     },
                     "number": {
                       "anyOf": [
@@ -239360,7 +239493,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Who decided."
+                      "description": "Who decided; null when the requester cannot see the page."
                     },
                     "decidedAt": {
                       "anyOf": [
@@ -239383,6 +239516,7 @@
                   "required": [
                     "id",
                     "requester",
+                    "target",
                     "spaceId",
                     "spaceName",
                     "itemId",
@@ -239405,6 +239539,7 @@
                     "name": "Mia Kranz",
                     "email": "mia.kranz@example.org"
                   },
+                  "target": "space",
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                   "spaceName": "IT Operations",
                   "itemId": null,
@@ -286384,7 +286519,7 @@
             "maximum": 9007199254740991
           },
           "pages": {
-            "description": "Number of pages that give access to groups or through broad links, for `confidentialSharing`; number of pages that would lose the status, for `statusInUse`.",
+            "description": "Number of pages that give access to groups or through broad links, for `confidentialSharing`; number of pages that would lose the status, for `statusInUse`; number of pages the caller cannot open, for `hiddenContent`.",
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
@@ -286873,7 +287008,7 @@
               "properties": {
                 "path": {
                   "type": "string",
-                  "description": "Position in the document, such as `content.2.content.0`."
+                  "description": "Position in the document, such as `.content[2].content[0]`."
                 },
                 "code": {
                   "type": "string",

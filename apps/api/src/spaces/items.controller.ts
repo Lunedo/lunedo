@@ -458,7 +458,7 @@ export class ItemsController {
   @ApiRoute({
     summary: "Preview a move",
     description:
-      "Shows who would gain or lose access to the item and its children if it moved to the place, through roles in the space and through view restrictions it inherits there. When access changes, the answer carries a confirmation to send with the move. Needs edit permission in both spaces. Nothing is changed.",
+      "Shows who would gain or lose access to the item and its children if it moved to the place, through roles in the space and through view restrictions it inherits there. When access changes, the answer carries a confirmation to send with the move. Needs edit permission in both spaces. Moving into a space of another organization or into or out of a personal space is refused, and so is moving to another space while pages below are restricted so that the caller cannot open or edit them. Nothing is changed.",
     tags: [TAG],
     status: 200,
     params: itemParams,
@@ -469,6 +469,8 @@ export class ItemsController {
       "invalidPlacement",
       "moveIntoDescendant",
       "overviewPage",
+      "otherOrganization",
+      "hiddenContent",
       "confidentialSharing",
       "knowledgeBaseContent",
       "knowledgeBaseMode",
@@ -488,7 +490,7 @@ export class ItemsController {
   @ApiRoute({
     summary: "Move an item",
     description:
-      "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces. When the move changes who can access the content, through roles or inherited view restrictions, it is refused with the change unless the request carries the confirmation of a preview of exactly that change.",
+      "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces, stays within the organization, never involves a personal space and is refused while pages below are restricted so that the caller cannot open or edit them. When the move changes who can access the content, through roles or inherited view restrictions, it is refused with the change unless the request carries the confirmation of a preview of exactly that change.",
     tags: [TAG],
     status: 200,
     params: itemParams,
@@ -500,6 +502,8 @@ export class ItemsController {
       "moveIntoDescendant",
       "itemMoved",
       "overviewPage",
+      "otherOrganization",
+      "hiddenContent",
       "confidentialSharing",
       "moveChangesAccess",
       "confidentialGuestsBySpaceAdmins",

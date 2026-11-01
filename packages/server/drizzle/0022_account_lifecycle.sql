@@ -1,2 +1,0 @@
-ALTER TABLE "accounts" ADD COLUMN "merged_into_id" uuid;--> statement-breakpoint
-ALTER TABLE "accounts" ADD CONSTRAINT "accounts_merged_into_id_accounts_id_fk" FOREIGN KEY ("merged_into_id") REFERENCES "public"."accounts"("id") ON DELETE no action ON UPDATE no action;

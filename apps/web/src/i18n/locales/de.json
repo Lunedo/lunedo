@@ -65,7 +65,7 @@
         "generic": "Profil und Gruppen dieses Anbieters werden bei jeder Anmeldung aktualisiert. Er hat kein Verzeichnis, mit dem Lunedo im Hintergrund synchronisieren könnte; mit einer SCIM-Verbindung sendet der Anbieter Änderungen sofort.",
         "google": "Google Workspace dient nur zur Anmeldung. Schalte in den Einstellungen die Gruppensynchronisierung ein, um Gruppen zu lesen und im Hintergrund zu synchronisieren.",
         "entraId": "Dieser Anbieter wird nur bei der Anmeldung gelesen.",
-        "saml": "Profil und Gruppen dieses Anbieters werden bei jeder Anmeldung aktualisiert. SAML hat kein Verzeichnis, das Lunedo im Hintergrund synchronisieren könnte.",
+        "saml": "Profil und Gruppen dieses Anbieters werden bei jeder Anmeldung aktualisiert. Im Hintergrund synchronisiert Lunedo einen SAML-Anbieter nur bei Microsoft Entra ID mit Zugriff auf Microsoft Graph.",
         "ldap": "Dieses Verzeichnis wird nur bei der Anmeldung gelesen."
       },
       "filter": "Läufe filtern",
@@ -275,7 +275,7 @@
       "caExpiringAction": "Lade vorher das neue CA-Zertifikat des Verzeichnisses in den Verbindungseinstellungen des Anbieters hoch, sonst kann Lunedo das Verzeichnis nicht mehr erreichen.",
       "openSettings": "Einstellungen öffnen",
       "noGraphTitle": "{name} kann Gruppen nicht über Microsoft Graph lesen",
-      "noGraph": "Entra ID lässt die Gruppen von Personen in mehr als 150 Gruppen weg. Ohne Zugriff auf Microsoft Graph verlieren diese Konten ihre Gruppen und den Zugriff aus den Regeln. Trage die Client-ID einer App-Registrierung und ihr Anmeldegeheimnis ein."
+      "noGraph": "Entra ID lässt die Gruppen von Personen in mehr als 150 Gruppen weg. Ohne Zugriff auf Microsoft Graph kann Lunedo sie nicht lesen: Neue Konten dieser Personen erhalten keine Gruppen, bestehende behalten ihre bisherigen Gruppen ohne Aktualisierung. Trage die Client-ID einer App-Registrierung und ihr Anmeldegeheimnis ein."
     },
     "tabs": {
       "mapping": "Gruppenzuordnung",
@@ -1507,6 +1507,8 @@
     "shareBeyondOwnAccessBelow": "Deine eigene Rolle im Space deckt {count, plural, one {# Seite} other {# Seiten}} darunter nicht ab. Gib nur diese Seite frei, wähle eine niedrigere Rolle oder frag einen Space-Admin.",
     "ownShare": "Du kannst keinen Zugriff ändern, den du selbst oder über eine deiner Gruppen hast. Bitte jemand anderen, der die Seite teilen kann.",
     "confidentialSharing": "Der Inhalt gibt Gruppen oder über breite Links Zugriff. Entferne diese Einträge und verschiebe ihn dann in den vertraulichen Space.",
+    "hiddenContent": "Darunter liegen Seiten, die so beschränkt sind, dass du sie nicht öffnen oder bearbeiten kannst. Bitte jemanden, der sie bearbeiten kann, den Inhalt zu verschieben.",
+    "hiddenContentPages": "{count, plural, one {# Seite darunter ist} other {# Seiten darunter sind}} so beschränkt, dass du sie nicht öffnen oder bearbeiten kannst. Bitte jemanden, der sie bearbeiten kann, den Inhalt zu verschieben.",
     "confidentialSharingPages": "{count, plural, one {# Seite gibt} other {# Seiten geben}} Gruppen oder über breite Links Zugriff. Entferne die Gruppen aus Zugriffslisten, Links und Beschränkungen und widerrufe die breiten Links, dann verschiebe erneut.",
     "restrictedParentInTrash": "Diese Seite lag unter einer eingeschränkten Seite. Stelle sie zusammen mit den Seiten darüber wieder her oder frage Space- oder Organisationsadministratoren.",
     "restrictedParentInTrashAsk": "Diese Seite lag unter einer eingeschränkten Seite. Bitte Space- oder Organisationsadministratoren, zuerst die Seiten darüber wiederherzustellen.",
@@ -1672,7 +1674,7 @@
     "templateFromRestrictedPage": "Die Seite ist eingeschränkt. Bestätige, dass alle, die die Vorlagen dieses Space verwenden können, ihren Inhalt sehen dürfen, und speichere dann erneut.",
     "notCopyable": "Nur Seiten, Ordner und Whiteboards können kopiert werden. Kopiere stattdessen eine Seite oder einen Ordner.",
     "neverPublished": "Die Seite wurde nie veröffentlicht und hat daher keinen Inhalt zum Kopieren. Veröffentliche sie zuerst und kopiere sie dann.",
-    "otherOrganization": "Inhalte können nur innerhalb ihrer Organisation kopiert werden. Wähle einen Space derselben Organisation.",
+    "otherOrganization": "Inhalte können nur innerhalb ihrer Organisation kopiert oder verschoben werden. Wähle einen Space derselben Organisation.",
     "invalidVisibility": "Wähle, wer den Space lesen darf.",
     "knowledgeBaseConfidential": "Eine Wissensdatenbank kann nicht vertraulich sein. Erstelle sie ohne die Option vertraulich.",
     "invalidAudience": "Nur Wissensdatenbanken haben eine Zielgruppe. Wähle für diesen Space stattdessen eine Sichtbarkeit.",
@@ -3759,7 +3761,7 @@
     "graphErrors": {
       "graphMailboxNotAllowed": {
         "cause": "Die App darf nicht als dieses Postfach senden: Exchange Online hat es blockiert.",
-        "action": "Nimm das Postfach in den Verwaltungsbereich oder die Anwendungszugriffsrichtlinie der App auf und teste erneut. Änderungen in Exchange Online können bis zu einer Stunde dauern."
+        "action": "Nimm das Postfach in den Verwaltungsbereich oder die Anwendungszugriffsrichtlinie der App auf und teste erneut. Änderungen in Exchange Online können zwischen 30 Minuten und 2 Stunden dauern."
       },
       "graphPermissionMissing": {
         "cause": "Die App hat keine Berechtigung, E-Mails zu senden.",
@@ -9915,7 +9917,7 @@
       "checkFailedAction": "Prüfe Adresse und Token und teste die Verbindung dann erneut.",
       "required": "Teste zuerst die Verbindung und fahre dann fort.",
       "allowSites": "Weitere Sites in den Import-Einstellungen der Instanz erlauben",
-      "askToAllowSites": "Instanz-Administratoren erlauben weitere Sites unter Einstellungen › Instanz › Seiten und Papierkorb › Importe.",
+      "askToAllowSites": "Instanz-Administratoren erlauben weitere Sites unter Einstellungen › Instanz › Personen und Anmeldung › Richtlinien, Abschnitt Importe.",
       "deletedTitle": "Token erneut eingeben",
       "deleted": "Lunedo hat das Token dieses Entwurfs am {when} gelöscht, weil der Entwurf eine Woche lang unbearbeitet blieb oder weil die importierende Person das Recht zum Importieren verloren hat. Teste die Verbindung erneut, um fortzufahren.",
       "sitePlaceholder": "example.atlassian.net",

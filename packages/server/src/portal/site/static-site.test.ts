@@ -633,4 +633,68 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     const everything = [...files.values()].map((content) => content.toString("latin1")).join("\n");
     expect(everything).not.toMatch(new RegExp(`(src|href)="[^"]*${leaked.id}`));
   }, 120_000);
+
+  it("writes HTML and SVG attachments so that a web server cannot run their scripts", async () => {
+    const organization = await fixtures.organization();
+    const owner = accountPrincipal(organization.owner);
+    const name = `Active ${randomUUID().slice(0, 6)}`;
+    const kb = await test.services.spaces.create(
+      owner,
+      organization.id,
+      {
+        name,
+        key: await test.services.spaces.suggestKey(name),
+        type: "knowledgeBase",
+        audience: "public",
+        grants: [],
+      },
+      test.services.spacePermissions.holders,
+    );
+    const article = await test.services.tree.create(owner, kb.id, {
+      kind: "page",
+      title: "Downloads",
+      placement: { parentId: null },
+    });
+    const upload = (fileName: string, text: string) =>
+      test.services.attachments.upload(owner, article.id, {
+        name: fileName,
+        body: Readable.from([Buffer.from(text, "utf8")]),
+        contentLength: Buffer.byteLength(text),
+      });
+    const page = await upload(
+      "handout.html",
+      "<html><body><script>alert(document.cookie)</script></body></html>",
+    );
+    const bare = await upload("handout", "<html><body><script>alert(3)</script></body></html>");
+    const drawing = await upload(
+      "diagram.svg",
+      '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><script>alert(1)</script><rect width="10" height="10" onclick="alert(2)"/></svg>',
+    );
+    await test.services.documents.replace(owner, article.id, {
+      type: "doc",
+      content: [
+        { type: "file", attrs: { attachmentId: page.id, name: "handout.html" } },
+        { type: "file", attrs: { attachmentId: bare.id, name: "handout" } },
+        { type: "image", attrs: { attachmentId: drawing.id, alt: "Diagram" } },
+        { type: "file", attrs: { attachmentId: drawing.id, name: "diagram.svg" } },
+      ],
+    });
+    await test.services.versions.publish(owner, article.id);
+
+    const files = await site(owner, kb.id, null);
+    const written = [...files.keys()].filter((path) => path.startsWith("files/"));
+    const handout = written.filter((path) => path.includes(page.id));
+    expect(handout).not.toHaveLength(0);
+    for (const path of handout) expect(path).toMatch(/\.html\.txt$/);
+    const plain = written.filter((path) => path.includes(bare.id));
+    expect(plain).not.toHaveLength(0);
+    for (const path of plain) expect(path).toMatch(/\.txt$/);
+    const svgs = written.filter((path) => path.includes(drawing.id));
+    expect(svgs).not.toHaveLength(0);
+    for (const path of svgs) {
+      const content = files.get(path)?.toString("utf8") ?? "";
+      expect(content).toContain("<svg");
+      expect(content).not.toMatch(/<script|onclick/i);
+    }
+  }, 120_000);
 });

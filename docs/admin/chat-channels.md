@@ -1,6 +1,6 @@
 # Chat channels
 
-Checked against Microsoft Teams, Slack, Discord and Element documentation, October 2026.
+Checked against Microsoft Teams, Slack, Discord and Element documentation, November 2026.
 
 Lunedo posts what happens in a space, and the announcements of an organization, to Microsoft Teams, Slack, Discord, Matrix or any service that accepts webhooks. A chat channel is a one-way connection: Lunedo posts, nobody answers through it.
 
@@ -56,7 +56,7 @@ The operations contacts of the instance can also receive warnings in Teams, see 
 ## Slack
 
 1. Create a Slack app for your workspace, open **Incoming Webhooks** in its settings and turn on **Activate Incoming Webhooks**.
-2. Select **Add New Webhook to Workspace**, choose the channel and confirm.
+2. Select **Add New Webhook to Workspace**, choose the channel and select **Authorize**. For a private channel, you must be a member of it.
 3. Copy the new address under **Webhook URLs for Your Workspace**; it starts with `https://hooks.slack.com/services/`.
 4. In Lunedo, choose **Slack** and paste it under **Webhook address**.
 
@@ -73,6 +73,8 @@ Lunedo posts to a Matrix room as a bot account.
 1. Create a bot account on your homeserver and invite it to the room.
 2. In the room settings, copy the address of the room or its `matrix.to` link.
 3. Sign in as the bot and copy its access token. In Element it is at the bottom of **All settings › Help & About**. Close the session afterwards without signing out, because signing out ends the token.
+
+   When the homeserver signs in through Matrix Authentication Service, the token Element shows is usually valid for only 5 minutes, and Lunedo does not refresh it. Ask the server administrator to issue a personal access token for the bot instead, through the Admin API or Element Admin. It has an expiry time; regenerate it before it expires and enter the new token in Lunedo.
 4. In Lunedo, choose **Matrix** and enter the **Homeserver address** (for example `https://matrix.example.com`), the **Room** (for example `#ops:example.com`) and the **Access token of the bot**.
 
 When saving, Lunedo checks that the homeserver accepts the token and knows the room.

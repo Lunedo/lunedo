@@ -40,7 +40,7 @@ The assistant opens with **Welcome**: the field for the setup code, **Set up a n
 | Step | Content |
 |---|---|
 | **Instance** | The address of the instance, taken from the address the setup is opened with, and the **Instance name**. An address set by `LUNEDO_INSTANCE_URL` is shown locked. |
-| **System check** | Database, file storage, clock, the address and HTTPS. Errors block the setup; warnings do not. See [System check](system-check.md). |
+| **System check** | Database, file storage, clock, the address, the client address and HTTPS. Errors block the setup; warnings do not. See [System check](system-check.md). |
 | **Owner account** | Owner account with password and TOTP. The step can be repeated until setup is complete. |
 | **Emergency kit** | One-time download of the emergency kit, then a confirmation that it is stored safely. |
 | **Organization** | The first organization with name, language, time zone and formats. The owner becomes its owner and has it as home organization. Its language and time zone also become the defaults of the instance, for pages outside an organization such as sign-in. |

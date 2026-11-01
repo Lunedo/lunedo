@@ -267,6 +267,84 @@ describe.skipIf(!baseUrl)("resetting another account's second factor", () => {
     await expect(test.services.memberships.deactivate(accountPrincipal(admin), target)).resolves.toBe(0);
   });
 
+  it("ranks the actor in every organization where the account holds a role, not only its home", async () => {
+    const home = await organization();
+    const other = await organization();
+    const target = await standard(home.id);
+    await test.database.transaction((tx) =>
+      test.services.memberships.add(tx, SYSTEM, {
+        organizationId: other.id,
+        accountId: target,
+        kind: "member",
+      }),
+    );
+    await role(target, "organization", "administrator", other.id);
+    const admin = await standard(home.id);
+    await role(admin, "organization", "administrator", home.id);
+    const actor = accountPrincipal(admin);
+    const { provider } = await test.services.identityProviders.create(SYSTEM, {
+      type: "ldap",
+      name: `Directory ${randomUUID().slice(0, 6)}`,
+      config: {
+        preset: "generic",
+        url: "ldaps://ldap.example.org",
+        bindDn: "cn=lunedo,ou=service,dc=example,dc=org",
+        userBaseDn: "ou=people,dc=example,dc=org",
+        groupBaseDn: "ou=groups,dc=example,dc=org",
+        domains: [`${randomUUID().slice(0, 8)}.example.net`],
+        accountCreation: { enabled: false, requiredGroups: [] },
+        secondFactor: { mode: "provider" },
+        disabled: { attribute: "employeeType", values: ["disabled"] },
+        sync: { intervalMinutes: 60, deactivationLimitPercent: 20, deactivationLimitAccounts: 5 },
+      },
+      credential: { kind: "bindPassword", secret: "service password" },
+    });
+    const linked = await test.services.administration.linkIdentity(SYSTEM, target, {
+      providerId: provider.id,
+      subject: randomUUID(),
+    });
+
+    await expect(
+      test.services.administration.linkIdentity(actor, target, {
+        providerId: provider.id,
+        subject: randomUUID(),
+      }),
+    ).rejects.toThrow(ForbiddenError);
+    await expect(test.services.administration.unlinkIdentity(actor, target, linked.id)).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(
+      test.services.administration.resetSecondFactor(actor, target, "Administrator elsewhere"),
+    ).rejects.toThrow(ForbiddenError);
+    await expect(test.services.administration.endSessions(actor, target)).rejects.toThrow(ForbiddenError);
+    await expect(test.services.memberships.deactivate(actor, target)).rejects.toThrow(ForbiddenError);
+    await expect(test.services.homeOrganizations.change(actor, target, home.id)).rejects.toThrow(
+      ForbiddenError,
+    );
+    const identities = await test.pool.query(
+      "select count(*)::int as count from identities where account_id = $1",
+      [target],
+    );
+    expect(identities.rows[0]?.count).toBe(1);
+
+    await test.services.memberships.deactivate(SYSTEM, target);
+    await expect(test.services.administration.reactivate(actor, target)).rejects.toThrow(ForbiddenError);
+    await test.services.administration.reactivate(SYSTEM, target);
+
+    await test.database.transaction((tx) =>
+      test.services.memberships.add(tx, SYSTEM, {
+        organizationId: other.id,
+        accountId: admin,
+        kind: "member",
+      }),
+    );
+    await role(admin, "organization", "administrator", other.id);
+    await expect(
+      test.services.administration.resetSecondFactor(actor, target, "Administrator in both"),
+    ).resolves.toEqual({ endedSessions: 0 });
+    await expect(test.services.memberships.deactivate(actor, target)).resolves.toBe(0);
+  });
+
   it("decides through the authorization service and refuses people without the permission", async () => {
     const org = await organization();
     const member = await standard(org.id);

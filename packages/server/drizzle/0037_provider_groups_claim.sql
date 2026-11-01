@@ -1,2 +1,0 @@
-ALTER TABLE "identity_providers" ADD COLUMN "groups_claim_seen_at" timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "identity_providers" ADD COLUMN "groups_claim_missing_since" timestamp with time zone;

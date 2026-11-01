@@ -34,7 +34,7 @@ export const PORTAL_PATH_MAX = 60;
 export const TOP_BAR_THRESHOLD_MAX = 100;
 export const FEEDBACK_RETENTION_MAX = 60;
 const DOMAIN = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
-const PATH_LOCK = "pagehall.knowledge-base.paths";
+const PATH_LOCK = "lunedo.knowledge-base.paths";
 
 export type PortalLanguage = (typeof supportedLanguages)[number];
 
@@ -166,7 +166,7 @@ interface ConfigRow extends Record<string, unknown> {
   languages: ArticleLanguage[];
 }
 
-export const PORTAL_DOMAINS_CHANNEL = "pagehall_portal_domains";
+export const PORTAL_DOMAINS_CHANNEL = "lunedo_portal_domains";
 
 export class PortalService {
   readonly #database: Database;

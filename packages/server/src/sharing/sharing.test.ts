@@ -450,6 +450,43 @@ describe.skipIf(!baseUrl)("sharing", () => {
         link(context, { scope: "anyone", expiresAt: new Date(Date.now() + DAY) }),
       ).rejects.toMatchObject({ code: "restrictedPage" });
     });
+
+    it("names on a link for a personal page only groups of organizations its creator belongs to", async () => {
+      const org = await organization();
+      const insider = await member(org.id, "member", "Mia Member");
+      const finance = await group(org.id, [insider]);
+      const stranger = accountPrincipal(await account());
+      const personal = await test.services.personalSpaces.ensure(stranger, "Mine");
+      const notes = await test.services.tree.create(stranger, personal.id, {
+        kind: "page",
+        title: "Private notes",
+        mode: "live",
+        placement: { parentId: null },
+      });
+      await expect(
+        test.services.shareLinks.create(stranger, notes.id, {
+          scope: "people",
+          people: [{ kind: "group", id: finance }],
+        }),
+      ).rejects.toMatchObject({ code: "invalidHolder" });
+      expect(await test.services.shareLinks.list(stranger, notes.id)).toEqual([]);
+      expect(await can(accountPrincipal(insider), "item.view", { type: "item", id: notes.id })).toBe(false);
+
+      const colleague = accountPrincipal(await member(org.id, "member", "Carl Colleague"));
+      const own = await test.services.personalSpaces.ensure(colleague, "Mine");
+      const plan = await test.services.tree.create(colleague, own.id, {
+        kind: "page",
+        title: "Plan",
+        mode: "live",
+        placement: { parentId: null },
+      });
+      const { token } = await test.services.shareLinks.create(colleague, plan.id, {
+        scope: "people",
+        people: [{ kind: "group", id: finance }],
+      });
+      await test.services.shareLinks.open(token, accountPrincipal(insider), { clientIp: "192.0.2.9" });
+      expect(await can(accountPrincipal(insider), "item.view", { type: "item", id: plan.id })).toBe(true);
+    });
   });
 
   describe("access requests", () => {
@@ -464,13 +501,21 @@ describe.skipIf(!baseUrl)("sharing", () => {
       expect(open.map((request) => [request.requester.id, request.itemTitle, request.number])).toEqual([
         [context.outsiderId, "Launch plan", context.shared.number],
       ]);
+      const hidden = await test.services.accessRequests.mine(context.outsider);
       expect(
-        (await test.services.accessRequests.mine(context.outsider)).map((request) => [
+        hidden.map((request) => [
+          request.target,
+          request.spaceId,
+          request.spaceName,
           request.itemId,
           request.itemTitle,
           request.number,
         ]),
-      ).toEqual([[context.shared.id, null, null]]);
+      ).toEqual([["page", null, "", null, null, null]]);
+      expect(await test.services.accessRequests.get(context.outsider, hidden[0]?.id ?? "")).toMatchObject({
+        spaceId: null,
+        itemId: null,
+      });
       const editorNotices = await test.services.notifications.list(context.editorId, { limit: 10 });
       expect(editorNotices.items.map((item) => item.type)).toContain("access.requested");
       const decided = await test.services.accessRequests.decide(context.editor, open[0]?.id ?? "", {
@@ -479,11 +524,18 @@ describe.skipIf(!baseUrl)("sharing", () => {
       });
       expect(decided).toMatchObject({ status: "approved", role: "commenter" });
       expect(await test.services.accessRequests.mine(context.outsider)).toEqual([
-        expect.objectContaining({ itemTitle: "Launch plan", number: context.shared.number }),
+        expect.objectContaining({
+          spaceId: context.space.id,
+          itemId: context.shared.id,
+          itemTitle: "Launch plan",
+          number: context.shared.number,
+        }),
       ]);
       expect(await can(context.outsider, "item.comment", { type: "item", id: context.shared.id })).toBe(true);
       const notices = await test.services.notifications.list(context.outsiderId, { limit: 10 });
-      expect(notices.items.map((item) => item.type)).toContain("access.requestDecided");
+      expect(notices.items.find((item) => item.type === "access.requestDecided")?.actor?.id).toBe(
+        context.editorId,
+      );
       await expect(
         test.services.accessRequests.decide(context.editor, decided.id, { approve: false }),
       ).rejects.toMatchObject({ code: "requestClosed" });
@@ -587,6 +639,23 @@ describe.skipIf(!baseUrl)("sharing", () => {
       });
       expect(decided.status).toBe("approved");
       expect(await can(context.outsider, "space.view", { type: "space", id: context.space.id })).toBe(true);
+    });
+
+    it("does not name who declined a request for a page the requester cannot see", async () => {
+      const context = await setup();
+      await test.services.accessRequests.requestPage(context.outsider, context.shared.id, "");
+      const [open] = await test.services.accessRequests.forSpace(context.editor, context.space.id);
+      await test.services.accessRequests.decide(context.editor, open?.id ?? "", { approve: false });
+      const [declined] = await test.services.accessRequests.mine(context.outsider);
+      expect(declined).toMatchObject({ status: "declined", decidedBy: null, spaceId: null, itemId: null });
+      expect(await test.services.accessRequests.get(context.outsider, declined?.id ?? "")).toMatchObject({
+        decidedBy: null,
+      });
+      const forEditor = await test.services.accessRequests.get(context.editor, declined?.id ?? "");
+      expect(forEditor?.decidedBy?.id).toBe(context.editorId);
+      const notices = await test.services.notifications.list(context.outsiderId, { limit: 10 });
+      const decision = notices.items.find((item) => item.type === "access.requestDecided");
+      expect(decision).toMatchObject({ actor: null });
     });
 
     it("can be withdrawn by the requester only", async () => {

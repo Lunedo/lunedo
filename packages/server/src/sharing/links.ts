@@ -304,10 +304,19 @@ export class ShareLinkService {
         const group = await tx.execute<{ organization_id: string }>(
           sql`select organization_id from groups where id = ${person.id}`,
         );
-        if (
-          !group.rows[0] ||
-          (item.organization_id && group.rows[0].organization_id !== item.organization_id)
-        ) {
+        const groupOrganization = group.rows[0]?.organization_id;
+        const allowed =
+          groupOrganization !== undefined &&
+          (item.organization_id
+            ? groupOrganization === item.organization_id
+            : actor.type === "system" ||
+              (actor.type === "account" &&
+                (
+                  await tx.execute(sql`select 1 from memberships m where m.organization_id = ${groupOrganization}
+                    and m.account_id = ${actor.id} and m.kind = 'member'
+                    and (m.expires_at is null or m.expires_at > now())`)
+                ).rows.length > 0));
+        if (!allowed) {
           throw new SpaceError("invalidHolder", "Choose a group of the organization the page belongs to");
         }
       }

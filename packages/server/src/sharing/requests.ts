@@ -30,7 +30,8 @@ function tooManyRequests(): SpaceError {
 export interface AccessRequest {
   id: string;
   requester: { id: string; name: string | null; email: string | null };
-  spaceId: string;
+  target: "space" | "page";
+  spaceId: string | null;
   spaceName: string;
   itemId: string | null;
   number: number | null;
@@ -111,15 +112,17 @@ export class AccessRequestService {
     return {
       id: row.id,
       requester: { id: row.requester_id, name: row.requester_name, email: row.requester_email },
-      spaceId: row.space_id,
+      target: row.item_id === null ? "space" : "page",
+      spaceId: options.hideSpace ? null : row.space_id,
       spaceName: options.hideSpace ? "" : row.space_name,
-      itemId: row.item_id,
+      itemId: options.hideSpace ? null : row.item_id,
       number: options.hideSpace || row.item_number === null ? null : Number(row.item_number),
       itemTitle: options.hideSpace ? null : row.item_title,
       message: row.message,
       status: row.status,
       role: row.role,
-      decidedBy: row.decided_by ? { id: row.decided_by, name: row.decided_by_name } : null,
+      decidedBy:
+        row.decided_by && !options.hideSpace ? { id: row.decided_by, name: row.decided_by_name } : null,
       decidedAt: row.decided_at ? new Date(row.decided_at) : null,
       createdAt: new Date(row.created_at),
     };
@@ -454,7 +457,7 @@ export class AccessRequestService {
     const result = await this.#notifications.notify(tx, {
       type: "access.requestDecided",
       recipients: [request.requester_id],
-      actor,
+      actor: reveal || request.item_id === null ? actor : null,
       organizationId: request.organization_id,
       targetId: request.id,
       params: {

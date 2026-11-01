@@ -435,7 +435,7 @@ export class CopyService {
       const located = await this.#locate(actor, sourceItemId, request.spaceId);
       const mailIds = await this.#database.transaction(
         async (tx) => {
-          await tx.execute(sql`select set_config('pagehall.tree_settled_later', 'on', true)`);
+          await tx.execute(sql`select set_config('lunedo.tree_settled_later', 'on', true)`);
           await checkParent(tx, this.#authorization, actor, located.targetSpaceId, request.parentId);
           await checkKnowledgeBaseCopy(tx, located.targetSpaceId, sourceItemId, row.descendants);
           const plan = await this.#plan(tx, actor, sourceItemId, row.descendants);

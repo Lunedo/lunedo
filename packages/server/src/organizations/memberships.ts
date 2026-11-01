@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
+import { checkRankInOrganizations } from "../accounts/rank.js";
 import { accounts, instance } from "../accounts/schema.js";
 import type { AuditEventInput, AuditEvents, AuditLog } from "../audit/audit-log.js";
 import type { AuditEventName } from "../audit/catalog.js";
@@ -671,11 +672,18 @@ export class MembershipService {
           executor: tx,
           action: "account.deactivate",
         });
-        if (target.home) {
-          const homeOwner = await this.#authorization.isOrganizationOwner(accountId, target.home, tx);
-          const instanceAdministrator = instanceAreas.accounts === "manage";
-          if (!instanceAdministrator || (homeOwner && owner?.id !== actor.id))
-            await this.#checkRank(tx, actor, target.home, accountId);
+        const homeOwner = target.home
+          ? await this.#authorization.isOrganizationOwner(accountId, target.home, tx)
+          : false;
+        const instanceAdministrator = instanceAreas.accounts === "manage";
+        if (!instanceAdministrator || (homeOwner && owner?.id !== actor.id)) {
+          await checkRankInOrganizations(
+            this.#authorization,
+            tx,
+            actor,
+            target,
+            "organization.members.manage",
+          );
         }
       }
       const owned = await tx

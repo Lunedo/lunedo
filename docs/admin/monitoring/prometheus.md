@@ -1,6 +1,6 @@
 # Monitoring with Prometheus
 
-Checked against Prometheus documentation, October 2026.
+Checked against Prometheus documentation, November 2026.
 
 Prometheus reads the metrics of Lunedo from `/metrics` of the API. [monitoring.md](../monitoring.md) lists every metric and explains the token.
 

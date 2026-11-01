@@ -398,7 +398,7 @@ install_lunedo() {
     say "     project a fixed address and set LUNEDO_TRUSTED_PROXIES in .env to it, never to the"
     say "     whole subnet or its gateway:"
   fi
-  say "     https://github.com/lunedo/lunedo/blob/main/docs/admin/reverse-proxy.md"
+  say "     https://lunedo.org/docs/admin/reverse-proxy/"
   say "  3. Copy $directory/.env to a safe place. It holds the master key and the backup key;"
   say "     a backup cannot be restored without them."
   say "  4. Update later with: $directory/lunedo update"

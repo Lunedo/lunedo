@@ -503,7 +503,7 @@ export class AuditLog {
             .limit(RETENTION_BATCH);
           const last = expired.at(-1);
           if (!last) return 0;
-          await tx.execute(sql`select set_config('pagehall.audit_retention', 'on', true)`);
+          await tx.execute(sql`select set_config('lunedo.audit_retention', 'on', true)`);
           const deleted = await tx
             .delete(auditEvents)
             .where(and(ofScope, lte(auditEvents.sequence, last.sequence)));

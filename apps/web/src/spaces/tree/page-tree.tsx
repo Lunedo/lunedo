@@ -259,6 +259,13 @@ export function PageTree({
     [space, canEdit, currentId, expanded, toggle, focusedId, dropTarget, drop, loading, categories],
   );
 
+  useEffect(() => {
+    const tree = container.current;
+    const first = tree?.querySelector<HTMLElement>('[role="treeitem"]');
+    if (!first || tree?.querySelector('[role="treeitem"][tabindex="0"]')) return;
+    setFocusedId(first.dataset.itemId ?? null);
+  });
+
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const items = [...(container.current?.querySelectorAll<HTMLElement>('[role="treeitem"]') ?? [])];
     const index = items.indexOf(document.activeElement as HTMLElement);

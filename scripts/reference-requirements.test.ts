@@ -208,6 +208,19 @@ describe("derived requirements", () => {
     });
   });
 
+  it("never ask for fewer than 2 vCPU, because fewer were never measured", () => {
+    const quiet = parseRequirements(
+      data([run({ machinePeakCpuPercent: 10 }), run({ machinePeakCpuPercent: 12 })]),
+    );
+    const values = derive(only(quiet.sizes), quiet, 20);
+    assert.equal(values.minimumCpus, 2);
+    assert.equal(values.recommendedCpus, 2);
+    assert.match(
+      renderRequirements(source(data())),
+      /but at least 2 vCPU, because fewer were never measured/,
+    );
+  });
+
   it("never recommend more CPU than was measured, and none when a target was missed", () => {
     const busy = parseRequirements(data([run({ machinePeakCpuPercent: 97.5 }), run()]));
     assert.equal(derive(only(busy.sizes), busy, 20).recommendedCpus, 4);

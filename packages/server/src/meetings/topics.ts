@@ -343,6 +343,17 @@ export class TopicService {
       if (input.meetingId && (await this.#meetings.seriesOfMeeting(input.meetingId, tx)) !== seriesId) {
         throw new SpaceError("meetingNotFound", "The meeting does not belong to this series");
       }
+      if (raisedIn && (input.meetingId || description || input.oneOff)) {
+        const target = { type: "item" as const, id: raisedIn };
+        const visible = await this.#authorization.explain(actor, "item.view", target, { executor: tx });
+        if (!visible.allowed) throw new SpaceError("meetingNotFound", "The meeting does not exist");
+        if (description || input.oneOff) {
+          const editable = await this.#authorization.explain(actor, "item.edit", target, { executor: tx });
+          if (!editable.allowed) {
+            throw new SpaceError("meetingNotEditable", "You cannot edit the meeting notes");
+          }
+        }
+      }
       const raisedState = raisedIn
         ? (await tx.execute<{ state: string }>(sql`select state from meetings where item_id = ${raisedIn}`))
             .rows[0]?.state

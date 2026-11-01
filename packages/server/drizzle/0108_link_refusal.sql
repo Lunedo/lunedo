@@ -1,1 +1,0 @@
-ALTER TYPE "public"."sign_in_refusal_reason" ADD VALUE 'linkAmbiguous';

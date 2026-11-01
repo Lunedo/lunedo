@@ -78,6 +78,7 @@ export function applicationContentSecurityPolicy(
     `script-src ${["'self'", "'wasm-unsafe-eval'", ...scriptHashes].join(" ")}`,
     "worker-src 'self' blob: data:",
     `frame-src ${["'self'", ...frameSources].join(" ")}`,
+    "frame-ancestors 'self'",
   ].join("; ");
 }
 

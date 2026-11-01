@@ -1,11 +1,13 @@
 export interface WorkflowJob {
   readonly id: string;
   readonly runsOn: string;
+  readonly matrixRunners: readonly string[];
   readonly permissions: ReadonlyMap<string, string>;
   readonly commands: readonly string[];
 }
 
 const HOSTED_RUNNER = /^(ubuntu|windows|macos)-[\w.-]+$/;
+const MATRIX_RUNNER = /^\$\{\{\s*matrix\.runner\s*\}\}$/;
 const WRITE_SCOPES = ["contents", "packages"] as const;
 
 function indentOf(line: string): number {
@@ -69,6 +71,10 @@ export function workflowJobs(workflow: string): WorkflowJob[] {
     jobs.push({
       id: header[1],
       runsOn: runsOn.trim(),
+      matrixRunners: body.flatMap((line) => {
+        const value = /^\s*(?:- )?runner:\s*(\S.*)$/.exec(line)?.[1];
+        return value === undefined ? [] : [value.trim()];
+      }),
       permissions: permissionsOf(body, 4) ?? workflowPermissions,
       commands: commandsOf(body),
     });
@@ -89,9 +95,12 @@ export function releaseJobProblems(workflows: Readonly<Record<string, string>>):
       const scopes = writes(job);
       if (scopes.length === 0) continue;
       const where = `${file}, job ${job.id}`;
-      if (!HOSTED_RUNNER.test(job.runsOn)) {
+      const runners = MATRIX_RUNNER.test(job.runsOn) ? job.matrixRunners : [job.runsOn];
+      const foreign =
+        runners.length === 0 ? [job.runsOn] : runners.filter((runner) => !HOSTED_RUNNER.test(runner));
+      for (const runner of foreign) {
         problems.push(
-          `${where} has ${scopes.map((scope) => `${scope}: write`).join(" and ")} but runs on "${job.runsOn}". Jobs that may write packages or the repository run only on a fixed GitHub-hosted runner, never on vars.RUNNER_LABELS or a self-hosted label.`,
+          `${where} has ${scopes.map((scope) => `${scope}: write`).join(" and ")} but runs on "${runner}". Jobs that may write packages or the repository run only on a fixed GitHub-hosted runner, never on vars.RUNNER_LABELS or a self-hosted label.`,
         );
       }
       for (const command of job.commands) {

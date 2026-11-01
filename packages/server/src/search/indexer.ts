@@ -27,7 +27,7 @@ import {
 } from "./extraction/text.js";
 import { contentLanguageOf, TextSearchConfigs } from "./languages.js";
 
-export const SEARCH_CHANGES_CHANNEL = "pagehall_search_changes";
+export const SEARCH_CHANGES_CHANNEL = "lunedo_search_changes";
 
 export const EXTRACTOR_VERSION = 1;
 

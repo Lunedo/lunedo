@@ -27,7 +27,7 @@ The change has these effects:
 
 A browser tab still open under the old address shows that Lunedo has moved, with a link to the new address, instead of failing. The change is recorded in the audit log as "Instance address changed" (`instance.addressChanged`); see [Audit log](audit-log.md).
 
-When the address comes from `LUNEDO_INSTANCE_URL`, change the variable and restart instead. Passkeys and identity providers are affected in the same way, but Lunedo neither ends the sessions nor records the change in the audit log.
+When the address comes from `LUNEDO_INSTANCE_URL`, change the variable and restart instead. Passkeys and identity providers are affected in the same way, but Lunedo does not end the sessions. When the stored address differs from the variable at the start, the audit log records "Setting changed" (`settings.changed`) for `instance.url` by the system, not "Instance address changed".
 
 ## After a change
 

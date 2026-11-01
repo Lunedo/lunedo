@@ -85,7 +85,7 @@ What happens:
 - Pages, comments and history stay and show the former user.
 - The audit log keeps the events with the account ID only; the account's personal data there becomes unreadable, including the data of placeholders merged into it and of invitations to its addresses. Copies of the audit log that were exported or streamed to other systems are outside Lunedo; remove the data there if needed.
 
-The instance owner, service and portal accounts and the own account cannot be anonymized. Accounts that hold an instance role can be anonymized only by the instance owner.
+The instance owner, service and portal accounts and the own account cannot be anonymized. Accounts that hold an instance role can be anonymized only by the instance owner. An owner of an organization can be anonymized only by an owner of that organization or the instance owner.
 
 ## Reminders and inactivity
 

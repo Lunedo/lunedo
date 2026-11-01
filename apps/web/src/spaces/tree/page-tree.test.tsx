@@ -77,7 +77,7 @@ describe("PageTree", () => {
     expect(tree.hasAttribute("aria-busy")).toBe(false);
   });
 
-  it("shows the pages below the home page as the first level, without the home page and without meeting series", async () => {
+  it("shows the pages below the home page as the first level, without the home page and without meeting series, with the first one tabbable on the home page", async () => {
     const home = "0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a50";
     const withHome = { ...space, overviewItemId: home } as SpaceWithRole;
     const page = (id: string, title: string, parentId: string | null, kind = "page") => ({
@@ -111,7 +111,7 @@ describe("PageTree", () => {
               },
             },
     });
-    await renderWithProviders(inSpace(<PageTree space={withHome} currentId={null} ancestors={[]} />));
+    await renderWithProviders(inSpace(<PageTree space={withHome} currentId={home} ancestors={[]} />));
     const tree = await screen.findByRole("tree", { name: "Page tree" });
     await within(tree).findByRole("treeitem", { name: "Network" });
     expect(
@@ -125,8 +125,9 @@ describe("PageTree", () => {
     expect(
       within(tree)
         .getAllByRole("treeitem")
-        .filter((entry) => entry.getAttribute("tabindex") === "0"),
-    ).toHaveLength(1);
+        .filter((entry) => entry.getAttribute("tabindex") === "0")
+        .map((entry) => entry.getAttribute("aria-label")),
+    ).toEqual(["Network"]);
   });
 
   it("draws the expand button of the current row on the accent fill, with a ring instead of a box on hover", async () => {

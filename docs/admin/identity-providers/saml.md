@@ -1,8 +1,8 @@
 # SAML
 
-Checked against Microsoft Entra and AD FS documentation, October 2026.
+Checked against Microsoft Entra and AD FS documentation, November 2026.
 
-Use **SAML 2.0** for identity providers such as Active Directory Federation Services (ADFS), Shibboleth or Microsoft Entra ID. Lunedo is the service provider. Profile and groups update at every sign-in; SAML has no directory Lunedo could synchronize with in the background. With [SCIM](scim.md), the provider can send changes at once.
+Use **SAML 2.0** for identity providers such as Active Directory Federation Services (ADFS), Shibboleth or Microsoft Entra ID. Lunedo is the service provider. Profile and groups update at every sign-in; SAML has no directory Lunedo could synchronize with in the background. The exception is the preset Microsoft Entra ID (SAML) with access to Microsoft Graph (see [Microsoft Graph for SAML](entra-id.md#microsoft-graph-for-saml)). With [SCIM](scim.md), the provider can send changes at once.
 
 The assistant offers three presets under **Identity provider**: Microsoft Entra ID (SAML), Active Directory Federation Services and Other SAML provider. For Entra ID, see [Microsoft Entra ID](entra-id.md#saml); this page describes the settings every SAML provider shares, and ADFS and other providers. What all providers share, such as domains, credentials, testing and the first sign-in, is described in [Identity providers](../identity-providers.md).
 

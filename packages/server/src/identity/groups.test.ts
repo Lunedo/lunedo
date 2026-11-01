@@ -537,7 +537,21 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
     expect(await membership(other.id, person.id)).toBe("member");
     expect(await roles(person.id)).toEqual([{ scope: "organization", role: "administrator" }]);
 
-    await test.services.administration.unlinkIdentity(accountPrincipal(home.owner), person.id, identityId);
+    await expect(
+      test.services.administration.unlinkIdentity(accountPrincipal(home.owner), person.id, identityId),
+    ).rejects.toMatchObject({ decision: { denials: ["roleExceedsOwnPermissions"] } });
+    const administrator = await account(null);
+    await test.services.roles.assign(SYSTEM, {
+      scope: "instance",
+      organizationId: null,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: administrator.id },
+    });
+    await test.services.administration.unlinkIdentity(
+      accountPrincipal(administrator.id),
+      person.id,
+      identityId,
+    );
     expect(await membership(other.id, person.id)).toBeNull();
     expect(await roles(person.id)).toEqual([]);
   });

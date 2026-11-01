@@ -15,7 +15,9 @@ import { RateLimitedError } from "../auth/errors.js";
 import { clientSubject, type RateLimiter } from "../auth/throttle.js";
 import { hashToken } from "../auth/tokens.js";
 import { intersectAreas } from "../authorization/areas.js";
-import type { AuthorizationService } from "../authorization/service.js";
+import { accountItemCondition } from "../authorization/item-access.js";
+import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
+import { spaceRoleConditionFor } from "../authorization/space-access.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { defineJob } from "../jobs/job-queue.js";
@@ -23,6 +25,7 @@ import type { NotificationService } from "../notifications/service.js";
 import { memberships } from "../organizations/access-schema.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import type { ScopeChain, SettingsService } from "../settings/service.js";
+import type { SpaceRole } from "../spaces/schema.js";
 import { apiTokenPrefix, generateApiToken, isValidApiTokenFormat } from "./format.js";
 import { apiTokens, serviceAccounts } from "./schema.js";
 import {
@@ -197,6 +200,51 @@ export class ApiTokenService {
     );
   }
 
+  async #checkSpaceReach(
+    actorId: string,
+    serviceAccountId: string,
+    organizationId: string,
+    scopes: TokenScopes,
+    contentLevel: ContentLevel,
+    knowledgeBaseIds: readonly string[] | null,
+    executor: Executor = this.#database,
+  ): Promise<void> {
+    const level = scopes.organization?.spaces;
+    if (level !== "view" && level !== "manage") return;
+    const roles: SpaceRole[] =
+      level === "manage" && contentLevel !== "read" ? ["reader", "editor", "admin"] : ["reader"];
+    const limit = knowledgeBaseIds ? sql`and s.id = any(${sql.param([...knowledgeBaseIds])}::uuid[])` : sql``;
+    const uncovered = sql.join(
+      roles.map(
+        (role) => sql`(${spaceRoleConditionFor(sql`${serviceAccountId}::uuid`, sql`s`, role)}
+          and not ${spaceRoleConditionFor(sql`${actorId}::uuid`, sql`s`, role)})`,
+      ),
+      sql` or `,
+    );
+    const serviceAccount = sql`${serviceAccountId}::uuid`;
+    const creator = sql`${actorId}::uuid`;
+    const uncoveredItems = sql.join(
+      roles.map((role) => {
+        const options = { editRestriction: role !== "reader" };
+        return sql`(${accountItemCondition(serviceAccount, sql`t`, sql`s`, role, options)}
+          and not ${accountItemCondition(creator, sql`t`, sql`s`, role, options)})`;
+      }),
+      sql` or `,
+    );
+    const result = await executor.execute<{ found: boolean }>(sql`
+      select exists (select 1 from spaces s where s.organization_id = ${organizationId} ${limit} and (${uncovered}))
+        or exists (select 1 from tree_items t join spaces s on s.id = t.space_id
+          where s.organization_id = ${organizationId} ${limit} and (${uncoveredItems})) as found`);
+    if (!result.rows[0]?.found) return;
+    throw new ForbiddenError({
+      action: "serviceAccount.manage",
+      resource: { type: "organization", id: organizationId },
+      allowed: false,
+      grants: [],
+      denials: ["roleExceedsOwnPermissions"],
+    });
+  }
+
   async ownerOrganization(accountId: string): Promise<string | null> {
     const owner = await this.#owner(this.#database, accountId);
     return owner?.serviceOrganization ?? null;
@@ -251,6 +299,14 @@ export class ApiTokenService {
         actorHolds: true,
         action: "serviceAccount.manage",
       });
+      await this.#checkSpaceReach(
+        actor.id,
+        owner.id,
+        service,
+        scopes,
+        contentLevel,
+        input.knowledgeBaseIds ?? null,
+      );
     }
     const maxDays = await this.#maxLifetimeDays(
       await this.#chains(this.#database, input.accountId, service, organizationId),
@@ -357,6 +413,18 @@ export class ApiTokenService {
         change.knowledgeBaseIds,
         current.organizationId ?? (await this.ownerOrganization(current.accountId)),
       );
+      const service = await this.ownerOrganization(current.accountId);
+      if (service && actor.type === "account" && actor.id !== current.accountId) {
+        await this.#checkSpaceReach(
+          actor.id,
+          current.accountId,
+          service,
+          scopes,
+          change.contentLevel,
+          knowledgeBaseIds,
+          tx,
+        );
+      }
       const previousLevel = contentLevelOf(current.contentLevel);
       const unchanged =
         previousLevel === change.contentLevel &&

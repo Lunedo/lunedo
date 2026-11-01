@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import {
   anchorAt,
+  commentText,
   containsAnchor,
   type DocumentJson,
   editorSchemaVersion,
@@ -153,6 +154,24 @@ describe("comment content", () => {
     );
     expect(codes(doc(paragraph(text(" "))))).toContain("invalidContent");
     expect(codes(doc(paragraph(text("x".repeat(MAX_COMMENT_BYTES)))))).toContain("tooLarge");
+  });
+});
+
+describe("comment text", () => {
+  const comment = doc(paragraph(text("Ask "), { type: "mention", attrs: { id: ANNA } }, text(" about it.")), {
+    type: "bulletList",
+    content: [{ type: "listItem", content: [paragraph(text("Item"))] }],
+  });
+
+  it("writes a mention as @ and the name it is given", () => {
+    expect(commentText(comment, (id) => (id === ANNA ? "Anna Example" : null))).toBe(
+      "Ask @Anna Example about it.\nItem",
+    );
+  });
+
+  it("leaves out mentions without a name and keeps the rest", () => {
+    expect(commentText(comment, () => null)).toBe("Ask  about it.\nItem");
+    expect(commentText(comment)).toBe("Ask  about it.\nItem");
   });
 });
 

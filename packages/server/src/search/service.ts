@@ -333,7 +333,7 @@ export class SearchService {
     const query = parseQuery(request.query);
     if (query.clauses.length === 0) return empty;
     const limit = Math.min(Math.max(request.limit, 1), SEARCH_PAGE_LIMIT);
-    const result = await this.#adapter.search(this.#database, {
+    const result = await this.#searchIndex({
       viewer,
       query,
       prefixLastTerm: false,

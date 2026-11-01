@@ -311,6 +311,57 @@ describe.skipIf(!baseUrl)("notification e-mails", () => {
       expect(mail?.text).toContain("Gesendet von");
     });
 
+    it("names the people a comment mentions in the excerpt, in the mail and in the app", async () => {
+      const context = await setup();
+      const stranger = await member((await organization()).id, "member", "Sam Stranger");
+      await test.settings.set(
+        settingsOf("comments").email,
+        { user: context.readerId },
+        "user",
+        "immediately",
+      );
+      const mention = (id: string): NodeJson => ({ type: "mention", attrs: { id } });
+      const created = await test.services.comments.create(
+        accountPrincipal(context.authorId),
+        context.page.id,
+        {
+          body: doc({
+            type: "paragraph",
+            content: [
+              { type: "text", text: "Please check, " },
+              mention(context.otherId),
+              { type: "text", text: " and " },
+              mention(stranger),
+              { type: "text", text: "." },
+            ],
+          }),
+        },
+      );
+      await test.database.transaction((tx) =>
+        test.services.notifications.notify(tx, {
+          type: "comment.created",
+          recipients: [context.readerId],
+          organizationId: context.org.id,
+          targetId: context.page.id,
+          actor: accountPrincipal(context.authorId),
+          params: {
+            itemTitle: context.page.title,
+            itemKind: "page",
+            spaceKey: context.space.key,
+            commentId: created,
+          },
+        }),
+      );
+      const [item] = (await test.services.notifications.list(context.readerId, { limit: 10 })).items;
+      expect(item?.preview).toBe("Please check, @Otto Other and .");
+      await test.services.notificationMailer.sendDue(inMinutes(31));
+      const mails = await sent(context.readerId);
+      expect(mails).toHaveLength(1);
+      expect(mails[0]?.text).toContain("Please check, @Otto Other and .");
+      expect((await sent(context.otherId))[0]?.text).toContain("Please check, @Otto Other and .");
+      expect(mails[0]?.text).not.toContain("Sam Stranger");
+    });
+
     it("checks access when the mail is built and leaves out what the person can no longer read", async () => {
       const context = await setup();
       await test.settings.set(

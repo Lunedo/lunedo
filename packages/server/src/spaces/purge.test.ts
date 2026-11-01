@@ -1,7 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { Readable } from "node:stream";
-import { fileURLToPath } from "node:url";
 import { uuidv7 } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -154,38 +152,6 @@ describe.skipIf(!baseUrl)("permanent deletion", () => {
     );
     expect(Number(spaces.rows[0]?.count)).toBe(0);
     expect(await stored([project.id, budget.id, line.id, ...extra.map((page) => page.id)])).toBe(0);
-  });
-
-  it("repairs archive references of pages that were deleted from an archive", async () => {
-    const { project, budget, line } = await archivedProject();
-    const kept = await archivedProject();
-    await keepLegacyArchiveReference([budget.id, line.id], project.id);
-
-    const migration = readFileSync(
-      fileURLToPath(new URL("../../drizzle/0050_purge_without_archive_reference.sql", import.meta.url)),
-      "utf8",
-    );
-    const repair = migration.split("--> statement-breakpoint").at(-1) ?? "";
-    await test.pool.query(repair);
-
-    const rows = await test.database.execute<{ id: string; archived_root_id: string | null }>(sql`
-      select id, archived_root_id from tree_items
-      where id in (${project.id}, ${budget.id}, ${line.id}, ${kept.project.id})`);
-    expect(Object.fromEntries(rows.rows.map((row) => [row.id, row.archived_root_id]))).toEqual({
-      [project.id]: project.id,
-      [budget.id]: null,
-      [line.id]: null,
-      [kept.project.id]: kept.project.id,
-    });
-    const archive = await setup();
-    const root = await archive.page("Root");
-    const child = await archive.page("Child", root.id);
-    await test.services.archive.archive(archive.as, root.id);
-    await test.pool.query(repair);
-    const untouched = await test.database.execute<{ archived_root_id: string | null }>(
-      sql`select archived_root_id from tree_items where id = ${child.id}`,
-    );
-    expect(untouched.rows[0]?.archived_root_id).toBe(root.id);
   });
 
   describe("with a failing entry", () => {

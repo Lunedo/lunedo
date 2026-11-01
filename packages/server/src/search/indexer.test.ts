@@ -1,7 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { Writable } from "node:stream";
 import type { DocumentJson } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
@@ -9,7 +6,6 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
 import { createDatabase } from "../database/database.js";
-import { migrationsFolder, runMigrations } from "../database/migrate.js";
 import { createDatabasePool } from "../database/pool.js";
 import { createLogger } from "../logging/logger.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
@@ -20,22 +16,9 @@ import { PostgresSearchAdapter } from "./postgres-adapter.js";
 import { searchRequest } from "./search.testing.js";
 
 const baseUrl = testDatabaseBaseUrl();
-const SEARCH_MIGRATION = "0056_search_index";
 
 function body(text: string): DocumentJson {
   return { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] };
-}
-
-function migrationsBefore(tag: string): string {
-  const folder = mkdtempSync(path.join(tmpdir(), "lunedo-migrations-"));
-  cpSync(migrationsFolder, folder, { recursive: true });
-  const journalPath = path.join(folder, "meta", "_journal.json");
-  const journal = JSON.parse(readFileSync(journalPath, "utf8")) as { entries: { tag: string }[] };
-  const index = journal.entries.findIndex((entry) => entry.tag === tag);
-  if (index < 0) throw new Error(`The migration ${tag} does not exist`);
-  journal.entries = journal.entries.slice(0, index);
-  writeFileSync(journalPath, JSON.stringify(journal));
-  return folder;
 }
 
 describe.skipIf(!baseUrl)("search indexer", () => {
@@ -532,78 +515,5 @@ describe.skipIf(!baseUrl)("search indexer", () => {
     await test.pool.query("update tree_items set content_language = 'fr' where id = $1", [pageId]);
     await test.services.search.indexer.drain();
     expect(await config()).toEqual({ config: "french", language: "fr" });
-  });
-});
-
-describe.skipIf(!baseUrl)("search index after the migration", () => {
-  let test: TestServices;
-  const organizationId = randomUUID();
-  const accountId = randomUUID();
-  const itemIds = [randomUUID(), randomUUID()];
-
-  beforeAll(async () => {
-    test = await createTestServices(baseUrl ?? "", {
-      beforeMigrations: async (url) => {
-        const pool = createDatabasePool({ connectionString: url, applicationName: "lunedo-test" });
-        try {
-          await runMigrations(pool, {
-            logger: createLogger({ service: "test", level: "silent" }),
-            folder: migrationsBefore(SEARCH_MIGRATION),
-          });
-          const spaceId = randomUUID();
-          await pool.query("insert into organizations (id, name, slug) values ($1, 'Existing', $2)", [
-            organizationId,
-            `existing-${organizationId.slice(0, 8)}`,
-          ]);
-          await pool.query(
-            "insert into accounts (id, type, state, email, name) values ($1, 'standard', 'active', $2, 'Existing member')",
-            [accountId, `${accountId}@example.org`],
-          );
-          await pool.query(
-            "insert into memberships (id, organization_id, account_id, kind) values ($1, $2, $3, 'member')",
-            [randomUUID(), organizationId, accountId],
-          );
-          await pool.query(
-            "insert into spaces (id, organization_id, key, name, visibility) values ($1, $2, 'EXIST', 'Existing', 'organization')",
-            [spaceId, organizationId],
-          );
-          for (const [index, itemId] of itemIds.entries()) {
-            await pool.query(
-              "insert into tree_items (id, space_id, kind, position, title, mode) values ($1, $2, 'page', $3, $4, 'live')",
-              [itemId, spaceId, `a${index}`, `Existing page ${index}`],
-            );
-            await pool.query(
-              "insert into page_documents (item_id, state, snapshot, schema_version) values ($1, '\\x00', $2, 1)",
-              [itemId, body("written before search existed")],
-            );
-          }
-        } finally {
-          await pool.end();
-        }
-      },
-    });
-  });
-
-  afterAll(async () => {
-    await test?.close();
-  });
-
-  it("fills the index in the background after the first start and says so until it is done", async () => {
-    const before = await test.services.search.search(
-      accountPrincipal(accountId),
-      organizationId,
-      searchRequest("existed"),
-    );
-    expect(before.results).toEqual([]);
-    expect(before.index).toEqual({ building: true });
-    expect(await test.services.search.indexer.state()).toMatchObject({ building: true, total: 2, done: 0 });
-    await test.services.search.indexer.drain();
-    const after = await test.services.search.search(
-      accountPrincipal(accountId),
-      organizationId,
-      searchRequest("existed"),
-    );
-    expect(after.results.map((hit) => hit.itemId).sort()).toEqual([...itemIds].sort());
-    expect(after.index.building).toBe(false);
   });
 });

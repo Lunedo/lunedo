@@ -568,3 +568,42 @@ describe.skipIf(!databaseBaseUrl)("setup with an instance URL that differs from 
     expect(restart.statusCode).toBe(204);
   });
 });
+
+describe.skipIf(!databaseBaseUrl)("the system check behind a proxy that is not trusted", () => {
+  const GATEWAY = "172.17.0.1";
+  let test: AuthTestApp;
+
+  beforeAll(async () => {
+    test = await createAuthTestApp({ LUNEDO_TRUSTED_PROXIES: "" });
+  });
+
+  afterAll(async () => {
+    await test?.close();
+  });
+
+  async function clientAddressCheck(headers: Record<string, string>) {
+    const client = new TestClient(test.app, { remoteAddress: GATEWAY });
+    const started = await client.post(
+      "/api/v1/setup/session",
+      { code: await issueCode(test) },
+      { ...headers, origin: "http://lunedo.test" },
+    );
+    expect(started.statusCode).toBe(204);
+    const steps = (await client.get("/api/v1/setup/steps", headers)).json();
+    return steps.steps.find((step: { id: string }) => step.id === "systemCheck").details.checks.clientAddress;
+  }
+
+  it("warns when requests from the gateway address carry a forwarded client address", async () => {
+    expect(await clientAddressCheck({ host: "lunedo.test", "x-forwarded-for": "203.0.113.9" })).toMatchObject(
+      {
+        status: "warning",
+        cause: "untrustedProxy",
+        docs: "admin/reverse-proxy.md#forwarded-headers-and-lunedo_trusted_proxies",
+      },
+    );
+  });
+
+  it("does not warn when requests from the gateway address carry no forwarded client address", async () => {
+    expect(await clientAddressCheck({ host: "lunedo.test" })).toMatchObject({ status: "ok", cause: null });
+  });
+});

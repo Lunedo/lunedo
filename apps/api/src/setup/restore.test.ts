@@ -50,7 +50,7 @@ describe.skipIf(!databaseBaseUrl)("restoring a backup from the setup through the
       filesDir: source,
       config: {},
       lunedoVersion: "1.0.3",
-      schemaVersion: "0000_foundation",
+      schemaVersion: "0000_baseline",
       logger: createLogger({ service: "test", level: "silent" }),
     });
   });

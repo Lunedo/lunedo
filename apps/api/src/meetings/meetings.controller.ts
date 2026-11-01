@@ -824,7 +824,8 @@ export class MeetingsController {
   @Permission("item.edit", series)
   @ApiRoute({
     summary: "Add a running topic",
-    description: "Creates a topic and adds it to the upcoming meeting.",
+    description:
+      "Creates a topic and adds it to the upcoming meeting. Naming a meeting needs read access to it; a description, which goes into the notes of that meeting, and a topic for one meeting only need edit permission on it.",
     tags: [TAG],
     params: seriesParams,
     body: createTopicSchema,
@@ -848,6 +849,7 @@ export class MeetingsController {
       "invalidMember",
       "seriesEnded",
       "meetingRequired",
+      "meetingNotEditable",
       "invalidUpdate",
     ],
   })
