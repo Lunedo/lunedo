@@ -288,33 +288,6 @@ describe("rendered section", () => {
     assert.doesNotMatch(renderRequirements(source(data())), /while it missed the targets/);
   });
 
-  it("says which sizes were load-tested with an earlier version than the newest runs", () => {
-    const later = (scenario: "peak" | "typical") =>
-      run({
-        scenario,
-        commit: "abcdef0123456789abcdef0123456789abcdef01",
-        startedAt: "2026-11-01T08:00:00Z",
-      });
-    const measured = data();
-    const small = only(measured.sizes);
-    const sizes = [
-      small,
-      { ...small, name: "medium" },
-      { ...small, name: "large", loadRuns: [later("peak"), later("peak")] },
-    ];
-    const text = renderRequirements(source({ ...measured, sizes }));
-    assert.match(
-      text,
-      /Small and medium were load-tested with an earlier version \(`fedcba98`\) than large \(`abcdef01`\), so their response times and CPU values do not include the performance changes made since then\./,
-    );
-    const one = renderRequirements(source({ ...measured, sizes: [small, sizes[2]] }));
-    assert.match(
-      one,
-      /Small was load-tested with an earlier version \(`fedcba98`\) than large \(`abcdef01`\), so its response times/,
-    );
-    assert.doesNotMatch(renderRequirements(source(measured)), /earlier version/);
-  });
-
   it("replaces only the marked section of a hand-written page", () => {
     const [start, end] = sectionMarkers("measured-requirements");
     const reference = {

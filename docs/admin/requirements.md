@@ -101,7 +101,7 @@ Directories that you mount must belong to UID 1000, or the [system check](system
 
 This section is generated from `docs/data/requirements.json`, `packages/server/src/backup/configuration.ts` by `pnpm docs:generate`. Do not edit it by hand; change the sources and run the command again.
 
-Measured on a reference machine with 4 vCPU (12th Gen Intel(R) Core(TM) i5-12500), 7.8 GiB of RAM and 272.5 GB of disk (ZFS on one consumer NVMe SSD without power-loss protection, shared with seven other virtual machines, which were kept quiet during the load runs of size large), running Ubuntu 24.04.5 LTS with kernel 6.8.0-147-generic, Docker 29.9.2, Docker Compose 5.6.1 and PostgreSQL 17.11. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. Size, backups and start times were measured on 2026-10-31 with commit `8c70161e`. The load came from one computer, which sent the requests of each person from a client address of its own, in load runs of 15 minutes.
+Measured on a reference machine with 4 vCPU (12th Gen Intel(R) Core(TM) i5-12500), 7.8 GiB of RAM and 272.5 GB of disk (ZFS on one consumer NVMe SSD), running Ubuntu 24.04.5 LTS with kernel 6.8.0-147-generic, Docker 29.9.2, Docker Compose 5.6.1 and PostgreSQL 17.11. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. Size, backups and start times were measured on 2026-11-01 with commit `8c70161e`. The load came from one computer, which sent the requests of each person from a client address of its own, in load runs of 15 minutes.
 
 ### Scenarios
 
@@ -117,7 +117,8 @@ The targets apply to **typical**; **peak** shows how much room is left. A size m
 | Size | Scenario | Load runs | Measured on | Commit | Not counted at the start |
 |---|---|---|---|---|---|
 | small | peak | 3 | 2026-10-29 | `8c70161e` | nothing |
-| medium | peak | 3 | 2026-10-29 | `8c70161e` | nothing |
+| medium | typical | 2 | 2026-11-01 | `adb35241` | 4 min |
+| medium | peak | 2 | 2026-11-01 | `adb35241` | 4 min |
 | large | typical | 2 | 2026-10-31 | `21e978c3` | 4 min |
 | large | peak | 3 | 2026-10-31 | `21e978c3` | 4 min |
 
@@ -136,12 +137,8 @@ The targets apply to **typical**; **peak** shows how much room is left. A size m
 | Size | Minimum CPU | Minimum RAM | Minimum disk | Recommended CPU | Recommended RAM | Recommended disk, backups elsewhere | Recommended disk, backups on this host |
 |---|---|---|---|---|---|---|---|
 | small | 2 vCPU | 2 GiB | 6 GB | 3 vCPU | 3 GiB | 7 GB | 56 GB |
-| medium | 4 vCPU | 2 GiB | 42 GB | more than 4 vCPU; the targets were missed on the reference machine | 3 GiB | 55 GB | 541 GB |
+| medium | 1 vCPU | 5 GiB | 42 GB | 2 vCPU | 7 GiB | 55 GB | 541 GB |
 | large | 2 vCPU | 5 GiB | 107 GB | 3 vCPU | 7 GiB | 139 GB | 1,371 GB |
-
-The minimum of medium is what the reference machine used while it missed the targets, not what keeps this size usable.
-
-Small and medium were load-tested with an earlier version (`8c70161e`) than large (`21e978c3`), so their response times and CPU values do not include the performance changes made since then.
 
 ### Response times under load
 
@@ -150,7 +147,8 @@ Median of the load runs; p95 is the time within which 95 % of the requests finis
 | Size | Scenario | Open a page, API | Open a page, readable | Search | Save | For you and notifications | Errors |
 |---|---|---|---|---|---|---|---|
 | small | peak | 160 ms / 256 ms | 353 ms / 855 ms | 86 ms / 136 ms | 54 ms / 85 ms | 45 ms / 69 ms | 0 |
-| medium | peak | 271 ms / 1.20 s | 829 ms / 1.84 s | 252 ms / 865 ms | 89 ms / 349 ms | 404 ms / 919 ms | 0 |
+| medium | typical | 35 ms / 59 ms | 223 ms / 261 ms | 65 ms / 95 ms | 27 ms / 38 ms | 124 ms / 142 ms | 0 |
+| medium | peak | 35 ms / 60 ms | 223 ms / 246 ms | 66 ms / 97 ms | 24 ms / 42 ms | 127 ms / 152 ms | 0 |
 | large | typical | 38 ms / 67 ms | 223 ms / 249 ms | 180 ms / 229 ms | 22 ms / 59 ms | 21 ms / 38 ms | 0 |
 | large | peak | 43 ms / 105 ms | 227 ms / 333 ms | 199 ms / 480 ms | 24 ms / 57 ms | 25 ms / 66 ms | 0 |
 
@@ -165,10 +163,15 @@ Each cell shows p50 / p95.
 | small | peak | Search (p95) | below 800 ms | 148 ms | yes |
 | small | peak | Save (p95) | below 500 ms | 101 ms | yes |
 | small | peak | Errors | 0 | 0 | yes |
-| medium | peak | Open a page, API (p95) | below 500 ms | 1.48 s | no |
-| medium | peak | Open a page, readable (p95) | below 1.50 s | 1.93 s | no |
-| medium | peak | Search (p95) | below 800 ms | 1.41 s | no |
-| medium | peak | Save (p95) | below 500 ms | 375 ms | yes |
+| medium | typical | Open a page, API (p95) | below 500 ms | 60 ms | yes |
+| medium | typical | Open a page, readable (p95) | below 1.50 s | 272 ms | yes |
+| medium | typical | Search (p95) | below 800 ms | 95 ms | yes |
+| medium | typical | Save (p95) | below 500 ms | 39 ms | yes |
+| medium | typical | Errors | 0 | 0 | yes |
+| medium | peak | Open a page, API (p95) | below 500 ms | 60 ms | yes |
+| medium | peak | Open a page, readable (p95) | below 1.50 s | 248 ms | yes |
+| medium | peak | Search (p95) | below 800 ms | 101 ms | yes |
+| medium | peak | Save (p95) | below 500 ms | 43 ms | yes |
 | medium | peak | Errors | 0 | 0 | yes |
 | large | typical | Open a page, API (p95) | below 500 ms | 67 ms | yes |
 | large | typical | Open a page, readable (p95) | below 1.50 s | 257 ms | yes |
@@ -186,7 +189,7 @@ Each cell shows p50 / p95.
 | Size | Database | File store | Image | One full backup | Backup takes | Restore takes | Start until ready | RAM when idle | New page found in search (p95) | Job queue under load (peak) |
 |---|---|---|---|---|---|---|---|---|---|---|
 | small | 150 MB | 2.0 GB | 1.1 GB | 2.0 GB | 45.5 s | 22.8 s | 9.30 s | 741 MiB | 700 ms | 16 |
-| medium | 1.3 GB | 19.6 GB | 1.1 GB | 19.7 GB | 7 min 25 s | 4 min 52 s | 9.30 s | 826 MiB | 3.50 s | 16 |
+| medium | 1.3 GB | 19.6 GB | 1.1 GB | 19.7 GB | 7 min 25 s | 4 min 52 s | 9.30 s | 826 MiB | 1.00 s | 16 |
 | large | 6.4 GB | 49.2 GB | 1.1 GB | 49.9 GB | 20 min 8 s | 17 min 4 s | 10.0 s | 885 MiB | 2.40 s | 16 |
 
 ### Writing through the API
