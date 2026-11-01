@@ -509,10 +509,26 @@
                       "additionalProperties": false,
                       "description": "Who asks."
                     },
-                    "spaceId": {
+                    "target": {
                       "type": "string",
-                      "format": "uuid",
-                      "description": "The space."
+                      "description": "Whether the request is for a whole space or for a page. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "space",
+                        "page"
+                      ]
+                    },
+                    "spaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "The space."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The space, or null when the requester cannot see the page the request is for."
                     },
                     "spaceName": {
                       "type": "string",
@@ -522,13 +538,14 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid"
+                          "format": "uuid",
+                          "description": "The page."
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The page, or null for the whole space."
+                      "description": "The page; null for the whole space and when the requester cannot see the page."
                     },
                     "number": {
                       "anyOf": [
@@ -635,6 +652,7 @@
                   "required": [
                     "id",
                     "requester",
+                    "target",
                     "spaceId",
                     "spaceName",
                     "itemId",
@@ -657,6 +675,7 @@
                     "name": "Mia Kranz",
                     "email": "mia.kranz@example.org"
                   },
+                  "target": "space",
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                   "spaceName": "IT Operations",
                   "itemId": null,
@@ -909,10 +928,26 @@
                       "additionalProperties": false,
                       "description": "Who asks."
                     },
-                    "spaceId": {
+                    "target": {
                       "type": "string",
-                      "format": "uuid",
-                      "description": "The space."
+                      "description": "Whether the request is for a whole space or for a page. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "space",
+                        "page"
+                      ]
+                    },
+                    "spaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "The space."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The space, or null when the requester cannot see the page the request is for."
                     },
                     "spaceName": {
                       "type": "string",
@@ -922,13 +957,14 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid"
+                          "format": "uuid",
+                          "description": "The page."
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The page, or null for the whole space."
+                      "description": "The page; null for the whole space and when the requester cannot see the page."
                     },
                     "number": {
                       "anyOf": [
@@ -1035,6 +1071,7 @@
                   "required": [
                     "id",
                     "requester",
+                    "target",
                     "spaceId",
                     "spaceName",
                     "itemId",
@@ -1057,6 +1094,7 @@
                     "name": "Mia Kranz",
                     "email": "mia.kranz@example.org"
                   },
+                  "target": "space",
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                   "spaceName": "IT Operations",
                   "itemId": null,
@@ -1522,10 +1560,26 @@
                         "additionalProperties": false,
                         "description": "Who asks."
                       },
-                      "spaceId": {
+                      "target": {
                         "type": "string",
-                        "format": "uuid",
-                        "description": "The space."
+                        "description": "Whether the request is for a whole space or for a page. New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "space",
+                          "page"
+                        ]
+                      },
+                      "spaceId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "The space."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The space, or null when the requester cannot see the page the request is for."
                       },
                       "spaceName": {
                         "type": "string",
@@ -1535,13 +1589,14 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "format": "uuid"
+                            "format": "uuid",
+                            "description": "The page."
                           },
                           {
                             "type": "null"
                           }
                         ],
-                        "description": "The page, or null for the whole space."
+                        "description": "The page; null for the whole space and when the requester cannot see the page."
                       },
                       "number": {
                         "anyOf": [
@@ -1648,6 +1703,7 @@
                     "required": [
                       "id",
                       "requester",
+                      "target",
                       "spaceId",
                       "spaceName",
                       "itemId",
@@ -1673,6 +1729,7 @@
                       "name": "Mia Kranz",
                       "email": "mia.kranz@example.org"
                     },
+                    "target": "space",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                     "spaceName": "IT Operations",
                     "itemId": null,
@@ -238877,10 +238934,26 @@
                         "additionalProperties": false,
                         "description": "Who asks."
                       },
-                      "spaceId": {
+                      "target": {
                         "type": "string",
-                        "format": "uuid",
-                        "description": "The space."
+                        "description": "Whether the request is for a whole space or for a page. New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "space",
+                          "page"
+                        ]
+                      },
+                      "spaceId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "The space."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The space, or null when the requester cannot see the page the request is for."
                       },
                       "spaceName": {
                         "type": "string",
@@ -238890,13 +238963,14 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "format": "uuid"
+                            "format": "uuid",
+                            "description": "The page."
                           },
                           {
                             "type": "null"
                           }
                         ],
-                        "description": "The page, or null for the whole space."
+                        "description": "The page; null for the whole space and when the requester cannot see the page."
                       },
                       "number": {
                         "anyOf": [
@@ -239003,6 +239077,7 @@
                     "required": [
                       "id",
                       "requester",
+                      "target",
                       "spaceId",
                       "spaceName",
                       "itemId",
@@ -239028,6 +239103,7 @@
                       "name": "Mia Kranz",
                       "email": "mia.kranz@example.org"
                     },
+                    "target": "space",
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                     "spaceName": "IT Operations",
                     "itemId": null,
@@ -239257,10 +239333,26 @@
                       "additionalProperties": false,
                       "description": "Who asks."
                     },
-                    "spaceId": {
+                    "target": {
                       "type": "string",
-                      "format": "uuid",
-                      "description": "The space."
+                      "description": "Whether the request is for a whole space or for a page. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "space",
+                        "page"
+                      ]
+                    },
+                    "spaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "The space."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The space, or null when the requester cannot see the page the request is for."
                     },
                     "spaceName": {
                       "type": "string",
@@ -239270,13 +239362,14 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uuid"
+                          "format": "uuid",
+                          "description": "The page."
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "The page, or null for the whole space."
+                      "description": "The page; null for the whole space and when the requester cannot see the page."
                     },
                     "number": {
                       "anyOf": [
@@ -239383,6 +239476,7 @@
                   "required": [
                     "id",
                     "requester",
+                    "target",
                     "spaceId",
                     "spaceName",
                     "itemId",
@@ -239405,6 +239499,7 @@
                     "name": "Mia Kranz",
                     "email": "mia.kranz@example.org"
                   },
+                  "target": "space",
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a00",
                   "spaceName": "IT Operations",
                   "itemId": null,

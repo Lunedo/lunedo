@@ -1079,6 +1079,7 @@ describe("sharing and access", () => {
           {
             id: REQUEST,
             requester: { id: OLIVIA.id, name: OLIVIA.name, email: null },
+            target: "space",
             spaceId: SPACE_ID,
             spaceName: "IT Operations",
             itemId: null,
@@ -1115,6 +1116,7 @@ describe("sharing and access", () => {
     const entry = {
       id: REQUEST,
       requester: { id: LUKAS, name: "Lukas Hofer", email: "lukas@example.org" },
+      target: "space",
       spaceId: SPACE_ID,
       spaceName: "IT Operations",
       itemId: null,

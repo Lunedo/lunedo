@@ -13,6 +13,7 @@ function entry(status: string) {
   return {
     id: REQUEST,
     requester: { id: "01929b1e-0000-7000-8000-0000000000a4", name: "Felix Gruber", email: null },
+    target: "page",
     spaceId: SPACE,
     spaceName: "People",
     itemId: PAGE,

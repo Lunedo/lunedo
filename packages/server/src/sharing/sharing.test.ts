@@ -464,13 +464,21 @@ describe.skipIf(!baseUrl)("sharing", () => {
       expect(open.map((request) => [request.requester.id, request.itemTitle, request.number])).toEqual([
         [context.outsiderId, "Launch plan", context.shared.number],
       ]);
+      const hidden = await test.services.accessRequests.mine(context.outsider);
       expect(
-        (await test.services.accessRequests.mine(context.outsider)).map((request) => [
+        hidden.map((request) => [
+          request.target,
+          request.spaceId,
+          request.spaceName,
           request.itemId,
           request.itemTitle,
           request.number,
         ]),
-      ).toEqual([[context.shared.id, null, null]]);
+      ).toEqual([["page", null, "", null, null, null]]);
+      expect(await test.services.accessRequests.get(context.outsider, hidden[0]?.id ?? "")).toMatchObject({
+        spaceId: null,
+        itemId: null,
+      });
       const editorNotices = await test.services.notifications.list(context.editorId, { limit: 10 });
       expect(editorNotices.items.map((item) => item.type)).toContain("access.requested");
       const decided = await test.services.accessRequests.decide(context.editor, open[0]?.id ?? "", {
@@ -479,7 +487,12 @@ describe.skipIf(!baseUrl)("sharing", () => {
       });
       expect(decided).toMatchObject({ status: "approved", role: "commenter" });
       expect(await test.services.accessRequests.mine(context.outsider)).toEqual([
-        expect.objectContaining({ itemTitle: "Launch plan", number: context.shared.number }),
+        expect.objectContaining({
+          spaceId: context.space.id,
+          itemId: context.shared.id,
+          itemTitle: "Launch plan",
+          number: context.shared.number,
+        }),
       ]);
       expect(await can(context.outsider, "item.comment", { type: "item", id: context.shared.id })).toBe(true);
       const notices = await test.services.notifications.list(context.outsiderId, { limit: 10 });

@@ -39,7 +39,7 @@ const SPACE_ROLES = ["reader", "commenter", "editor", "admin"] as const;
 const PAGE_ROLES = ["reader", "commenter", "editor"] as const;
 
 export function requestTarget(t: TFunction, entry: AccessRequest): string {
-  if (entry.itemId) {
+  if (entry.target !== "space") {
     return entry.itemTitle
       ? t("sharing.requests.targetPage", { title: entry.itemTitle })
       : t("sharing.requests.targetHiddenPage");
@@ -232,7 +232,8 @@ function Decision({ entry, onDecided }: { entry: AccessRequest; onDecided: (next
           body: approve ? { approve: true, role, includeDescendants: below } : { approve: false },
         }),
       );
-      await queryClient.invalidateQueries({ queryKey: sharingKeys.requests(entry.spaceId) });
+      if (entry.spaceId)
+        await queryClient.invalidateQueries({ queryKey: sharingKeys.requests(entry.spaceId) });
       toast({
         title: approve ? t("sharing.requests.approved", { name }) : t("sharing.requests.declined", { name }),
         variant: "success",
@@ -300,7 +301,8 @@ export function AccessRequestActions({
           body: approve ? { approve: true, role, includeDescendants: false } : { approve: false },
         }),
       );
-      await queryClient.invalidateQueries({ queryKey: sharingKeys.requests(entry.spaceId) });
+      if (entry.spaceId)
+        await queryClient.invalidateQueries({ queryKey: sharingKeys.requests(entry.spaceId) });
       await queryClient.invalidateQueries({ queryKey: ["accessRequests", entry.id] });
       toast({
         title: approve
