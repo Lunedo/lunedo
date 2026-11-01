@@ -56,11 +56,15 @@ export function OneTimeCodeInput({
         pattern="[0-9]*"
         spellCheck={false}
         value={digits}
-        onChange={(event) => onValueChange(cleanCode(event.target.value, length))}
+        onChange={(event) => {
+          const typed = event.target.value.replace(/\D/g, "");
+          const restart = digits.length === length && typed.length > length;
+          onValueChange(cleanCode(restart ? typed.slice(length) : typed, length));
+        }}
         onFocus={(event) => {
           setFocused(true);
           const end = event.target.value.length;
-          event.target.setSelectionRange(end, end);
+          event.target.setSelectionRange(end === length ? 0 : end, end);
           onFocus?.(event);
         }}
         onBlur={(event) => {

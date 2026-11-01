@@ -49,4 +49,24 @@ describe("OneTimeCodeInput", () => {
     await userEvent.keyboard("{Backspace}");
     expect(boxes().slice(0, 3)).toEqual(["1", "2", ""]);
   });
+
+  it("starts a new code when a digit is typed into a full field", async () => {
+    renderUi(<Probe />);
+    const input = screen.getByLabelText("Code from your authenticator app");
+    await userEvent.type(input, "000000");
+    await userEvent.type(input, "12", { skipClick: true });
+    expect(screen.getByRole("status").textContent).toBe("12");
+    expect(boxes().slice(0, 3)).toEqual(["1", "2", ""]);
+  });
+
+  it("selects a full code on focus so that typing replaces it", async () => {
+    renderUi(<Probe />);
+    const input = screen.getByLabelText<HTMLInputElement>("Code from your authenticator app");
+    await userEvent.type(input, "000000");
+    input.blur();
+    await userEvent.click(input);
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, 6]);
+    await userEvent.keyboard("987654");
+    expect(screen.getByRole("status").textContent).toBe("987654");
+  });
 });
