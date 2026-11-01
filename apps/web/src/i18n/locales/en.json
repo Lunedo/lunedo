@@ -65,7 +65,7 @@
         "generic": "Profile and groups of this provider update at every sign-in. It has no directory Lunedo could synchronize with in the background; with a SCIM connection, the provider sends changes at once.",
         "google": "Google Workspace is only used to sign in. Turn on group synchronization in the settings to read groups and synchronize them in the background.",
         "entraId": "This provider is only read at sign-in.",
-        "saml": "Profile and groups of this provider update at every sign-in. SAML has no directory Lunedo could synchronize with in the background.",
+        "saml": "Profile and groups of this provider update at every sign-in. Lunedo synchronizes a SAML provider in the background only for Microsoft Entra ID with access to Microsoft Graph.",
         "ldap": "This directory is only read at sign-in."
       },
       "filter": "Filter runs",
@@ -275,7 +275,7 @@
       "caExpiringAction": "Upload the new CA certificate of the directory in the provider's connection settings before then, or Lunedo can no longer connect to the directory.",
       "openSettings": "Open settings",
       "noGraphTitle": "{name} cannot read groups through Microsoft Graph",
-      "noGraph": "Entra ID leaves out the groups of people in more than 150 groups. Without access to Microsoft Graph, these accounts lose their groups and the access the rules give. Add the client ID of an app registration and its credential."
+      "noGraph": "Entra ID leaves out the groups of people in more than 150 groups. Without access to Microsoft Graph, Lunedo cannot read them: new accounts of these people get no groups, and existing ones keep their earlier groups without updates. Add the client ID of an app registration and its credential."
     },
     "tabs": {
       "mapping": "Group mapping",
@@ -3759,7 +3759,7 @@
     "graphErrors": {
       "graphMailboxNotAllowed": {
         "cause": "The app may not send as this mailbox: Exchange Online blocked it.",
-        "action": "Add the mailbox to the management scope or the application access policy of the app, then test again. Changes in Exchange Online can take up to an hour."
+        "action": "Add the mailbox to the management scope or the application access policy of the app, then test again. Changes in Exchange Online can take between 30 minutes and 2 hours."
       },
       "graphPermissionMissing": {
         "cause": "The app has no permission to send e-mail.",
@@ -9915,7 +9915,7 @@
       "checkFailedAction": "Check the address and the token, then test the connection again.",
       "required": "Test the connection first, then continue.",
       "allowSites": "Allow other sites in the import settings of the instance",
-      "askToAllowSites": "Instance administrators allow other sites under Settings › Instance › Pages and trash › Imports.",
+      "askToAllowSites": "Instance administrators allow other sites under Settings › Instance › People and sign-in › Policies, section Imports.",
       "deletedTitle": "Enter the token again",
       "deleted": "Lunedo deleted the token of this draft on {when}, because the draft was left alone for a week or because its importer lost the permission to import. Test the connection again to continue.",
       "sitePlaceholder": "example.atlassian.net",
