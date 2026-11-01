@@ -7,6 +7,7 @@ export const GIB = 1024 ** 3;
 export const GB = 1000 ** 3;
 export const RAM_FACTOR = 1.5;
 export const CPU_FACTOR = 1.5;
+const MINIMUM_CPUS = 2;
 export const DISK_HEADROOM = 1.3;
 
 export const ACTIONS = ["pageOpen", "pageReadable", "search", "save", "forYou"] as const;
@@ -372,7 +373,7 @@ export function derive(size: SizeResult, data: Requirements, backups: number): D
   const footprint = size.footprint;
   const stored = footprint.imageBytes + footprint.databaseBytes + footprint.fileStorageBytes;
   const met = targetResults(size, data.targets).every((target) => target.met);
-  const minimumCpus = Math.max(1, Math.ceil(peakCores));
+  const minimumCpus = Math.max(MINIMUM_CPUS, Math.ceil(peakCores));
   const busiestRuns = counted(runsOf(size, "peak"));
   const busiestCores = busiestRuns.length
     ? (Math.max(...busiestRuns.map((run) => run.machinePeakCpuPercent)) / 100) * data.referenceMachine.vcpus
@@ -486,7 +487,7 @@ export function renderRequirements(source: RequirementsSource): string {
       ]),
     ),
     "### Hardware",
-    `**Minimum** is what the reference machine used at the peak of the load runs, rounded up: CPU from the busy time of the whole machine, RAM from the Lunedo and PostgreSQL containers. Add what the operating system needs. **Recommended** RAM is the peak × ${RAM_FACTOR}, and recommended CPU keeps the response times below the targets with room for peaks: at least the peak × ${CPU_FACTOR} and at least what the peak scenario used, never more than the reference machine has. Disk is the image, the database, the file store and backups, with ${Math.round((DISK_HEADROOM - 1) * 100)} % headroom; with backups on the same host, it counts the ${backups} backups that the default retention keeps.`,
+    `**Minimum** is what the reference machine used at the peak of the load runs, rounded up: CPU from the busy time of the whole machine, but at least ${MINIMUM_CPUS} vCPU, because fewer were never measured; RAM from the Lunedo and PostgreSQL containers. Add what the operating system needs. **Recommended** RAM is the peak × ${RAM_FACTOR}, and recommended CPU keeps the response times below the targets with room for peaks: at least the peak × ${CPU_FACTOR} and at least what the peak scenario used, never more than the reference machine has. Disk is the image, the database, the file store and backups, with ${Math.round((DISK_HEADROOM - 1) * 100)} % headroom; with backups on the same host, it counts the ${backups} backups that the default retention keeps.`,
     table(
       [
         "Size",
