@@ -1,6 +1,6 @@
 # E-mail with Google Workspace
 
-Checked against Google Cloud and Google Workspace documentation, October 2026.
+Checked against Google Cloud and Google Workspace documentation, November 2026.
 
 Lunedo sends through Google Workspace with SMTP and OAuth2: a Google Cloud service account with domain-wide delegation signs in at `smtp.gmail.com` as one mailbox. No password of the mailbox is stored.
 
@@ -9,7 +9,7 @@ The settings are under **Settings › Instance › Services › Delivery** and n
 ## Create the service account
 
 1. In the Google Cloud console, create a service account in a project of your organization, for example "lunedo-mail".
-2. Under **Keys**, add a key of the type JSON and download the key file.
+2. Under **Keys**, add a key of the type JSON and download the key file. When the organization policy `iam.disableServiceAccountKeyCreation` blocks the creation of keys, which is the default in newer organizations, an organization policy administrator must exempt the project.
 3. Note the client ID of the service account, a number. The console shows it under **Advanced settings** in the details of the service account, and the key file contains it as `client_id`.
 
 ## Allow domain-wide delegation

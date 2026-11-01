@@ -97,7 +97,7 @@ When mails go out:
 
 - **Mentions, tasks, shares and access requests:** after 2 minutes, so several events about the same item in that time become one mail.
 - **Other content events**, such as changes and comments: once nothing new was combined into the notification for 30 minutes, or 24 hours after it started. A burst of changes becomes one mail, as it becomes one notification.
-- **Administration and security events:** at once.
+- **Administration and security events:** at once when the event has a mail of its own, such as a new browser, break-glass access or expiring credentials. The events of **Space administration** and **Imports and exports** have no mail of their own and go out like other content events.
 - **Daily digest:** at the digest time.
 
 Each notification mail links to the notification and to the notification settings. It carries an unsubscribe link in the footer and the one-click unsubscribe headers `List-Unsubscribe` and `List-Unsubscribe-Post` (RFC 8058). Microsoft Graph with its default setting sends no headers, see [Microsoft 365](email/microsoft-365.md#sent-items-and-unsubscribe-headers). The link works without signing in and does not expire. It sets the e-mail choice of that one event to **Off**, or turns the digest off, for that person only. A value the organization locked is not changed; the page says so.

@@ -1,13 +1,13 @@
 # E-mail with Microsoft 365
 
-Checked against Microsoft Entra and Exchange Online documentation, October 2026.
+Checked against Microsoft Entra and Exchange Online documentation, November 2026.
 
 Lunedo sends through Microsoft 365 in two ways:
 
 - **Microsoft Graph** (recommended): Lunedo calls `sendMail` of one sender mailbox with an app registration of its own. No SMTP is involved, and the app can be limited to the sender mailbox.
 - **SMTP with OAuth2**: Lunedo signs in at `smtp.office365.com` with an access token instead of a password. Use it when the mails need the one-click unsubscribe header without keeping copies in the sender mailbox, see [Sent Items and unsubscribe headers](#sent-items-and-unsubscribe-headers).
 
-Exchange Online is moving away from SMTP with passwords; do not use the password sign-in for Microsoft 365.
+Exchange Online is moving away from SMTP with passwords: from the end of December 2026 it turns this sign-in off by default for existing tenants. Do not use the password sign-in for Microsoft 365.
 
 Both are set up under **Settings › Instance › Services › Delivery** and need the instance area Settings with Manage and a recent sign-in, also for test mails. The general settings, delivery and troubleshooting are on [E-mail](../email.md).
 
@@ -40,11 +40,13 @@ Both are set up under **Settings › Instance › Services › Delivery** and ne
 6. Enter an address under **Send a test mail to** and select **Send test mail**.
 7. Select **Save** again. Lunedo now sends through Microsoft Graph.
 
-A test mail can be sent with settings before they are saved; it always uses the stored credentials. Graph accepts a mail with `202 Accepted` and delivers it later, so a successful test only means that Microsoft 365 accepted it. A delivery failure arrives as a non-delivery report in the sender mailbox, for example `550 5.7.233` when the tenant has reached its daily limit of external recipients. The message trace in the Exchange admin center shows what happened to a mail.
+A test mail can be sent with settings before they are saved. It uses the stored credentials only while tenant, client ID and Microsoft cloud stay the same; otherwise it fails with `graphCredentialMissing`. For a new app registration, save the settings first, then add its credential and test. Graph accepts a mail with `202 Accepted` and delivers it later, so a successful test only means that Microsoft 365 accepted it. A delivery failure arrives as a non-delivery report in the sender mailbox, for example `550 5.7.233` when the tenant has reached its daily limit of external recipients. The message trace in the Exchange admin center shows what happened to a mail.
 
 ### Sending limits
 
-Exchange Online allows one mailbox to send 30 messages per minute and to reach 10,000 recipients in 24 hours, for Microsoft Graph and SMTP alike; the tenant also has a daily limit of external recipients that depends on its licenses. Mail above the per-minute limit is held back by Microsoft and delivered late, mail above the daily limits is rejected with a non-delivery report.
+Exchange Online allows one mailbox to send 30 messages per minute and to reach 10,000 recipients in 24 hours, for Microsoft Graph and SMTP alike; the tenant also has a daily limit of external recipients that depends on its licenses. Through SMTP, mail above the per-minute limit is rejected and must be sent again; otherwise Microsoft carries it over to the following minutes. Mail above the daily limits is rejected with a non-delivery report.
+
+Mail from the default `onmicrosoft.com` domain of a tenant may reach only 100 external recipients per organization in 24 hours; above that, sending to external recipients fails with `550 5.7.236`. Use a sender mailbox on a domain of your own.
 
 When **E-mails per minute** is not set, Lunedo sends at most 30 e-mails per minute through Microsoft Graph, so it stays within the limit of the sender mailbox. When you send through Microsoft 365 over SMTP, set **E-mails per minute** to 30 yourself: Lunedo cannot tell which service is behind an SMTP server and sends without a limit there unless one is set.
 
