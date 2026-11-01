@@ -1,6 +1,6 @@
 # Google Workspace
 
-Checked against Google Cloud and Google Workspace documentation, October 2026.
+Checked against Google Cloud and Google Workspace documentation, November 2026.
 
 People sign in with their Google Workspace account through OpenID Connect. At first, Google Workspace is used for sign-in only. Group synchronization can be turned on later with a service account; Lunedo then reads groups through the Google Directory API and synchronizes them in the background.
 

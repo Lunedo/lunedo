@@ -1,6 +1,6 @@
 # SCIM
 
-Checked against Microsoft Entra documentation, October 2026.
+Checked against Microsoft Entra documentation, November 2026.
 
 With SCIM 2.0, an identity provider sends changes of people and groups to Lunedo itself, instead of waiting for the next sign-in or synchronization. How soon depends on the provider; Microsoft Entra ID sends changes in provisioning cycles about every 40 minutes. Accounts are created before the first sign-in and deactivated, never deleted. Every provider in Lunedo can receive SCIM requests, whatever its sign-in method.
 

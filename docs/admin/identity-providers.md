@@ -12,7 +12,7 @@ This page covers what all providers share. Each method has its own page for the 
 
 | You use | Choose in Lunedo | Page |
 |---|---|---|
-| Microsoft Entra ID | Microsoft Entra ID (OIDC), or SAML 2.0 with the preset Microsoft Entra ID (SAML) | [Microsoft Entra ID](identity-providers/entra-id.md) |
+| Microsoft Entra ID | Microsoft Entra ID, or SAML 2.0 with the preset Microsoft Entra ID (SAML) | [Microsoft Entra ID](identity-providers/entra-id.md) |
 | Google Workspace | Google Workspace | [Google Workspace](identity-providers/google-workspace.md) |
 | Keycloak, Authentik or another OIDC provider | Other OIDC provider | [OpenID Connect](identity-providers/openid-connect.md) |
 | ADFS, Shibboleth or another SAML identity provider | SAML 2.0 | [SAML](identity-providers/saml.md) |
@@ -55,7 +55,7 @@ The sign-in page lists a button for every provider, the last used one first, and
 - The domain belongs to an LDAP provider: the page asks for the sign-in name and the password of the directory.
 - No active provider has the domain, or the entry has no `@`: the page asks for the Lunedo password. Local accounts and guests sign in there.
 
-The answer depends only on the domain and the active providers, never on whether an account with the address exists, so the page cannot be used to find out who has an account. A client can ask 30 times a minute; further questions are refused for a short time.
+The answer depends only on the domain and the active providers, never on whether an account with the address exists, so the page cannot be used to find out who has an account. A client can ask 300 times a minute; further questions are refused for a short time.
 
 A managed account that reaches the password step, for example because its address is outside the provider's domains or its provider is deactivated, is refused there. Only after a correct password does the answer name the provider that manages the account; the page then shows "Sign in through *provider*" with the provider's button, or says that the provider is not available. A wrong password gets the same answer as for any address.
 
