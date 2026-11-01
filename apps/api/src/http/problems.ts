@@ -725,7 +725,7 @@ export const problemSchema = z
       .array(
         z
           .object({
-            path: z.string().describe("Position in the document, such as `content.2.content.0`."),
+            path: z.string().describe("Position in the document, such as `.content[2].content[0]`."),
             code: z.string().describe("Kind of problem, such as `unknownNode` or `invalidAttribute`."),
             message: z.string().describe("Explanation for people."),
           })

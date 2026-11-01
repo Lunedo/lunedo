@@ -286968,7 +286968,7 @@
               "properties": {
                 "path": {
                   "type": "string",
-                  "description": "Position in the document, such as `content.2.content.0`."
+                  "description": "Position in the document, such as `.content[2].content[0]`."
                 },
                 "code": {
                   "type": "string",
