@@ -11,6 +11,7 @@ import {
   registerShutdown,
   runApiCluster,
   StartupError,
+  waitForTurnToListen,
 } from "@lunedo/server";
 import { createApp } from "./app.js";
 import { apiContextOf } from "./context.js";
@@ -60,6 +61,7 @@ async function serve() {
     trustedProxies: config.trustedProxies,
     logger,
   });
+  if (cluster.isWorker) await waitForTurnToListen();
   await app.listen({ port: config.ports.api, host: config.host });
   logger.info({ port: config.ports.api }, "API listening");
   registerShutdown(
