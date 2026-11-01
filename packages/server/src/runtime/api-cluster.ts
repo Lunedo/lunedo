@@ -50,11 +50,12 @@ export function runApiCluster(options: ApiClusterOptions): void {
         if (running.size === 0) exit(exitCode);
         return;
       }
-      options.logger.error(
+      const failed = code !== 0;
+      options.logger[failed ? "error" : "info"](
         { process: child.id, code, signal },
         "An API process stopped; stopping the others",
       );
-      stop(code && code > 0 ? code : 1);
+      stop(failed ? code || 1 : 0);
     });
   };
 

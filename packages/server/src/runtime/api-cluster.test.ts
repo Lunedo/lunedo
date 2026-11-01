@@ -62,6 +62,17 @@ describe("API processes", () => {
     expect(exit).toHaveBeenCalledWith(78);
   });
 
+  it("exits cleanly when a process stops cleanly on its own, as after a restore", () => {
+    const { started, exit } = cluster(3);
+    started[0]?.listen();
+    started[2]?.stop(0);
+    expect(started[0]?.signals).toEqual(["SIGTERM"]);
+    expect(started[1]?.signals).toEqual(["SIGTERM"]);
+    started[0]?.stop(0);
+    started[1]?.stop(0);
+    expect(exit).toHaveBeenCalledWith(0);
+  });
+
   it("exits with an error when the first process fails before it listens", () => {
     const { started, exit } = cluster(4);
     started[0]?.stop(null, "SIGKILL");
