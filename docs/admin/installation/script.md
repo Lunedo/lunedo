@@ -7,7 +7,7 @@ The setup script installs Lunedo with Docker Compose on one Linux host and later
 1. Download the script of the newest release and run it:
 
    ```sh
-   curl -fsSLO https://github.com/lunedo/lunedo/releases/latest/download/install.sh && bash install.sh
+   curl -fsSLO https://lunedo.org/install.sh && bash install.sh
    ```
 
 2. Answer the questions. Each has a default in brackets:

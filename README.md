@@ -45,7 +45,7 @@ Every feature is in every installation: no paid tiers, no license keys, no seat 
 On a Linux host with Docker Engine 24 or newer:
 
 ```sh
-curl -fsSLO https://github.com/lunedo/lunedo/releases/latest/download/install.sh && bash install.sh
+curl -fsSLO https://lunedo.org/install.sh && bash install.sh
 ```
 
 The script asks for the installation directory and the address people open, starts Lunedo and prints a setup link. Then put a reverse proxy with TLS in front of it. The [installation guide](https://lunedo.org/docs/admin/installation/) covers your own Compose file, the [requirements](https://lunedo.org/docs/admin/requirements/) list what each size needs.
