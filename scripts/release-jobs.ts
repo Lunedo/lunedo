@@ -4,6 +4,7 @@ export interface WorkflowJob {
   readonly matrixRunners: readonly string[];
   readonly permissions: ReadonlyMap<string, string>;
   readonly commands: readonly string[];
+  readonly registryLogins: readonly string[];
 }
 
 const HOSTED_RUNNER = /^(ubuntu|windows|macos)-[\w.-]+$/;
@@ -56,6 +57,21 @@ function commandsOf(lines: readonly string[]): string[] {
   return commands;
 }
 
+function registryLoginsOf(lines: readonly string[]): string[] {
+  const registries: string[] = [];
+  lines.forEach((line, index) => {
+    if (!/^\s*(?:- )?uses:\s*docker\/login-action@/.test(line)) return;
+    const indent = indentOf(line);
+    for (const next of lines.slice(index + 1)) {
+      if (next.trim() === "") continue;
+      if (indentOf(next) <= indent) break;
+      const registry = /^\s*registry:\s*(\S+)/.exec(next)?.[1];
+      if (registry) registries.push(registry);
+    }
+  });
+  return registries;
+}
+
 export function workflowJobs(workflow: string): WorkflowJob[] {
   const lines = workflow.split(/\r?\n/);
   const workflowPermissions = permissionsOf(lines, 0) ?? new Map<string, string>();
@@ -77,6 +93,7 @@ export function workflowJobs(workflow: string): WorkflowJob[] {
       }),
       permissions: permissionsOf(body, 4) ?? workflowPermissions,
       commands: commandsOf(body),
+      registryLogins: registryLoginsOf(body),
     });
   }
   return jobs;
@@ -103,9 +120,16 @@ export function releaseJobProblems(workflows: Readonly<Record<string, string>>):
           `${where} has ${scopes.map((scope) => `${scope}: write`).join(" and ")} but runs on "${runner}". Jobs that may write packages or the repository run only on a fixed GitHub-hosted runner, never on vars.RUNNER_LABELS or a self-hosted label.`,
         );
       }
+      const readsPackages = ["read", "write"].includes(job.permissions.get("packages") ?? "");
+      const loggedIn = job.registryLogins.includes("ghcr.io");
       for (const command of job.commands) {
         for (const line of command.split("\n")) {
           if (!/\bdocker run\b/.test(line)) continue;
+          if (!loggedIn || !readsPackages) {
+            problems.push(
+              `${where} runs an image without logging in to ghcr.io with packages: read: "${line.trim()}". Pulling a private package fails with "unauthorized"; add docker/login-action for ghcr.io with GITHUB_TOKEN and grant packages: read.`,
+            );
+          }
           if (!/@\$?\{?\w*DIGEST\}?|@sha256:/.test(line) || !/--pull[ =]always/.test(line)) {
             problems.push(
               `${where} runs an image without its digest and --pull always: "${line.trim()}". Run the image by the digest the publish job reported, so that no local image of that tag is used.`,
