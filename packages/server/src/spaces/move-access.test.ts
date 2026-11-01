@@ -333,6 +333,48 @@ describe.skipIf(!baseUrl)("moving content", () => {
       expect(await canView(editor, hidden.id)).toBe(false);
     });
 
+    it("is refused into a space the actor administers while a page below is restricted from their edits", async () => {
+      const { org, editor, wiki, parent, owner, as } = await hiddenSetup();
+      const minutes = await page(org.owner, wiki.id, "Approved minutes", parent.id);
+      await test.services.pageAccess.change(owner, minutes.id, [{ action: "restrict", kind: "edit" }]);
+      const own = await space(org.id, editor);
+      const restrictedOnly = await page(org.owner, wiki.id, "Policy");
+      const locked = await page(org.owner, wiki.id, "Signed policy", restrictedOnly.id);
+      await test.services.pageAccess.change(owner, locked.id, [{ action: "restrict", kind: "edit" }]);
+
+      await expect(
+        test.services.tree.moveImpact(as, restrictedOnly.id, { spaceId: own.id, parentId: null }),
+      ).rejects.toMatchObject({ code: "hiddenContent", details: { pages: 1 } });
+      await expect(
+        test.services.tree.move(as, restrictedOnly.id, { spaceId: own.id, parentId: null, confirmation: "" }),
+      ).rejects.toMatchObject({ code: "hiddenContent" });
+      expect(await placeOf(locked.id)).toBe(wiki.id);
+      await expect(
+        test.services.pageAccess.removeRestrictionAsAdministrator(as, wiki.id, locked.id, "edit"),
+      ).rejects.toThrow();
+    });
+
+    it("is refused between personal spaces", async () => {
+      const { org, editor, as } = await hiddenSetup();
+      const other = await member(org.id, "member", "Otto Other");
+      const theirs = await test.services.personalSpaces.ensure(accountPrincipal(other), "Overview");
+      const mine = await test.services.personalSpaces.ensure(as, "Overview");
+      await test.services.spacePermissions.grant(
+        accountPrincipal(other),
+        theirs.id,
+        [{ principalKind: "account", principalId: editor }],
+        "editor",
+      );
+      const draft = await page(editor, mine.id, "Draft");
+      await expect(
+        test.services.tree.moveImpact(as, draft.id, { spaceId: theirs.id, parentId: null }),
+      ).rejects.toMatchObject({ code: "otherOrganization" });
+      await expect(
+        test.services.tree.move(as, draft.id, { spaceId: theirs.id, parentId: null, confirmation: "" }),
+      ).rejects.toMatchObject({ code: "otherOrganization" });
+      expect(await placeOf(draft.id)).toBe(mine.id);
+    });
+
     it("is refused into another space of the organization while a page below is hidden from the actor", async () => {
       const { org, editor, wiki, parent, hidden, as } = await hiddenSetup();
       const other = await space(org.id, editor);

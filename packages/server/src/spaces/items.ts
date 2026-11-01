@@ -1020,21 +1020,24 @@ export class TreeService {
       if (overview.rows[0]) {
         throw new SpaceError("overviewPage", "The overview page of a space stays in its space");
       }
-      const organizations = await tx.execute<{ same: boolean }>(sql`
+      const organizations = await tx.execute<{ same: boolean; personal: boolean }>(sql`
         select (select organization_id from spaces where id = ${sourceSpaceId})
-          is not distinct from (select organization_id from spaces where id = ${targetSpaceId}) as same`);
-      if (!organizations.rows[0]?.same) {
+          is not distinct from (select organization_id from spaces where id = ${targetSpaceId}) as same,
+          exists (select 1 from spaces where id in (${sourceSpaceId}, ${targetSpaceId})
+            and personal_of is not null) as personal`);
+      if (!organizations.rows[0]?.same || organizations.rows[0]?.personal) {
         throw new SpaceError("otherOrganization", "Content can only be moved within its organization");
       }
       const hidden = await tx.execute<{ count: number }>(sql`
         select count(*)::int as count from tree_items t join spaces s on s.id = t.space_id
         where t.space_id = ${sourceSpaceId} and ${itemId}::uuid = any(t.path)
-          and not ${this.#authorization.itemFilter(actor, sql`t`, sql`s`)}`);
+          and not (${this.#authorization.itemFilter(actor, sql`t`, sql`s`)}
+            and ${this.#authorization.itemFilter(actor, sql`t`, sql`s`, "editor", { editRestriction: true })})`);
       const count = hidden.rows[0]?.count ?? 0;
       if (count > 0) {
         throw new SpaceError(
           "hiddenContent",
-          `${count} ${count === 1 ? "page below is" : "pages below are"} restricted so that you cannot open ${count === 1 ? "it" : "them"}. Ask someone who can open ${count === 1 ? "it" : "them"} to move the content, or move only pages you can open.`,
+          `${count} ${count === 1 ? "page below is" : "pages below are"} restricted so that you cannot open or edit ${count === 1 ? "it" : "them"}. Ask someone who can edit ${count === 1 ? "it" : "them"} to move the content, or move only pages you can edit.`,
           { pages: count },
         );
       }

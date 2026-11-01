@@ -960,6 +960,7 @@ describe("page tree", () => {
       key: "PERS",
       name: "Private notes",
       organizationId: null,
+      personal: true,
     };
     const { tree } = await renderTree({
       "GET /api/v1/spaces": () => ({
