@@ -450,6 +450,43 @@ describe.skipIf(!baseUrl)("sharing", () => {
         link(context, { scope: "anyone", expiresAt: new Date(Date.now() + DAY) }),
       ).rejects.toMatchObject({ code: "restrictedPage" });
     });
+
+    it("names on a link for a personal page only groups of organizations its creator belongs to", async () => {
+      const org = await organization();
+      const insider = await member(org.id, "member", "Mia Member");
+      const finance = await group(org.id, [insider]);
+      const stranger = accountPrincipal(await account());
+      const personal = await test.services.personalSpaces.ensure(stranger, "Mine");
+      const notes = await test.services.tree.create(stranger, personal.id, {
+        kind: "page",
+        title: "Private notes",
+        mode: "live",
+        placement: { parentId: null },
+      });
+      await expect(
+        test.services.shareLinks.create(stranger, notes.id, {
+          scope: "people",
+          people: [{ kind: "group", id: finance }],
+        }),
+      ).rejects.toMatchObject({ code: "invalidHolder" });
+      expect(await test.services.shareLinks.list(stranger, notes.id)).toEqual([]);
+      expect(await can(accountPrincipal(insider), "item.view", { type: "item", id: notes.id })).toBe(false);
+
+      const colleague = accountPrincipal(await member(org.id, "member", "Carl Colleague"));
+      const own = await test.services.personalSpaces.ensure(colleague, "Mine");
+      const plan = await test.services.tree.create(colleague, own.id, {
+        kind: "page",
+        title: "Plan",
+        mode: "live",
+        placement: { parentId: null },
+      });
+      const { token } = await test.services.shareLinks.create(colleague, plan.id, {
+        scope: "people",
+        people: [{ kind: "group", id: finance }],
+      });
+      await test.services.shareLinks.open(token, accountPrincipal(insider), { clientIp: "192.0.2.9" });
+      expect(await can(accountPrincipal(insider), "item.view", { type: "item", id: plan.id })).toBe(true);
+    });
   });
 
   describe("access requests", () => {
