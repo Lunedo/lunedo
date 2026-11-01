@@ -7,6 +7,7 @@ import {
   ChallengeExpiredError,
   InvalidCredentialsError,
   InvalidSecondFactorError,
+  LockedError,
   RateLimitedError,
 } from "../auth/errors.js";
 import { twoFactorRequiredSetting } from "../auth/settings.js";
@@ -468,6 +469,38 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(again.kind).toBe("secondFactorRequired");
     expect(await managedStateOf(test.database, existing.id)).toBeNull();
     expect((await test.services.accounts.get(existing.id))?.passwordHash).not.toBeNull();
+  });
+
+  it("counts wrong second factors against the owner's account when linking, from any address", async () => {
+    const existing = await account(null);
+    await asOwner(existing.id);
+    const secret = await enableTotp(existing.id);
+    const id = await provider({});
+    const subject = randomUUID();
+    const first = await signIn(id, { sub: subject, email: existing.email });
+    if (first.kind !== "linkRequired") throw new Error(`Linking expected, got ${first.kind}`);
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await expect(
+        test.services.signIn.confirmIdentityLink({
+          pendingToken: first.pendingToken,
+          password: PASSWORD,
+          factor: { type: "totp", code: "000000" },
+          client: { ip: `198.51.100.${attempt + 10}` },
+        }),
+      ).rejects.toThrow(InvalidSecondFactorError);
+    }
+
+    const second = await signIn(id, { sub: subject, email: existing.email });
+    if (second.kind !== "linkRequired") throw new Error(`Linking expected, got ${second.kind}`);
+    await expect(
+      test.services.signIn.confirmIdentityLink({
+        pendingToken: second.pendingToken,
+        password: PASSWORD,
+        factor: { type: "totp", code: TOTP.generate({ secret, timestamp: Date.now() + 30_000 }) },
+        client: { ip: "198.51.100.99" },
+      }),
+    ).rejects.toThrow(LockedError);
+    expect(await localCredentials(existing.id)).toMatchObject({ sessions: 0 });
   });
 
   async function localCredentials(accountId: string) {

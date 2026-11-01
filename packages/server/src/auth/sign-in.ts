@@ -744,12 +744,26 @@ export class SignInService {
         factorNeeded = true;
       }
       const factor = input.factor;
+      const factorSubjects = { email: account.email, clientIp: input.client.ip };
       const failedFactor = async (method: SignInMethod) => {
         await this.#challenges.recordFailure(pending.id);
-        await this.#recordFailure(subjects, reservation, account.id, method, "invalidSecondFactor");
+        await this.#recordFailure(factorSubjects, reservation, account.id, method, "invalidSecondFactor");
         return new InvalidSecondFactorError();
       };
       if (factorNeeded) {
+        const lockout = await this.#throttle.lockout(factorSubjects);
+        if (lockout) {
+          await this.#audit.recordAlone({
+            name: "auth.signInFailed",
+            actor: ANONYMOUS,
+            targetId: account.id,
+            fields: {
+              reason: lockout.subject === "account" ? "accountLocked" : "clientLocked",
+              method: factor?.type ?? "totp",
+            },
+          });
+          throw new LockedError(secondsUntil(lockout.lockedUntil));
+        }
         if (!factor || !hasSecondFactor(factors)) throw await failedFactor("totp");
         if (factor.type === "totp" && !(await this.#totp.verify(this.#database, account.id, factor.code))) {
           throw await failedFactor("totp");
