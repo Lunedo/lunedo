@@ -15,7 +15,9 @@ import { RateLimitedError } from "../auth/errors.js";
 import { clientSubject, type RateLimiter } from "../auth/throttle.js";
 import { hashToken } from "../auth/tokens.js";
 import { intersectAreas } from "../authorization/areas.js";
-import type { AuthorizationService } from "../authorization/service.js";
+import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
+import { spaceRoleConditionFor } from "../authorization/space-access.js";
+import type { SpaceRole } from "../spaces/schema.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { defineJob } from "../jobs/job-queue.js";
@@ -197,6 +199,39 @@ export class ApiTokenService {
     );
   }
 
+  async #checkSpaceReach(
+    actorId: string,
+    serviceAccountId: string,
+    organizationId: string,
+    scopes: TokenScopes,
+    contentLevel: ContentLevel,
+    knowledgeBaseIds: readonly string[] | null,
+    executor: Executor = this.#database,
+  ): Promise<void> {
+    const level = scopes.organization?.spaces;
+    if (level !== "view" && level !== "manage") return;
+    const roles: SpaceRole[] =
+      level === "manage" && contentLevel !== "read" ? ["reader", "editor", "admin"] : ["reader"];
+    const limit = knowledgeBaseIds ? sql`and s.id = any(${sql.param([...knowledgeBaseIds])}::uuid[])` : sql``;
+    const uncovered = sql.join(
+      roles.map(
+        (role) => sql`(${spaceRoleConditionFor(sql`${serviceAccountId}::uuid`, sql`s`, role)}
+          and not ${spaceRoleConditionFor(sql`${actorId}::uuid`, sql`s`, role)})`,
+      ),
+      sql` or `,
+    );
+    const result = await executor.execute<{ found: boolean }>(sql`
+      select exists (select 1 from spaces s where s.organization_id = ${organizationId} ${limit} and (${uncovered})) as found`);
+    if (!result.rows[0]?.found) return;
+    throw new ForbiddenError({
+      action: "serviceAccount.manage",
+      resource: { type: "organization", id: organizationId },
+      allowed: false,
+      grants: [],
+      denials: ["roleExceedsOwnPermissions"],
+    });
+  }
+
   async ownerOrganization(accountId: string): Promise<string | null> {
     const owner = await this.#owner(this.#database, accountId);
     return owner?.serviceOrganization ?? null;
@@ -251,6 +286,14 @@ export class ApiTokenService {
         actorHolds: true,
         action: "serviceAccount.manage",
       });
+      await this.#checkSpaceReach(
+        actor.id,
+        owner.id,
+        service,
+        scopes,
+        contentLevel,
+        input.knowledgeBaseIds ?? null,
+      );
     }
     const maxDays = await this.#maxLifetimeDays(
       await this.#chains(this.#database, input.accountId, service, organizationId),
@@ -357,6 +400,18 @@ export class ApiTokenService {
         change.knowledgeBaseIds,
         current.organizationId ?? (await this.ownerOrganization(current.accountId)),
       );
+      const service = await this.ownerOrganization(current.accountId);
+      if (service && actor.type === "account" && actor.id !== current.accountId) {
+        await this.#checkSpaceReach(
+          actor.id,
+          current.accountId,
+          service,
+          scopes,
+          change.contentLevel,
+          knowledgeBaseIds,
+          tx,
+        );
+      }
       const previousLevel = contentLevelOf(current.contentLevel);
       const unchanged =
         previousLevel === change.contentLevel &&

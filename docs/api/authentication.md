@@ -34,7 +34,7 @@ When you create a token, you choose its scopes: permission areas of the instance
 - At every request, the token can do only what both its scopes and the current permissions of its account allow. A token never does more than its account, and losing a role takes effect on the next request.
 - A token can be limited to one organization. It then has no instance scopes and grants nothing outside that organization.
 - A service account has no instance permissions, so its tokens have no instance scopes. Its tokens are always limited to its organization.
-- A token for a service account is created only when what it allows, its scopes intersected with the service account's roles, is covered by the permanent permissions of the person who creates it.
+- A token for a service account is created only when what it allows, its scopes intersected with the service account's roles, is covered by the permanent permissions of the person who creates it. This includes content: in every space where the service account has a role, the person needs at least the same role, up to what the token's content level allows (reader for a token that only reads). Raising the content level later passes the same check.
 - Reading spaces, pages and articles needs the organization area `spaces` with at least `view`. A token without it reaches no content.
 
 A request that the scopes do not cover is refused with `forbidden`, and `denials` contains `tokenScope`.

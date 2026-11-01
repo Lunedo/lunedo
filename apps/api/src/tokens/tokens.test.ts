@@ -168,6 +168,51 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     expect(afterwards.json()).toMatchObject({ type: "urn:lunedo:problem:invalidApiToken" });
   });
 
+  it("creates a service account token only for spaces the creator can reach with the same role", async () => {
+    const { account: creator, client: creatorClient } = await member("integrations-only@lunedo.test");
+    await assign(owner, await customRole("Integrations only", { integrationsAndApi: "manage" }), creator.id);
+    const created = await creatorClient.post(`/api/v1/organizations/${organizationId}/service-accounts`, {
+      name: "Board sync",
+      description: "Reads the board space",
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const serviceAccountId = created.json().id as string;
+    const board = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+      name: "Board",
+      key: "BRDSYNC",
+      visibility: "private",
+      grants: [{ principalKind: "account", principalId: serviceAccountId, role: "editor" }],
+    });
+    expect(board.statusCode, board.body).toBe(201);
+    const boardId = board.json().id as string;
+    const create = (body: object) =>
+      creatorClient.post(`/api/v1/service-accounts/${serviceAccountId}/tokens`, { name: "Board", ...body });
+
+    const hidden = await create({ scopes: { organization: { spaces: "view" } } });
+    expect(hidden.statusCode, hidden.body).toBe(403);
+    expect(hidden.json()).toMatchObject({ code: "forbidden", denials: ["roleExceedsOwnPermissions"] });
+
+    const grant = await owner.post(`/api/v1/spaces/${boardId}/permissions/grants`, {
+      holders: [{ principalKind: "account", principalId: creator.id }],
+      role: "reader",
+    });
+    expect(grant.statusCode, grant.body).toBeLessThan(300);
+    const reading = await create({ scopes: { organization: { spaces: "view" } } });
+    expect(reading.statusCode, reading.body).toBe(201);
+
+    const writing = await create({ scopes: { organization: { spaces: "manage" } }, contentLevel: "publish" });
+    expect(writing.statusCode, writing.body).toBe(403);
+    expect(writing.json()).toMatchObject({ denials: ["roleExceedsOwnPermissions"] });
+    const readOnly = await create({ scopes: { organization: { spaces: "manage" } }, contentLevel: "read" });
+    expect(readOnly.statusCode, readOnly.body).toBe(201);
+    const raised = await creatorClient.put(
+      `/api/v1/service-accounts/${serviceAccountId}/tokens/${readOnly.json().apiToken.id}/content-access`,
+      { contentLevel: "publish", knowledgeBaseIds: null },
+    );
+    expect(raised.statusCode, raised.body).toBe(403);
+    expect(raised.json()).toMatchObject({ denials: ["roleExceedsOwnPermissions"] });
+  });
+
   it("refuses service account management without the integrations area", async () => {
     const { client } = await member("no.integrations@lunedo.test");
     const response = await client.post(`/api/v1/organizations/${organizationId}/service-accounts`, {
