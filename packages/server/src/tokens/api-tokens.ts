@@ -15,6 +15,7 @@ import { RateLimitedError } from "../auth/errors.js";
 import { clientSubject, type RateLimiter } from "../auth/throttle.js";
 import { hashToken } from "../auth/tokens.js";
 import { intersectAreas } from "../authorization/areas.js";
+import { accountItemCondition } from "../authorization/item-access.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import { spaceRoleConditionFor } from "../authorization/space-access.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
@@ -220,8 +221,20 @@ export class ApiTokenService {
       ),
       sql` or `,
     );
+    const serviceAccount = sql`${serviceAccountId}::uuid`;
+    const creator = sql`${actorId}::uuid`;
+    const uncoveredItems = sql.join(
+      roles.map((role) => {
+        const options = { editRestriction: role !== "reader" };
+        return sql`(${accountItemCondition(serviceAccount, sql`t`, sql`s`, role, options)}
+          and not ${accountItemCondition(creator, sql`t`, sql`s`, role, options)})`;
+      }),
+      sql` or `,
+    );
     const result = await executor.execute<{ found: boolean }>(sql`
-      select exists (select 1 from spaces s where s.organization_id = ${organizationId} ${limit} and (${uncovered})) as found`);
+      select exists (select 1 from spaces s where s.organization_id = ${organizationId} ${limit} and (${uncovered}))
+        or exists (select 1 from tree_items t join spaces s on s.id = t.space_id
+          where s.organization_id = ${organizationId} ${limit} and (${uncoveredItems})) as found`);
     if (!result.rows[0]?.found) return;
     throw new ForbiddenError({
       action: "serviceAccount.manage",

@@ -213,6 +213,74 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     expect(raised.json()).toMatchObject({ denials: ["roleExceedsOwnPermissions"] });
   });
 
+  it("refuses a service account token that reaches pages through shares or restriction lists beyond its creator", async () => {
+    const { account: creator, client: creatorClient } = await member("page-reach@lunedo.test");
+    await assign(
+      owner,
+      await customRole("Integrations for pages", { integrationsAndApi: "manage" }),
+      creator.id,
+    );
+    const created = await creatorClient.post(`/api/v1/organizations/${organizationId}/service-accounts`, {
+      name: "Page sync",
+      description: "Reads shared pages",
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const serviceAccountId = created.json().id as string;
+    const create = () =>
+      creatorClient.post(`/api/v1/service-accounts/${serviceAccountId}/tokens`, {
+        name: "Pages",
+        scopes: { organization: { spaces: "view" } },
+      });
+    const newSpace = async (key: string, grants: object[]) => {
+      const response = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+        name: key,
+        key,
+        visibility: "private",
+        grants,
+      });
+      expect(response.statusCode, response.body).toBe(201);
+      return response.json().id as string;
+    };
+    const newPage = async (spaceId: string, title: string) => {
+      const response = await owner.post(`/api/v1/spaces/${spaceId}/items`, {
+        kind: "page",
+        title,
+        parentId: null,
+        mode: "live",
+      });
+      expect(response.statusCode, response.body).toBe(201);
+      return response.json().id as string;
+    };
+    const access = async (pageId: string, changes: object[]) => {
+      const response = await owner.post(`/api/v1/pages/${pageId}/access`, { changes });
+      expect(response.statusCode, response.body).toBe(200);
+    };
+
+    const hidden = await newSpace("SHRPRV", []);
+    const shared = await newPage(hidden, "Supplier contracts");
+    await access(shared, [
+      { action: "share", holderKind: "account", holderId: serviceAccountId, role: "reader" },
+    ]);
+    const viaShare = await create();
+    expect(viaShare.statusCode, viaShare.body).toBe(403);
+    expect(viaShare.json()).toMatchObject({ denials: ["roleExceedsOwnPermissions"] });
+    await access(shared, [{ action: "share", holderKind: "account", holderId: creator.id, role: "reader" }]);
+    expect((await create()).statusCode).toBe(201);
+
+    const team = await newSpace("RSTPRV", [
+      { principalKind: "account", principalId: serviceAccountId, role: "reader" },
+      { principalKind: "account", principalId: creator.id, role: "reader" },
+    ]);
+    const restricted = await newPage(team, "Salary bands");
+    await access(restricted, [
+      { action: "restrict", kind: "view" },
+      { action: "share", holderKind: "account", holderId: serviceAccountId, role: "reader" },
+    ]);
+    const viaList = await create();
+    expect(viaList.statusCode, viaList.body).toBe(403);
+    expect(viaList.json()).toMatchObject({ denials: ["roleExceedsOwnPermissions"] });
+  });
+
   it("keeps a token limited to knowledge bases out of the organization's spaces list and trash", async () => {
     const help = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
       name: "Help",
