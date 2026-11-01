@@ -6,6 +6,7 @@ import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
 import { lastReviewedAt } from "../knowledge-bases/reviews.js";
 import type { ArticleSort, ListedArticle } from "../search/adapter.js";
+import { SearchBusyError, SearchTimeoutError } from "../search/lane.js";
 import type { SearchCursor, SearchService } from "../search/service.js";
 import type { ArticleType } from "../spaces/schema.js";
 import type { ArticleRenderer } from "./articles.js";
@@ -448,18 +449,25 @@ export class PortalReader {
   ): Promise<string[]> {
     const shown: string[] = [];
     for (const term of await this.#statistics.frequentSearches(config.spaceId, FREQUENT_CANDIDATES)) {
-      const found = await this.#search.portalSearch(principal, {
-        organizationId: config.organizationId,
-        spaceId: config.spaceId,
-        query: term,
-        categoryId: null,
-        articleTypes: [],
-        limit: 1,
-        cursor: null,
-        language,
-        fallbackLanguage: config.defaultLanguage,
-      });
-      if (found.total > 0) shown.push(term);
+      let total: number;
+      try {
+        const found = await this.#search.portalSearch(principal, {
+          organizationId: config.organizationId,
+          spaceId: config.spaceId,
+          query: term,
+          categoryId: null,
+          articleTypes: [],
+          limit: 1,
+          cursor: null,
+          language,
+          fallbackLanguage: config.defaultLanguage,
+        });
+        total = found.total;
+      } catch (error) {
+        if (error instanceof SearchBusyError || error instanceof SearchTimeoutError) break;
+        throw error;
+      }
+      if (total > 0) shown.push(term);
       if (shown.length === FREQUENT_SHOWN) break;
     }
     return shown;

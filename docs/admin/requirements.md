@@ -48,6 +48,7 @@ Searches run in PostgreSQL in a lane of their own, so that many broad searches c
 - At most `LUNEDO_SEARCH_SLOTS` searches run at the same time, counted for all API processes and containers that use the same database: by default one less than the CPUs of the container, at least 1 and at most 4. When PostgreSQL runs on another machine, set it to one less than that machine's CPUs.
 - A search waits for a free slot for at most `LUNEDO_SEARCH_WAIT_SECONDS` (2 by default) without holding a database connection. After that the API answers `429` with `Retry-After`, and the app says that search is busy and tries once more.
 - Searches use connections of their own (`lunedo-search` in `pg_stat_activity`, one per slot in every API process), without parallel query, and each statement may run at most `LUNEDO_SEARCH_TIMEOUT_SECONDS` (5 by default).
+- Searches in knowledge base portals, also by visitors who are not signed in, use the same lane. When no slot becomes free in time, the portal answers `503` and asks to search again, and its start page leaves out the frequent searches.
 
 A search with more than 1,000 matches counts and ranks only the 1,000 most recently changed of them; the app shows the number with a plus sign and says that it shows the most recently changed results. On large instances a broad search therefore prefers recently changed pages. Add more words to narrow it to fewer matches and find older ones.
 

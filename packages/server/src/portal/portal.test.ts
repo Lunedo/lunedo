@@ -7,12 +7,17 @@ import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { generateToken } from "../auth/tokens.js";
 import { itemLevel } from "../authorization/item-access.js";
 import { NotificationListener } from "../database/notifications.js";
+import { createDatabasePool } from "../database/pool.js";
 import { createLogger } from "../logging/logger.js";
+import { SearchBusyError, SearchLane } from "../search/lane.js";
+import { PostgresSearchAdapter } from "../search/postgres-adapter.js";
+import { SearchService } from "../search/service.js";
 import type { KnowledgeBaseAudience } from "../spaces/schema.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
 import { checkBrand } from "./portals.js";
+import { PortalReader } from "./reader.js";
 import { PortalSessionService } from "./sessions.js";
 import { cleanFeedback, normalizeTerm, PortalStatistics } from "./statistics.js";
 
@@ -741,6 +746,73 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     expect(html).toContain("Bänder");
     expect(html).toContain(`href="/__portal__/${numberOf(open)}#schritt"`);
     expect(html).toContain(`href="https://other.example/spaces/HR/pages/${numberOf(restricted)}/fremd"`);
+  });
+
+  it("searches the portal through the shared search slots and leaves out frequent searches while they are busy", async () => {
+    const org = await organization();
+    const kb = await knowledgeBase(org.id, org.owner, "public");
+    await publishedPage(org.owner, kb.id, "VPN einrichten", "VPN Zugang");
+    await test.services.search.indexer.drain();
+    for (let index = 0; index < 3; index += 1) {
+      await test.services.portalStatistics.recordSearch(kb.id, { term: "VPN", results: 1, categoryId: null });
+    }
+    const pool = createDatabasePool({
+      connectionString: test.url,
+      applicationName: "lunedo-portal-search-test",
+      max: 2,
+      settings: { statement_timeout: 5000 },
+    });
+    try {
+      const lane = new SearchLane({ pool, slots: 1, waitMs: 200 });
+      const search = new SearchService({
+        database: test.database,
+        authorization: test.services.authorization,
+        people: test.services.people,
+        adapter: new PostgresSearchAdapter(),
+        indexer: test.services.search.indexer,
+        lane,
+      });
+      const reader = new PortalReader({
+        database: test.database,
+        authorization: test.services.authorization,
+        search,
+        renderer: test.services.articleRenderer,
+        statistics: test.services.portalStatistics,
+      });
+      const config = await test.services.portals.config(kb.id);
+      if (!config) throw new Error("missing config");
+      expect(await reader.frequentSearches(ANONYMOUS, config)).toEqual(["vpn"]);
+      let release = () => {};
+      let started = () => {};
+      const running = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const held = lane.run(async () => {
+        started();
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+      });
+      await running;
+      await expect(
+        search.portalSearch(ANONYMOUS, {
+          organizationId: org.id,
+          spaceId: kb.id,
+          query: "VPN",
+          categoryId: null,
+          articleTypes: [],
+          limit: 10,
+          cursor: null,
+          language: config.defaultLanguage,
+          fallbackLanguage: config.defaultLanguage,
+        }),
+      ).rejects.toBeInstanceOf(SearchBusyError);
+      expect(await reader.frequentSearches(ANONYMOUS, config)).toEqual([]);
+      release();
+      await held;
+    } finally {
+      await pool.end();
+    }
   });
 
   it("counts zero-result searches and offers only repeated terms with results as frequent searches", async () => {
