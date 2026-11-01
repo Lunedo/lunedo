@@ -496,7 +496,9 @@ describe.skipIf(!baseUrl)("sharing", () => {
       ]);
       expect(await can(context.outsider, "item.comment", { type: "item", id: context.shared.id })).toBe(true);
       const notices = await test.services.notifications.list(context.outsiderId, { limit: 10 });
-      expect(notices.items.map((item) => item.type)).toContain("access.requestDecided");
+      expect(notices.items.find((item) => item.type === "access.requestDecided")?.actor?.id).toBe(
+        context.editorId,
+      );
       await expect(
         test.services.accessRequests.decide(context.editor, decided.id, { approve: false }),
       ).rejects.toMatchObject({ code: "requestClosed" });
@@ -614,6 +616,9 @@ describe.skipIf(!baseUrl)("sharing", () => {
       });
       const forEditor = await test.services.accessRequests.get(context.editor, declined?.id ?? "");
       expect(forEditor?.decidedBy?.id).toBe(context.editorId);
+      const notices = await test.services.notifications.list(context.outsiderId, { limit: 10 });
+      const decision = notices.items.find((item) => item.type === "access.requestDecided");
+      expect(decision).toMatchObject({ actor: null });
     });
 
     it("can be withdrawn by the requester only", async () => {

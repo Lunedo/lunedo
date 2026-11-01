@@ -457,7 +457,7 @@ export class AccessRequestService {
     const result = await this.#notifications.notify(tx, {
       type: "access.requestDecided",
       recipients: [request.requester_id],
-      actor,
+      actor: reveal || request.item_id === null ? actor : null,
       organizationId: request.organization_id,
       targetId: request.id,
       params: {
