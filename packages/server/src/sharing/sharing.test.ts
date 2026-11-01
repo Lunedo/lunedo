@@ -602,6 +602,20 @@ describe.skipIf(!baseUrl)("sharing", () => {
       expect(await can(context.outsider, "space.view", { type: "space", id: context.space.id })).toBe(true);
     });
 
+    it("does not name who declined a request for a page the requester cannot see", async () => {
+      const context = await setup();
+      await test.services.accessRequests.requestPage(context.outsider, context.shared.id, "");
+      const [open] = await test.services.accessRequests.forSpace(context.editor, context.space.id);
+      await test.services.accessRequests.decide(context.editor, open?.id ?? "", { approve: false });
+      const [declined] = await test.services.accessRequests.mine(context.outsider);
+      expect(declined).toMatchObject({ status: "declined", decidedBy: null, spaceId: null, itemId: null });
+      expect(await test.services.accessRequests.get(context.outsider, declined?.id ?? "")).toMatchObject({
+        decidedBy: null,
+      });
+      const forEditor = await test.services.accessRequests.get(context.editor, declined?.id ?? "");
+      expect(forEditor?.decidedBy?.id).toBe(context.editorId);
+    });
+
     it("can be withdrawn by the requester only", async () => {
       const context = await setup();
       await test.services.accessRequests.requestPage(context.outsider, context.shared.id, "");

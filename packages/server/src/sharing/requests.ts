@@ -121,7 +121,8 @@ export class AccessRequestService {
       message: row.message,
       status: row.status,
       role: row.role,
-      decidedBy: row.decided_by ? { id: row.decided_by, name: row.decided_by_name } : null,
+      decidedBy:
+        row.decided_by && !options.hideSpace ? { id: row.decided_by, name: row.decided_by_name } : null,
       decidedAt: row.decided_at ? new Date(row.decided_at) : null,
       createdAt: new Date(row.created_at),
     };

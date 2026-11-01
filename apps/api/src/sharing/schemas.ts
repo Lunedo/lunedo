@@ -306,7 +306,7 @@ export const accessRequestSchema = z
       "`satisfied` means the person got access another way.",
     ),
     role: z.enum(spaceRoleValues).nullable().describe("The role given when approved."),
-    decidedBy: person.nullable().describe("Who decided."),
+    decidedBy: person.nullable().describe("Who decided; null when the requester cannot see the page."),
     decidedAt: timestamp("When it was decided.").nullable(),
     createdAt: timestamp("When it was sent."),
   })

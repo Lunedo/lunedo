@@ -629,7 +629,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Who decided."
+                      "description": "Who decided; null when the requester cannot see the page."
                     },
                     "decidedAt": {
                       "anyOf": [
@@ -1048,7 +1048,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Who decided."
+                      "description": "Who decided; null when the requester cannot see the page."
                     },
                     "decidedAt": {
                       "anyOf": [
@@ -1680,7 +1680,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Who decided."
+                        "description": "Who decided; null when the requester cannot see the page."
                       },
                       "decidedAt": {
                         "anyOf": [
@@ -239054,7 +239054,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Who decided."
+                        "description": "Who decided; null when the requester cannot see the page."
                       },
                       "decidedAt": {
                         "anyOf": [
@@ -239453,7 +239453,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Who decided."
+                      "description": "Who decided; null when the requester cannot see the page."
                     },
                     "decidedAt": {
                       "anyOf": [
