@@ -1,6 +1,6 @@
+import { sql } from "drizzle-orm";
 import { builtInRoleAreas, coversAreas } from "../authorization/areas.js";
 import type { AuthorizationService } from "../authorization/service.js";
-import { sql } from "drizzle-orm";
 import type { Executor, Transaction } from "../database/database.js";
 import type { Principal } from "./principal.js";
 import { instance } from "./schema.js";

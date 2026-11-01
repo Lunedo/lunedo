@@ -17,7 +17,6 @@ import { hashToken } from "../auth/tokens.js";
 import { intersectAreas } from "../authorization/areas.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import { spaceRoleConditionFor } from "../authorization/space-access.js";
-import type { SpaceRole } from "../spaces/schema.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
 import { defineJob } from "../jobs/job-queue.js";
@@ -25,6 +24,7 @@ import type { NotificationService } from "../notifications/service.js";
 import { memberships } from "../organizations/access-schema.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import type { ScopeChain, SettingsService } from "../settings/service.js";
+import type { SpaceRole } from "../spaces/schema.js";
 import { apiTokenPrefix, generateApiToken, isValidApiTokenFormat } from "./format.js";
 import { apiTokens, serviceAccounts } from "./schema.js";
 import {

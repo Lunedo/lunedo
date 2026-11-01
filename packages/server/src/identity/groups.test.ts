@@ -547,7 +547,11 @@ describe.skipIf(!baseUrl)("group synchronization and mapping rules", () => {
       role: { builtIn: "administrator" },
       principal: { kind: "account", id: administrator.id },
     });
-    await test.services.administration.unlinkIdentity(accountPrincipal(administrator.id), person.id, identityId);
+    await test.services.administration.unlinkIdentity(
+      accountPrincipal(administrator.id),
+      person.id,
+      identityId,
+    );
     expect(await membership(other.id, person.id)).toBeNull();
     expect(await roles(person.id)).toEqual([]);
   });

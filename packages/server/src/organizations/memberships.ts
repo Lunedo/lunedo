@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
+import { checkRankInOrganizations } from "../accounts/rank.js";
 import { accounts, instance } from "../accounts/schema.js";
 import type { AuditEventInput, AuditEvents, AuditLog } from "../audit/audit-log.js";
 import type { AuditEventName } from "../audit/catalog.js";
@@ -27,7 +28,6 @@ import {
   memberships,
   roleAssignments,
 } from "./access-schema.js";
-import { checkRankInOrganizations } from "../accounts/rank.js";
 import { OrganizationError } from "./organizations.js";
 import { organizations } from "./schema.js";
 
