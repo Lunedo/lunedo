@@ -152,6 +152,7 @@ function tokenAllows(
     const level = action.spaceRole === "editor" || action.spaceRole === "admin" ? "manage" : "view";
     return grantsLevel(token.scopes.organization?.spaces, level);
   }
+  if (action.area === "spaces" && token.knowledgeBaseIds) return false;
   if (
     action.area === "spaces" &&
     action.level === "manage" &&

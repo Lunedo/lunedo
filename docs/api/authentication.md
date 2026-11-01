@@ -50,7 +50,7 @@ What a token may do with content (spaces, pages, articles) is its content level.
 | `publish` | Write and publish | Write and publish like its account. |
 
 - `draft` and `publish` need the organization area `spaces` with `manage`. Without a level, a token gets `publish` when `spaces` is `manage`, otherwise `read`.
-- A token can be limited to selected knowledge bases (1 to 100). It then reaches no other space, also not in search.
+- A token can be limited to selected knowledge bases (1 to 100). It then reaches no other space, also not in search, and is refused on the organization-wide routes of the spaces area, such as the list of all spaces and the organization's trash.
 - An account that may only read a knowledge base cannot write to it, whatever the level of its token.
 - The level and the knowledge bases can be changed later in the token list with **Change rights**. Changing them needs a recent sign-in.
 

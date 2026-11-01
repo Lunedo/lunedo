@@ -213,6 +213,60 @@ describe.skipIf(!databaseBaseUrl)("API tokens and service accounts through the A
     expect(raised.json()).toMatchObject({ denials: ["roleExceedsOwnPermissions"] });
   });
 
+  it("keeps a token limited to knowledge bases out of the organization's spaces list and trash", async () => {
+    const help = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+      name: "Help",
+      key: "HLPKBT",
+      type: "knowledgeBase",
+      audience: "signedIn",
+      grants: [],
+    });
+    expect(help.statusCode, help.body).toBe(201);
+    const wiki = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+      name: "Team wiki",
+      key: "WIKKBT",
+      visibility: "organization",
+      grants: [],
+    });
+    expect(wiki.statusCode, wiki.body).toBe(201);
+    const page = await owner.post(`/api/v1/spaces/${wiki.json().id}/items`, {
+      kind: "page",
+      title: "Old travel policy",
+      parentId: null,
+      mode: "live",
+    });
+    expect(page.statusCode, page.body).toBe(201);
+    expect((await owner.delete(`/api/v1/items/${page.json().id}`)).statusCode).toBeLessThan(300);
+    const trash = await owner.get(`/api/v1/organizations/${organizationId}/trash`);
+    const entry = (trash.json() as { id: string; title: string }[]).find(
+      (item) => item.title === "Old travel policy",
+    );
+    expect(entry).toBeDefined();
+    const { token } = await personalToken(
+      owner,
+      { organization: { spaces: "manage" } },
+      { organizationId, contentLevel: "publish", knowledgeBaseIds: [help.json().id] },
+    );
+
+    const bot = new TestClient(test.app);
+    expect((await bot.get(`/api/v1/spaces/${help.json().id}`, bearer(token))).statusCode).toBe(200);
+    for (const path of [
+      `/organizations/${organizationId}/trash`,
+      `/organizations/${organizationId}/spaces`,
+    ]) {
+      const response = await bot.get(`/api/v1${path}`, bearer(token));
+      expect(response.statusCode, path).toBe(403);
+      expect(response.json()).toMatchObject({ denials: ["tokenScope"] });
+    }
+    const restore = await bot.post(
+      `/api/v1/organizations/${organizationId}/trash/${entry?.id}/restore`,
+      undefined,
+      bearer(token),
+    );
+    expect(restore.statusCode).toBe(403);
+    expect((await owner.get(`/api/v1/items/${page.json().id}`)).statusCode).toBe(404);
+  });
+
   it("refuses service account management without the integrations area", async () => {
     const { client } = await member("no.integrations@lunedo.test");
     const response = await client.post(`/api/v1/organizations/${organizationId}/service-accounts`, {
