@@ -397,6 +397,10 @@ export class AccountLifecycleService {
           });
         }
       }
+      await this.#authorization.checkOwnersOverAccount(actor, target.id, {
+        executor: tx,
+        action: "account.anonymize",
+      });
       if (input.confirmation.trim() !== target.name.trim()) {
         throw new OrganizationError("confirmationMismatch", "Type the name of the account to confirm");
       }
