@@ -64,7 +64,7 @@ The job "Scope" decides the lane and the areas (`scripts/ci-scope.ts`, run by `s
 
 ### Installation, update and reverse proxies
 
-The job builds the image under test and the previous version: the newest release tag, or, before the first release, the image of the commit before this change. Then it runs three scripts:
+The job builds the image under test and the previous version: the newest release tag, or, before the first release, the image of the commit before this change. When that commit predates the migration baseline `0000_baseline`, which no installation can update from, it takes the commit that added the baseline. Then it runs three scripts:
 
 - `scripts/install-update-check.sh` installs the previous version with the setup script, adds synthetic content, updates to the image under test with one command, runs the setup script again, checks that an update to a version that does not start stops with the rollback, and follows the documented rollback.
 - `scripts/reverse-proxy-check.sh`: CI starts each reverse proxy example in front of a test instance and checks a page, a WebSocket connection to `/collab` and a large upload.
