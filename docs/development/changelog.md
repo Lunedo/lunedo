@@ -61,4 +61,6 @@ Exit codes:
 
 ## Releases
 
-For every release tag, CI builds the image, runs `release-notes --json` in it to create `lunedo-versions.json` and `release-notes --since <previous tag>` for the text of the GitHub release, and attaches the version file and `scripts/install.sh` to the release. The update check of every instance downloads `lunedo-versions.json` of the latest release.
+For every release tag, CI builds the image, runs `release-notes --json` in it to create `lunedo-versions.json`, and attaches the version file and `scripts/install.sh` to the release. The update check of every instance downloads `lunedo-versions.json` of the latest release.
+
+The text of the GitHub release is `docs/releases/<version>.md` of the tagged commit, for example `docs/releases/0.1.0.md`. Write it before the tag, in the release pull request: `scripts/release-notes.test.ts` fails while the version in `package.json` has none, and CI refuses a tag without it and publishes nothing. It also replaces the text of a release that already exists.

@@ -125,9 +125,9 @@ Every PostgreSQL used by tests in CI runs with `fsync=off`, `synchronous_commit=
 
 ## Releases
 
-A release tag such as `v1.4.2` publishes `ghcr.io/lunedo/lunedo` and `ghcr.io/lunedo/render`, creates the GitHub release with the release notes that the published image reads from `CHANGELOG.md`, and attaches `lunedo-versions.json` and `install.sh` to it. The format of `CHANGELOG.md` is described in [changelog.md](changelog.md).
+A release tag such as `v1.4.2` publishes `ghcr.io/lunedo/lunedo` and `ghcr.io/lunedo/render`, creates the GitHub release with the text of `docs/releases/<version>.md` from the tagged commit, and attaches `lunedo-versions.json` and `install.sh` to it. The format of `CHANGELOG.md` is described in [changelog.md](changelog.md).
 
-- The job "Check the release tag" refuses a tag that is not a release version or whose commit is not on `main`.
+- The job "Check the release tag" refuses a tag that is not a release version, whose commit is not on `main` or that has no `docs/releases/<version>.md`.
 - The images always get the tag `1.4.2`. `1.4` and `latest`, and the GitHub release as the latest one, move only when the tag is the highest release version, so a patch for an older line never moves them back.
 - Each image is built natively per architecture, amd64 on `ubuntu-24.04` and arm64 on `ubuntu-24.04-arm`, and pushed by digest; the job "Publish the images" joins both into one manifest per image, gives it the tags and fails when an architecture is missing.
 - The jobs that hold `packages: write` or `contents: write` run only on GitHub-hosted runners (`ubuntu-24.04`, `ubuntu-24.04-arm`), never on `RUNNER_LABELS`, because self-hosted runners also run the code of pull requests. A job with `runs-on: ${{ matrix.runner }}` passes only when every `runner` of its matrix is such a runner. The job that reads the release notes runs the image by the digest the publish job reported, with `--pull always`. `pnpm release-jobs:check` enforces both.

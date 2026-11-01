@@ -89,6 +89,10 @@ jobs:
             exit 1
           fi
           minor="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          if ! [ -s "docs/releases/$version.md" ]; then
+            echo "::error::docs/releases/$version.md is missing in $TAG; it is the text of the GitHub release. Nothing is published."
+            exit 1
+          fi
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
             echo "::error::The tag $TAG points to a commit that is not on main; nothing is published."
             exit 1
@@ -230,9 +234,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
-      - name: Read the release notes from the published image
+      - name: Read the version file from the published image
         env:
           TAG: ${{ github.ref_name }}
           DIGEST: ${{ needs.publish-image.outputs.digest }}
@@ -241,16 +244,21 @@ jobs:
             echo "::error::The publish job reported no image digest."
             exit 1
           fi
-          previous="$(git describe --tags --abbrev=0 --match 'v*' "$TAG^" 2>/dev/null || echo v0.0.0)"
           docker run --rm --pull always "$IMAGE@$DIGEST" release-notes --json > lunedo-versions.json
-          docker run --rm --pull always "$IMAGE@$DIGEST" release-notes --since "${previous#v}" > release-notes.txt
       - name: Attach it to the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           LATEST: ${{ needs.release.outputs.latest }}
         run: |
-          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "Lunedo ${TAG#v}" --notes-file release-notes.txt --latest="$LATEST"
+          notes="docs/releases/${TAG#v}.md"
+          if ! [ -s "$notes" ]; then
+            echo "::error::$notes is missing in $TAG."
+            exit 1
+          fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$notes"
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "Lunedo ${TAG#v}" --notes-file "$notes" --latest="$LATEST"
           fi
           gh release upload "$TAG" lunedo-versions.json scripts/install.sh --repo "$GITHUB_REPOSITORY" --clobber
