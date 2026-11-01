@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+import type { Readable } from "node:stream";
 import { type DocumentJson, extractSections, type NodeJson, plainText, slugify } from "@lunedo/editor-schema";
 import { sql } from "drizzle-orm";
 import MiniSearch from "minisearch";
@@ -13,6 +14,7 @@ import type { FileService } from "../../files/files.js";
 import type { OrganizationService } from "../../organizations/organizations.js";
 import { SpaceError } from "../../spaces/common.js";
 import { migrated } from "../../spaces/documents.js";
+import { SvgRejectedError, sanitizeSvg } from "../../whiteboards/svg.js";
 import type { ArticleAddresses, ArticleRenderer } from "../articles.js";
 import { brandValues, interfaceLanguage, type PortalConfig, type PortalService } from "../portals.js";
 import type { PortalArticle, PortalArticleSummary, PortalCategory, PortalReader } from "../reader.js";
@@ -69,6 +71,37 @@ interface SiteFile {
   attachmentId: string;
   extension: string;
   display: boolean;
+}
+
+const ACTIVE_EXTENSIONS = new Set([
+  ".htm",
+  ".html",
+  ".shtml",
+  ".xht",
+  ".xhtml",
+  ".mht",
+  ".mhtml",
+  ".xml",
+  ".xsl",
+  ".xslt",
+  ".js",
+  ".mjs",
+  ".svgz",
+]);
+
+function passiveExtension(extension: string): string {
+  return ACTIVE_EXTENSIONS.has(extension) ? `${extension}.txt` : extension;
+}
+
+async function passiveSvg(content: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of content) chunks.push(Buffer.from(chunk));
+  try {
+    return Buffer.from(sanitizeSvg(Buffer.concat(chunks).toString("utf8")), "utf8");
+  } catch (error) {
+    if (error instanceof SvgRejectedError) return Buffer.alloc(0);
+    throw error;
+  }
 }
 
 interface FileInfo {
@@ -280,7 +313,9 @@ export class StaticSiteBuilder {
     const fileOf = (attachmentId: string, display: boolean) => {
       const info = names.get(attachmentId);
       if (!info) return null;
-      const extension = display ? (info?.displayExtension ?? "") : extensionOf(info?.name ?? "");
+      const extension = passiveExtension(
+        display ? (info?.displayExtension ?? "") : extensionOf(info?.name ?? ""),
+      );
       const key = `${attachmentId}${display ? "-display" : ""}`;
       files.set(key, { attachmentId, extension, display });
       return `files/${key}${extension}`;
@@ -581,7 +616,8 @@ export class StaticSiteBuilder {
           const shown = file.display
             ? ((await this.#displayVersions.apply(content, "display")) ?? content)
             : content;
-          return this.#files.read(shown.fileId);
+          const data = await this.#files.read(shown.fileId);
+          return file.extension === ".svg" ? passiveSvg(data) : data;
         },
       });
     }
