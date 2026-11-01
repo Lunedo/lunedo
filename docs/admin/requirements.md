@@ -141,6 +141,8 @@ The targets apply to **typical**; **peak** shows how much room is left. A size m
 
 The minimum of medium is what the reference machine used while it missed the targets, not what keeps this size usable.
 
+Small and medium were load-tested with an earlier version (`8c70161e`) than large (`21e978c3`), so their response times and CPU values do not include the performance changes made since then.
+
 ### Response times under load
 
 Median of the load runs; p95 is the time within which 95 % of the requests finished. **Readable** is the time until the page is shown in the browser.

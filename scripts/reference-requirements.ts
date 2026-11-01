@@ -413,11 +413,36 @@ function integer(value: number): string {
   return Math.round(value).toLocaleString("en-US");
 }
 
+function capitalized(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function listOf(names: readonly string[]): string {
+  return names.length === 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+}
+
 function missedNote(names: string[]): string[] {
   if (names.length === 0) return [];
-  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+  const list = listOf(names);
   return [
     `The minimum of ${list} is what the reference machine used while it missed the targets, not what keeps ${names.length === 1 ? "this size" : "these sizes"} usable.`,
+  ];
+}
+
+function short(commit: string): string {
+  return `\`${commit.slice(0, 8)}\``;
+}
+
+function earlierVersionNote(data: Requirements): string[] {
+  const runs = data.sizes.flatMap((entry) => entry.loadRuns);
+  const newest = runs.reduce((latest, run) => (run.startedAt > latest.startedAt ? run : latest)).commit;
+  const current = data.sizes.filter((entry) => entry.loadRuns.some((run) => run.commit === newest));
+  const earlier = data.sizes.filter((entry) => !current.includes(entry));
+  if (earlier.length === 0) return [];
+  const names = (sizes: readonly SizeResult[]) => listOf(sizes.map((entry) => entry.name));
+  const commits = [...new Set(earlier.flatMap((entry) => entry.loadRuns.map((run) => short(run.commit))))];
+  return [
+    `${capitalized(names(earlier))} ${earlier.length === 1 ? "was" : "were"} load-tested with an earlier version (${commits.join(", ")}) than ${names(current)} (${short(newest)}), so ${earlier.length === 1 ? "its" : "their"} response times and CPU values do not include the performance changes made since then.`,
   ];
 }
 
@@ -512,6 +537,7 @@ export function renderRequirements(source: RequirementsSource): string {
     ...missedNote(
       derived.filter(({ values }) => values.recommendedCpus === null).map(({ size: entry }) => entry.name),
     ),
+    ...earlierVersionNote(data),
     "### Response times under load",
     "Median of the load runs; p95 is the time within which 95 % of the requests finished. **Readable** is the time until the page is shown in the browser.",
     table(
