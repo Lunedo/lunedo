@@ -22,8 +22,12 @@ describe.skipIf(!baseUrl)("resolving sessions", () => {
     await test?.close();
   });
 
-  async function signedIn(email: string) {
+  let accountCount = 0;
+
+  async function signedIn(name: string) {
     const { services, database } = test;
+    accountCount += 1;
+    const email = `${name}.${Date.now().toString(36)}.${accountCount}@example.org`;
     const account = await database.transaction((tx) =>
       services.accounts.createStandard(tx, {
         email,
@@ -58,7 +62,7 @@ describe.skipIf(!baseUrl)("resolving sessions", () => {
   }
 
   it("records one use for requests of a session that arrive at the same moment", async () => {
-    const { account, token } = await signedIn("touch@example.org");
+    const { account, token } = await signedIn("touch");
     let recorded = 0;
     const counting = new Proxy(test.database, {
       get(target, property, receiver) {
@@ -92,18 +96,20 @@ describe.skipIf(!baseUrl)("resolving sessions", () => {
   });
 
   it("writes the last use without waiting for the write-ahead log", async () => {
-    const { token } = await signedIn("touch-wal@example.org");
+    const { token } = await signedIn("touch-wal");
+    const settingOf = async (database: Pick<Database, "execute">) =>
+      (await database.execute<{ value: string }>(sql`select current_setting('synchronous_commit') as value`))
+        .rows[0]?.value ?? "";
+    const before = await settingOf(test.database);
     const seen: string[] = [];
     const observing = new Proxy(test.database, {
       get(target, property, receiver) {
         if (property === "transaction") {
           return (run: (tx: Transaction) => Promise<unknown>) =>
             target.transaction(async (tx) => {
+              await tx.execute(sql`set local synchronous_commit = on`);
               const result = await run(tx);
-              const setting = await tx.execute<{ value: string }>(
-                sql`select current_setting('synchronous_commit') as value`,
-              );
-              seen.push(setting.rows[0]?.value ?? "");
+              seen.push(await settingOf(tx));
               return result;
             });
         }
@@ -113,16 +119,11 @@ describe.skipIf(!baseUrl)("resolving sessions", () => {
     await serviceAt(() => new Date(Date.now() + 5 * MINUTE), observing).resolve(token);
     expect(seen.length).toBeGreaterThan(0);
     expect(seen.every((value) => value === "off")).toBe(true);
-    const [outside] = (
-      await test.database.execute<{ value: string }>(
-        sql`select current_setting('synchronous_commit') as value`,
-      )
-    ).rows;
-    expect(outside?.value).toBe("on");
+    expect(await settingOf(test.database)).toBe(before);
   });
 
   it("never deadlocks with a change that locks the account before it removes sessions", async () => {
-    const { account, token } = await signedIn("touch-lock@example.org");
+    const { account, token } = await signedIn("touch-lock");
     const later = serviceAt(() => new Date(Date.now() + 5 * MINUTE));
     let resolving: Promise<unknown> = Promise.resolve();
     await test.database.transaction(async (tx) => {
@@ -135,7 +136,7 @@ describe.skipIf(!baseUrl)("resolving sessions", () => {
   });
 
   it("records the last use at most once a minute", async () => {
-    const { token, sessionId, createdAt } = await signedIn("touch-minute@example.org");
+    const { token, sessionId, createdAt } = await signedIn("touch-minute");
     const start = createdAt.getTime();
     await serviceAt(() => new Date(start + 59_000)).resolve(token);
     expect((await lastUsed(sessionId))?.getTime()).toBe(start);
@@ -146,7 +147,7 @@ describe.skipIf(!baseUrl)("resolving sessions", () => {
   });
 
   it("ends a session idle for longer than the idle timeout and never extends it", async () => {
-    const { token, sessionId, createdAt } = await signedIn("touch-idle@example.org");
+    const { token, sessionId, createdAt } = await signedIn("touch-idle");
     const idle = (await test.settings.get(sessionIdleTimeoutSetting, {})) * MINUTE;
     const start = createdAt.getTime();
     expect(await serviceAt(() => new Date(start + idle - MINUTE)).resolve(token)).not.toBeNull();

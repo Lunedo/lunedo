@@ -1,10 +1,15 @@
 import type { Logger } from "../logging/logger.js";
 import { SHUTDOWN_MARGIN_SECONDS } from "./shutdown.js";
 
+export const PREPARED_MESSAGE = "lunedo:prepared";
+export const LISTEN_MESSAGE = "lunedo:listen";
+
 export interface ClusterProcess {
   readonly id: number;
   on(event: "listening", listener: () => void): unknown;
+  on(event: "message", listener: (message: unknown) => void): unknown;
   on(event: "exit", listener: (code: number | null, signal: string | null) => void): unknown;
+  send(message: unknown): unknown;
   kill(signal?: string): void;
 }
 
@@ -40,22 +45,27 @@ export function runApiCluster(options: ApiClusterOptions): void {
     for (const child of running) child.kill("SIGTERM");
   };
 
-  const start = (onListening?: () => void) => {
+  const start = (onPrepared: () => void, onListening: () => void) => {
     const child = options.fork();
     running.add(child);
-    child.on("listening", () => onListening?.());
+    child.on("message", (message) => {
+      if (message === PREPARED_MESSAGE && !stopping) onPrepared();
+    });
+    child.on("listening", onListening);
     child.on("exit", (code, signal) => {
       running.delete(child);
       if (stopping) {
         if (running.size === 0) exit(exitCode);
         return;
       }
-      options.logger.error(
+      const failed = code !== 0;
+      options.logger[failed ? "error" : "info"](
         { process: child.id, code, signal },
         "An API process stopped; stopping the others",
       );
-      stop(code && code > 0 ? code : 1);
+      stop(failed ? code || 1 : 0);
     });
+    return child;
   };
 
   const shutdown = (signal: NodeJS.Signals) => {
@@ -65,9 +75,41 @@ export function runApiCluster(options: ApiClusterOptions): void {
   signals.once("SIGTERM", shutdown);
   signals.once("SIGINT", shutdown);
 
-  start(() => {
-    if (stopping) return;
-    for (let index = 1; index < options.processes; index++) start();
-    options.logger.info({ processes: options.processes }, "API processes started");
+  const started: ClusterProcess[] = [];
+  let prepared = 0;
+  let listening = 0;
+  const onPrepared = () => {
+    prepared += 1;
+    if (prepared === 1) {
+      for (let index = 1; index < options.processes; index++) started.push(start(onPrepared, onListening));
+    }
+    if (prepared === options.processes) for (const child of started) child.send(LISTEN_MESSAGE);
+  };
+  const onListening = () => {
+    listening += 1;
+    if (listening === options.processes && !stopping) {
+      options.logger.info({ processes: options.processes }, "API processes started");
+    }
+  };
+  started.push(start(onPrepared, onListening));
+}
+
+export interface ClusterChannel {
+  send?: (message: unknown) => unknown;
+  on(event: "message", listener: (message: unknown) => void): unknown;
+  off(event: "message", listener: (message: unknown) => void): unknown;
+}
+
+export function waitForTurnToListen(channel: ClusterChannel = process): Promise<void> {
+  const send = channel.send;
+  if (!send) return Promise.resolve();
+  return new Promise((resolve) => {
+    const listener = (message: unknown) => {
+      if (message !== LISTEN_MESSAGE) return;
+      channel.off("message", listener);
+      resolve();
+    };
+    channel.on("message", listener);
+    send.call(channel, PREPARED_MESSAGE);
   });
 }

@@ -883,7 +883,7 @@ export {
   type TermCount,
 } from "./portal/statistics.js";
 export { type PushDevice, PushService, PushSubscriptionError } from "./push/push-service.js";
-export { type ClusterProcess, runApiCluster } from "./runtime/api-cluster.js";
+export { type ClusterProcess, runApiCluster, waitForTurnToListen } from "./runtime/api-cluster.js";
 export {
   availableMasterKeys,
   createServerRuntime,
