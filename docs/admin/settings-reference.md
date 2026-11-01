@@ -398,7 +398,7 @@ The same settings as in [My account › Notifications](#my-account--notification
 
 | Key | Label | Levels | Default | Allowed values | Lockable | Hint |
 |---|---|---|---|---|---|---|
-| `mail.sendRatePerMinute` | E-mails per minute | instance | `30` | A whole number from 1 to 10,000. | no | Further e-mails wait for the next minute. |
+| `mail.sendRatePerMinute` | E-mails per minute | instance | none | A whole number from 1 to 10,000 or none. | no | Unset: 30 for Graph, no limit for SMTP. |
 
 ### Browser push
 

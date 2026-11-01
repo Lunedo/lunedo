@@ -470,6 +470,33 @@ describe.skipIf(!baseUrl)("search", () => {
     expect(spaces.reduce((sum, facet) => sum + facet.count, 0)).toBe(2);
   });
 
+  it("answers the same when the newest matches are hidden from the person as when it reads every match", async () => {
+    const w = await world();
+    const service = (candidateFactor: number) =>
+      new SearchService({
+        database: test.database,
+        authorization: test.services.authorization,
+        people: test.services.people,
+        adapter: new PostgresSearchAdapter({ matchCap: 1, candidateFactor }),
+        indexer: test.services.search.indexer,
+      });
+    for (const request of [searchRequest(w.word), searchRequest(w.word, { spaceIds: [w.second.id] })]) {
+      for (const viewer of [w.other, w.author]) {
+        const narrowed = await service(1).search(viewer, w.org.id, request);
+        const everything = await service(1_000_000).search(viewer, w.org.id, request);
+        expect(narrowed.results.map((hit) => hit.itemId)).toEqual(
+          everything.results.map((hit) => hit.itemId),
+        );
+        expect({ total: narrowed.total, capped: narrowed.totalCapped, facets: narrowed.facets }).toEqual({
+          total: everything.total,
+          capped: everything.totalCapped,
+          facets: everything.facets,
+        });
+        if (viewer === w.other) expect(narrowed.results.map((hit) => hit.itemId)).not.toContain(w.secret);
+      }
+    }
+  });
+
   it("keeps the counts of the other filters complete when a filter picks few of many matches", async () => {
     const w = await world();
     for (const picked of [w.shared.id, w.second.id]) {

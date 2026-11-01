@@ -259,6 +259,9 @@ export const treeItems = pgTable(
       .on(table.spaceId, sql`${table.contentUpdatedAt} desc`, sql`${table.id} desc`)
       .where(sql`${table.trashEntryId} is null and ${table.archivedRootId} is null`),
     index().on(table.parentId),
+    index("tree_items_restore_parent_index")
+      .on(table.restoreParentId)
+      .where(sql`${table.parentId} is null and ${table.restoreParentId} is not null`),
     index().on(table.linkItemId),
     index().on(table.creatorId),
     index().on(table.ownerId),

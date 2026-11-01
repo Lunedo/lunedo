@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "../app.js";
 import { initI18n } from "../i18n/index.js";
-import { mockApi, type RecordedRequest } from "../testing/render.js";
+import { mockApi, problem, type RecordedRequest } from "../testing/render.js";
 import { filtersOf } from "./search-api.js";
 import { fromSearchParams, noFilters, toSearchParams } from "./search-params.js";
 import { hitHref, hitPath, hitTitle, hitTypeLabel, typeLabel } from "./search-results.js";
@@ -359,6 +359,52 @@ describe("quick search", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(within(dialog).queryByRole("option", { name: /Gate list/ })).toBeNull();
     expect(within(dialog).getByRole("option", { name: /Gateway restart/ })).toBeTruthy();
+  });
+
+  it("says that search is busy while it tries again once, then shows the results", async () => {
+    let answered = 0;
+    let release = () => {};
+    const api = await renderApp("/settings/preferences", () => {
+      answered += 1;
+      return answered === 1
+        ? problem(429, "searchBusy", { retryAfterSeconds: 0 })
+        : { body: response([hit(3, "Gateway restart")]) };
+    });
+    const answer = api.fetch.getMockImplementation();
+    api.fetch.mockImplementation(async (resource: Request | string, init?: RequestInit) => {
+      const url = resource instanceof Request ? resource.url : String(resource);
+      if (url.includes("mode=quick") && answered === 1) {
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+      }
+      return answer?.(resource, init) as Promise<Response>;
+    });
+    await userEvent.keyboard("/");
+    const dialog = await screen.findByRole("dialog", { name: "Search" });
+    await userEvent.type(within(dialog).getByRole("combobox"), "gateway");
+    expect(await within(dialog).findByText("Search is busy. Trying again …")).toBeTruthy();
+    release();
+    expect(await within(dialog).findByRole("option", { name: /Gateway restart/ })).toBeTruthy();
+    expect(within(dialog).queryByText("Search is busy. Trying again …")).toBeNull();
+    expect(
+      searchRequests(api.requests).filter((request) => queryOf(request).get("q") === "gateway"),
+    ).toHaveLength(2);
+  });
+
+  it("explains a busy search after the one retry and offers to try again", async () => {
+    await renderApp("/settings/preferences", () => problem(429, "searchBusy", { retryAfterSeconds: 0 }));
+    await userEvent.keyboard("/");
+    const dialog = await screen.findByRole("dialog", { name: "Search" });
+    await userEvent.type(within(dialog).getByRole("combobox"), "gateway");
+    expect(
+      await within(dialog).findByText(
+        /Search is busy because many searches are running/,
+        {},
+        { timeout: 3000 },
+      ),
+    ).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: "Try again" })).toBeTruthy();
   });
 
   it("works by keyboard: arrows move, Enter opens, Ctrl+Enter opens a new tab, Escape closes", async () => {

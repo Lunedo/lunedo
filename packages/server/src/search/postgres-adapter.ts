@@ -30,6 +30,7 @@ const TYPO_CANDIDATES = 40;
 const TYPO_FEW_RESULTS = 5;
 const FACET_LIMIT = 20;
 const MATCH_CAP = 1000;
+const CANDIDATE_FACTOR = 4;
 const RECENT_USE_DAYS = 30;
 const MAX_RECENT_BOOST = 0.15;
 const MAX_FREQUENT_BOOST = 0.1;
@@ -76,9 +77,11 @@ function weighted(chunk: IndexedChunk): { first: string; second: string; labels:
 
 export class PostgresSearchAdapter implements SearchAdapter {
   readonly #matchCap: number;
+  readonly #candidateFactor: number;
 
-  constructor(options: { matchCap?: number } = {}) {
+  constructor(options: { matchCap?: number; candidateFactor?: number } = {}) {
     this.#matchCap = options.matchCap ?? MATCH_CAP;
+    this.#candidateFactor = options.candidateFactor ?? CANDIDATE_FACTOR;
   }
 
   async replaceItem(executor: Executor, item: IndexedItem): Promise<void> {
@@ -266,12 +269,34 @@ export class PostgresSearchAdapter implements SearchAdapter {
   }
 
   async #execute(executor: Executor, request: AdapterSearch, parts: QueryParts): Promise<AdapterResult> {
+    const recent = this.#candidateFactor * (this.#matchCap + 1);
+    const narrowed = await this.#run(executor, request, parts, recent);
+    if (narrowed.complete) return narrowed.result;
+    return (await this.#run(executor, request, parts, null)).result;
+  }
+
+  async #run(
+    executor: Executor,
+    request: AdapterSearch,
+    parts: QueryParts,
+    recent: number | null,
+  ): Promise<{ result: AdapterResult; complete: boolean }> {
     const { viewer } = request;
 
+    const chunkConditions = [chunkOrganizationCondition(viewer), parts.match];
+    if (viewer.spaceIds)
+      chunkConditions.push(sql`c.space_id = any(${sql.param([...viewer.spaceIds])}::uuid[])`);
     const conditions = [...visibleChunkConditions(request.viewer), parts.match];
-    if (!request.filters.includeArchived) conditions.push(sql`not c.archived`);
+    if (!request.filters.includeArchived) {
+      conditions.push(sql`not c.archived`);
+      chunkConditions.push(sql`not c.archived`);
+    }
     const languages = request.articleLanguages;
-    if (languages) conditions.push(sql`c.language in (${languages.preferred}, ${languages.fallback})`);
+    if (languages) {
+      const language = sql`c.language in (${languages.preferred}, ${languages.fallback})`;
+      conditions.push(language);
+      chunkConditions.push(language);
+    }
     const baseScore =
       request.usageBoost && viewer.accountId
         ? sql`(${parts.score}) * (1 + ${usageBoost(sql`rv`)})`
@@ -331,12 +356,21 @@ export class PostgresSearchAdapter implements SearchAdapter {
     const result = await executor.execute<{
       total: string;
       pooled: string;
+      pooled_failing: string;
+      recent: string | null;
       hits: (Omit<AdapterHit, "score"> & { score: number | string })[] | null;
       facets: AdapterFacets | null;
     }>(sql`
-      with pooled as (
+      with ${
+        recent === null
+          ? sql``
+          : sql`recent as (
+        select c.id from search_chunks c where ${sql.join(chunkConditions, sql` and `)}
+        order by c.content_updated_at desc, c.id desc limit ${recent}
+      ),`
+      } pooled as (
         select c.id, c.content_updated_at${sql.join(flagColumns, sql``)}
-        from search_chunks c
+        from ${recent === null ? sql`search_chunks c` : sql`recent r join search_chunks c on c.id = r.id`}
         join tree_items t on t.id = c.item_id
         join spaces s on s.id = t.space_id
         left join search_pending_spaces p on p.space_id = c.space_id
@@ -389,7 +423,9 @@ export class PostgresSearchAdapter implements SearchAdapter {
       )`
           : sql``
       }
-      select (select count(*) from best) as total, (select count(*) from pool where ${failing} = 0) as pooled, ${facets} as facets,
+      select (select count(*) from best) as total, (select count(*) from pool where ${failing} = 0) as pooled,
+        (select count(*) from pool where ${failing} = 1) as pooled_failing,
+        ${recent === null ? sql`null` : sql`(select count(*) from recent)`} as recent, ${facets} as facets,
         (select jsonb_agg(jsonb_build_object(
           'source', bc.source, 'sourceId', bc.source_id, 'itemId', bc.item_id, 'spaceId', b.space_id,
           'contentType', bc.content_type, 'title', bc.title, 'heading', bc.heading, 'anchor', bc.anchor,
@@ -397,8 +433,13 @@ export class PostgresSearchAdapter implements SearchAdapter {
           'archived', bc.archived, 'attachment', bc.attachment, 'score', b.score, 'contentUpdatedAt', b.content_updated_at) order by ${order})
           from page b join search_chunks bc on bc.id = b.id) as hits`);
     const row = result.rows[0];
+    const complete =
+      recent === null ||
+      Number(row?.recent ?? 0) < recent ||
+      (Number(row?.pooled ?? 0) > this.#matchCap &&
+        (flags.length === 0 || Number(row?.pooled_failing ?? 0) >= this.#matchCap));
     const hits = (row?.hits ?? []).map((hit) => ({ ...hit, score: Number(hit.score) }));
-    return {
+    const found = {
       hits: hits.slice(0, request.limit),
       total: Number(row?.total ?? 0),
       capped: Number(row?.pooled ?? 0) > this.#matchCap,
@@ -408,6 +449,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
         : null,
       corrections: parts.corrections,
     };
+    return { result: found, complete };
   }
 
   #visibleArticleChunks(viewer: SearchViewer, spaceId: string): SQL {
@@ -669,13 +711,18 @@ export class PostgresSearchAdapter implements SearchAdapter {
   }
 }
 
+function chunkOrganizationCondition(viewer: SearchViewer): SQL {
+  const organization = sql`${viewer.organizationId}::uuid`;
+  return viewer.personalTokens.length > 0
+    ? sql`(c.organization_id = ${organization} or c.organization_id is null)`
+    : sql`c.organization_id = ${organization}`;
+}
+
 export function visibleChunkConditions(viewer: SearchViewer): SQL[] {
   const organization = sql`${viewer.organizationId}::uuid`;
   const personal = viewer.personalTokens.length > 0;
   return [
-    personal
-      ? sql`(c.organization_id = ${organization} or c.organization_id is null)`
-      : sql`c.organization_id = ${organization}`,
+    chunkOrganizationCondition(viewer),
     personal
       ? sql`(s.organization_id = ${organization} or s.organization_id is null)`
       : sql`s.organization_id = ${organization}`,

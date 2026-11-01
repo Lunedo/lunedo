@@ -443,6 +443,7 @@ export class SearchController {
     params: organizationIdParams,
     query: searchQuery,
     response: { description: "The results.", schema: responseSchema, example: exampleResponse },
+    errors: ["searchBusy", "searchTimedOut"],
   })
   async search(
     @Param("organizationId") organizationId: string,

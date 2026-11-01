@@ -128,10 +128,33 @@ export const configSettings: readonly ConfigSetting[] = [
     setting(
       "LUNEDO_DATABASE_POOL_SIZE",
       positiveInt.optional(),
-      "Maximum database connections in the pool of each process. The API, the worker and the collaboration server each have a pool, and each process also holds one connection for notifications and up to four for the job queue.",
+      "Maximum database connections in the pool of each process. The worker, the collaboration server and every API process each have a pool; each process also holds one connection for notifications, and the worker up to four and every API process one for the job queue.",
       {
-        defaultText: "twice the number of CPUs plus 2, at least 6 and at most 24",
+        defaultText:
+          "twice the number of CPUs plus 2, at least 6 and at most 24; with several API processes each of them gets this number divided by their count, at least 8",
       },
+    ),
+    setting(
+      "LUNEDO_SEARCH_SLOTS",
+      positiveInt.max(64).optional(),
+      "Searches that run in PostgreSQL at once, for all API processes and containers together. Further searches wait without holding a database connection.",
+      { defaultText: "one less than the number of CPUs, at least 1 and at most 4" },
+    ),
+    setting(
+      "LUNEDO_SEARCH_WAIT_SECONDS",
+      z.coerce.number().positive().max(30).default(2),
+      "How long a search waits for a free slot before it is answered with `429` and `Retry-After`.",
+    ),
+    setting(
+      "LUNEDO_SEARCH_TIMEOUT_SECONDS",
+      z.coerce.number().positive().max(300).default(5),
+      "Longest time one search statement may run in PostgreSQL before it is cancelled.",
+    ),
+    setting(
+      "LUNEDO_API_PROCESSES",
+      positiveInt.max(64).optional(),
+      "Number of API processes. Requests are spread over them, so the API can use more than one CPU. Each process has its own database pool.",
+      { defaultText: "the number of CPUs, at most 8" },
     ),
     setting("LUNEDO_HOST", nonEmpty.default("0.0.0.0"), "Address the HTTP servers listen on."),
     setting("LUNEDO_API_PORT", port.default(3000), "Port of the API."),

@@ -72,6 +72,7 @@ export const searchChunks = pgTable(
     index().on(table.contextItemId),
     index("search_chunks_organization_config_index").on(table.organizationId, table.config),
     index("search_chunks_organization_updated_index").on(table.organizationId, table.contentUpdatedAt),
+    index("search_chunks_updated_index").on(table.contentUpdatedAt, table.id),
     index("search_chunks_document_index").using("gin", table.document),
     index("search_chunks_readers_index").using("gin", table.readers),
     index("search_chunks_labels_index").using("gin", table.labels),

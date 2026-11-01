@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client.js";
 import type { paths } from "../api/generated/schema.js";
-import { request } from "../api/request.js";
+import { ApiError, request } from "../api/request.js";
 import { apiFilters, noFilters, type SearchFilters, searchTypes } from "./search-params.js";
 
 type Json<T> = T extends { content: { "application/json": infer Body } } ? Body : never;
@@ -27,6 +27,20 @@ export type Person = Ok<"/api/v1/people", "get">["items"][number];
 export type RecentItem = Ok<"/api/v1/recent", "get">[number];
 
 export const QUICK_DEBOUNCE_MS = 150;
+const BUSY_RETRY_MS = 2_000;
+
+export function searchBusy(error: unknown): boolean {
+  return error instanceof ApiError && error.code === "searchBusy";
+}
+
+function retryWhenBusy(failures: number, error: unknown): boolean {
+  return failures < 1 && searchBusy(error);
+}
+
+function busyRetryDelay(_attempt: number, error: unknown): number {
+  const seconds = error instanceof ApiError ? error.problem.retryAfterSeconds : undefined;
+  return typeof seconds === "number" ? Math.min(seconds * 1000, BUSY_RETRY_MS) : BUSY_RETRY_MS;
+}
 const PAGE_SIZE = 20;
 
 export const searchKeys = {
@@ -57,6 +71,8 @@ export function quickSearchQuery(organizationId: string, query: string, spaceId:
       ),
     staleTime: 10_000,
     placeholderData: keepPreviousData,
+    retry: retryWhenBusy,
+    retryDelay: busyRetryDelay,
   });
 }
 
@@ -89,6 +105,8 @@ export function searchResultsQuery(organizationId: string, query: string, filter
     queryFn: ({ pageParam, signal }) => searchPage(organizationId, query, filters, pageParam, signal),
     initialPageParam: null as string | null,
     getNextPageParam: (last: SearchResponse) => last.nextCursor,
+    retry: retryWhenBusy,
+    retryDelay: busyRetryDelay,
   });
 }
 

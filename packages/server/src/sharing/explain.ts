@@ -5,6 +5,7 @@ import { holderCovers, restrictionListedBy } from "../authorization/item-access.
 import type { AuthorizationService, Decision, Grant } from "../authorization/service.js";
 import { organizationMembership } from "../authorization/space-access.js";
 import type { Database, Executor } from "../database/database.js";
+import { withFreshRequestCache } from "../observability/request-context.js";
 import { SpaceError } from "../spaces/common.js";
 import { spaceDisplayName } from "../spaces/display-name.js";
 import type { PeopleService } from "../spaces/people.js";
@@ -361,12 +362,20 @@ export class AccessExplanationService {
         : ["item.edit", "item.comment", "item.view"];
     const decisions: Decision[] = [];
     for (const action of actions) {
-      decisions.push(await this.#authorization.explain(principal, action, resource, { fresh: true }));
+      decisions.push(await this.#authorization.explain(principal, action, resource));
     }
     return decisions;
   }
 
-  async explainAccess(
+  explainAccess(
+    viewer: Principal,
+    resource: { type: "space" | "item"; id: string },
+    accountId: string,
+  ): Promise<AccessExplanation> {
+    return withFreshRequestCache(() => this.#explainAccess(viewer, resource, accountId));
+  }
+
+  async #explainAccess(
     viewer: Principal,
     resource: { type: "space" | "item"; id: string },
     accountId: string,
@@ -399,13 +408,9 @@ export class AccessExplanationService {
               : null;
     const grants = decisions.flatMap((decision) => decision.grants);
     const itemFacts =
-      resource.type === "item"
-        ? await this.#authorization.itemFacts(accountId, resource.id, { fresh: true })
-        : null;
+      resource.type === "item" ? await this.#authorization.itemFacts(accountId, resource.id) : null;
     const spaceId = resource.type === "space" ? resource.id : await this.#spaceOf(resource.id);
-    const spaceFacts = spaceId
-      ? await this.#authorization.spaceRole(accountId, spaceId, { fresh: true })
-      : null;
+    const spaceFacts = spaceId ? await this.#authorization.spaceRole(accountId, spaceId) : null;
     const titles = await this.#titles(viewer, [
       ...grants.flatMap((grant) => (grant.kind === "share" ? [grant.itemId] : [])),
       ...(itemFacts?.viewRestrictions.map((restriction) => restriction.itemId) ?? []),

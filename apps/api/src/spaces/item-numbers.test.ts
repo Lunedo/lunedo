@@ -151,6 +151,36 @@ describe.skipIf(!databaseBaseUrl)("item lookup by number", () => {
         expect(byNumber.statusCode, label).toBe(byId.statusCode);
         expect(byNumber.json(), label).toEqual(byId.json());
         seen.add(`${byId.statusCode}`);
+        const view = await caller.get(`/api/v1/pages/by-number/${target.number}/view`);
+        expect(view.statusCode, label).toBe(byId.statusCode);
+        if (view.statusCode !== 200) {
+          expect(view.json(), label).toEqual(byNumber.json());
+          continue;
+        }
+        const content = await caller.get(`/api/v1/pages/${target.id}/content`);
+        const tasks = await caller.get(`/api/v1/pages/${target.id}/tasks`);
+        const access = await caller.get(`/api/v1/pages/${target.id}/access/mine`);
+        const isPage = target !== folder;
+        expect(view.json(), label).toEqual({
+          item: byNumber.json(),
+          content: isPage ? content.json() : null,
+          tasks: isPage ? tasks.json() : null,
+          access: access.json(),
+        });
+        if (!isPage) continue;
+        const panels = await caller.get(`/api/v1/pages/${target.id}/panels`);
+        const part = async (path: string) => (await caller.get(path)).json();
+        expect(panels.statusCode, label).toBe(200);
+        expect(panels.json(), label).toEqual({
+          labels: await part(`/api/v1/pages/${target.id}/labels`),
+          reactions: await part(`/api/v1/pages/${target.id}/reactions`),
+          watch: await part(`/api/v1/items/${target.id}/watch`),
+          editors: await part(`/api/v1/pages/${target.id}/editors`),
+          versions: await part(`/api/v1/pages/${target.id}/versions`),
+          backlinks: await part(`/api/v1/pages/${target.id}/backlinks`),
+          attachments: await part(`/api/v1/pages/${target.id}/attachments`),
+          comments: await part(`/api/v1/pages/${target.id}/comments`),
+        });
       }
     }
     expect(seen).toEqual(new Set(["200", "401", "404"]));
@@ -159,6 +189,115 @@ describe.skipIf(!databaseBaseUrl)("item lookup by number", () => {
       number: page.number,
       ancestors: [{ id: folder.id, number: folder.number }],
     });
+  });
+
+  it("gives everyone the side information and the page of a published page with a draft as each endpoint does", async () => {
+    const paragraph = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
+    const document = (...texts: string[]) => ({ type: "doc", content: texts.map(paragraph) });
+    const team = await space();
+    const created = await owner.post(`/api/v1/spaces/${team}/items`, {
+      kind: "page",
+      title: "Travel policy",
+      parentId: null,
+      mode: "publish",
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const page = created.json() as { id: string; number: number };
+    const upload = async (name: string) => {
+      const response = await owner.post(
+        `/api/v1/pages/${page.id}/attachments?name=${encodeURIComponent(name)}`,
+        Buffer.from(name),
+        { "content-type": "application/octet-stream" },
+      );
+      expect(response.statusCode, response.body).toBe(201);
+    };
+    expect(
+      (await owner.put(`/api/v1/pages/${page.id}/content`, { document: document("Published rules.") }))
+        .statusCode,
+    ).toBe(200);
+    await upload("published.txt");
+    expect((await owner.post(`/api/v1/pages/${page.id}/publish`, {})).statusCode).toBe(200);
+    expect((await owner.post(`/api/v1/pages/${page.id}/labels`, { label: "travel" })).statusCode).toBe(200);
+    const pageComment = await owner.post(`/api/v1/pages/${page.id}/comments`, {
+      body: document("Looks good."),
+    });
+    expect(pageComment.statusCode, pageComment.body).toBe(201);
+    expect(
+      (
+        await owner.put(`/api/v1/pages/${page.id}/content`, {
+          document: document("Published rules.", "Draft secret."),
+        })
+      ).statusCode,
+    ).toBe(200);
+    await upload("draft.txt");
+    const draftComment = await owner.post(`/api/v1/pages/${page.id}/comments`, {
+      body: document("Ready?"),
+      anchor: { exact: "Draft secret.", prefix: "", suffix: "" },
+    });
+    expect(draftComment.statusCode, draftComment.body).toBe(201);
+
+    const reader = await person();
+    const editor = await person();
+    const member = await person();
+    const guest = await person();
+    const stranger = await person(
+      (await owner.post("/api/v1/organizations", { name: `Elsewhere ${counter}` })).json().id,
+    );
+    await grant(team, reader.id, "reader");
+    await grant(team, editor.id, "editor");
+    const shared = await owner.post(`/api/v1/pages/${page.id}/access`, {
+      changes: [{ action: "share", holderKind: "account", holderId: guest.id, role: "reader" }],
+    });
+    expect(shared.statusCode, shared.body).toBe(200);
+    const callers: Caller[] = [
+      { name: "owner", get: (path) => owner.get(path) },
+      { name: "editor", get: (path) => editor.client.get(path) },
+      { name: "reader", get: (path) => reader.client.get(path) },
+      { name: "person with a share", get: (path) => guest.client.get(path) },
+      { name: "member without role", get: (path) => member.client.get(path) },
+      { name: "other organization", get: (path) => stranger.client.get(path) },
+      { name: "signed out", get: (path) => new TestClient(test.app).get(path) },
+    ];
+    const parts = {
+      labels: `/api/v1/pages/${page.id}/labels`,
+      reactions: `/api/v1/pages/${page.id}/reactions`,
+      watch: `/api/v1/items/${page.id}/watch`,
+      editors: `/api/v1/pages/${page.id}/editors`,
+      versions: `/api/v1/pages/${page.id}/versions`,
+      backlinks: `/api/v1/pages/${page.id}/backlinks`,
+      attachments: `/api/v1/pages/${page.id}/attachments`,
+      comments: `/api/v1/pages/${page.id}/comments`,
+    };
+    const statuses = new Set<number>();
+    const attachmentNames = new Map<string, string[]>();
+    for (const caller of callers) {
+      const panels = await caller.get(`/api/v1/pages/${page.id}/panels`);
+      const view = await caller.get(`/api/v1/pages/by-number/${page.number}/view`);
+      const item = await caller.get(`/api/v1/items/${page.id}`);
+      statuses.add(panels.statusCode);
+      expect(panels.statusCode, caller.name).toBe(item.statusCode);
+      expect(view.statusCode, caller.name).toBe(item.statusCode);
+      if (panels.statusCode !== 200) {
+        expect(panels.json(), caller.name).toEqual(item.json());
+        continue;
+      }
+      const separate: Record<string, unknown> = {};
+      for (const [part, path] of Object.entries(parts)) {
+        const response = await caller.get(path);
+        expect(response.statusCode, `${caller.name} · ${part}`).toBe(200);
+        separate[part] = response.json();
+      }
+      expect(panels.json(), caller.name).toEqual(separate);
+      expect(view.json().content, caller.name).toEqual(
+        (await caller.get(`/api/v1/pages/${page.id}/content`)).json(),
+      );
+      const listed = (panels.json() as { attachments: { name: string }[] }).attachments;
+      attachmentNames.set(caller.name, listed.map((attachment) => attachment.name).sort());
+    }
+    expect(statuses).toEqual(new Set([200, 401, 404]));
+    expect(attachmentNames.get("reader")).toEqual(["published.txt"]);
+    expect(attachmentNames.get("person with a share")).toEqual(["published.txt"]);
+    expect(attachmentNames.get("editor")).toEqual(["draft.txt", "published.txt"]);
   });
 
   it("gives an unknown number and a hidden number the same answer", async () => {

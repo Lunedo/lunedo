@@ -1356,6 +1356,8 @@
     "rateLimitedRetry": "Zu viele Anfragen. Versuche es in {seconds, plural, one {# Sekunde} other {# Sekunden}} erneut.",
     "internalError": "Der Server konnte die Anfrage nicht ausführen. Versuche es erneut; klappt es weiterhin nicht, bitte deine Administration, das Server-Log zu prüfen.",
     "busy": "Der Server ist ausgelastet. Versuche es gleich erneut.",
+    "searchBusy": "Die Suche ist ausgelastet, weil gerade viele Suchen laufen. Versuche es gleich noch einmal.",
+    "searchTimedOut": "Die Suche hat zu lange gedauert. Grenze sie mit weiteren Wörtern oder einem Filter ein und versuche es erneut.",
     "uploadTimeout": "Der Upload wurde nicht rechtzeitig fertig, wahrscheinlich wegen einer langsamen Verbindung. Versuche es mit einer schnelleren Verbindung oder einer kleineren Datei erneut.",
     "passwordExpired": "Dein Verzeichnispasswort ist abgelaufen. Ändere es auf dem in deiner Organisation üblichen Weg, zum Beispiel bei der Anmeldung am Computer, oder wende dich an die Administration von {organization}. Lunedo ändert Verzeichnispasswörter nie.",
     "passwordMustChange": "Dein Verzeichnispasswort muss geändert werden, bevor du dich anmelden kannst. Ändere es auf dem in deiner Organisation üblichen Weg, zum Beispiel bei der Anmeldung am Computer, oder wende dich an die Administration von {organization}. Lunedo ändert Verzeichnispasswörter nie.",
@@ -2954,8 +2956,8 @@
       },
       "mail_sendRatePerMinute": {
         "label": "E-Mails pro Minute",
-        "description": "Weitere E-Mails warten auf die nächste Minute.",
-        "help": "Mail-Dienste begrenzen, wie viele E-Mails ein Postfach senden darf. Microsoft 365 erlaubt über SMTP 30 pro Minute; die Grenze gilt für SMTP und Microsoft Graph gleichermaßen."
+        "description": "Leer: 30 bei Graph, unbegrenzt bei SMTP.",
+        "help": "Microsoft 365 erlaubt einem Postfach 30 E-Mails pro Minute und 10.000 Empfänger am Tag, für Microsoft Graph und SMTP gleichermaßen. Setze hier 30, wenn du über SMTP von Microsoft 365 sendest. Für große Organisationen nutze Zusammenfassungen oder ein SMTP-Relay."
       }
     },
     "disabled": {
@@ -2964,6 +2966,7 @@
       "noPermission": "Deine Rollen erlauben dir nicht, diese Einstellung zu ändern."
     },
     "noLimit": "Keine Begrenzung",
+    "mailRateByMethod": "30 für Microsoft Graph, keine Begrenzung für SMTP",
     "limitDuration": "Begrenzen",
     "lockTitle": "{name} sperren?",
     "lockImpactInstance": "Alle Organisationen und ihre Mitglieder verwenden dann {value} für {name} und können es nicht mehr ändern.",
@@ -10305,6 +10308,7 @@
     }
   },
   "search": {
+    "busy": "Die Suche ist ausgelastet. Neuer Versuch …",
     "title": "Suche",
     "titleWithQuery": "Suche: {query}",
     "field": "Suchbegriff",

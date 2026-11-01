@@ -48,6 +48,7 @@ import type { CollaborationProbe } from "../operations/status.js";
 import { outboundPolicy } from "../outbound/guarded-request.js";
 import { startPushDelivery } from "../push/push-service.js";
 import { searchIndexJob, startSearchIndexing } from "../search/jobs.js";
+import { SearchLane } from "../search/lane.js";
 import { type AccountServices, createAccountServices, workAccountJobs } from "../services.js";
 import { settingDefinitions } from "../settings/catalog.js";
 import { type SettingDefinition, SettingsRegistry } from "../settings/definition.js";
@@ -154,10 +155,33 @@ export async function createServerRuntime(options: {
   const pool = createDatabasePool({
     connectionString,
     applicationName: `lunedo-${role}`,
-    max: config.database.poolSize,
+    max: role === "api" ? config.database.apiPoolSize : config.database.poolSize,
+    settings: { plan_cache_mode: "force_generic_plan" },
     onAcquire: metrics.observeDatabaseAcquire,
   });
   pool.on("error", (error) => logger.warn({ err: error }, "Idle database connection failed"));
+  const searchPool =
+    role === "api"
+      ? createDatabasePool({
+          connectionString,
+          applicationName: "lunedo-search",
+          max: config.search.slots,
+          connectionTimeoutMillis: config.search.waitSeconds * 1000,
+          settings: {
+            max_parallel_workers_per_gather: 0,
+            statement_timeout: Math.round(config.search.timeoutSeconds * 1000),
+          },
+        })
+      : undefined;
+  searchPool?.on("error", (error) => logger.warn({ err: error }, "Idle search connection failed"));
+  const searchLane = searchPool
+    ? new SearchLane({
+        pool: searchPool,
+        slots: config.search.slots,
+        waitMs: config.search.waitSeconds * 1000,
+        observer: metrics.observeSearchLane(),
+      })
+    : undefined;
   const database = createDatabase(pool);
   const listener = new NotificationListener({ connectionString, logger });
   metrics.observeDatabasePool(pool);
@@ -263,6 +287,7 @@ export async function createServerRuntime(options: {
       version: config.version,
       ...(role === "api" ? { collaborationProbe: collaborationProbe(config.collabUpstream) } : {}),
       passwordHashConcurrency: config.passwordHashConcurrency,
+      ...(searchLane ? { searchLane } : {}),
       insecureIdentityProviders: config.insecureIdentityProviders,
       outboundAllowedNetworks: config.outboundAllowedNetworks,
       ...(config.render ? { render: config.render } : {}),
@@ -376,6 +401,7 @@ export async function createServerRuntime(options: {
         await activeJobs?.stop({ timeoutSeconds: shutdownTimeoutSeconds });
         await listener.close();
         await pool.end();
+        await searchPool?.end();
       },
     };
   } catch (error) {
@@ -383,6 +409,7 @@ export async function createServerRuntime(options: {
     await jobs?.stop({ timeoutSeconds: 1 }).catch(() => {});
     await listener.close().catch(() => {});
     await pool.end().catch(() => {});
+    await searchPool?.end().catch(() => {});
     throw error;
   }
 }

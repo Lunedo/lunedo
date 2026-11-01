@@ -209,6 +209,7 @@ import {
 } from "./portal/statistics.js";
 import { PushService } from "./push/push-service.js";
 import { SearchIndexer } from "./search/indexer.js";
+import type { SearchLane } from "./search/lane.js";
 import { PostgresSearchAdapter } from "./search/postgres-adapter.js";
 import { SavedSearchService } from "./search/saved-searches.js";
 import { SearchService } from "./search/service.js";
@@ -410,6 +411,7 @@ export function createAccountServices(options: {
   passwordHashConcurrency: number;
   insecureIdentityProviders?: boolean;
   meetingClock?: () => Date;
+  searchLane?: SearchLane;
   directoryConnector?: DirectoryConnector;
   mailTransport?: (options: SmtpOptions) => MailTransport;
   mailFetch?: typeof fetch;
@@ -973,6 +975,7 @@ export function createAccountServices(options: {
     people,
     adapter: searchAdapter,
     indexer: new SearchIndexer({ database, adapter: searchAdapter, files }),
+    lane: options.searchLane,
   });
   const portals = new PortalService({ database, audit, settings });
   const portalSessions = new PortalSessionService({ database, sessions, audit });

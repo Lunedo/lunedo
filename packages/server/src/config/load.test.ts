@@ -49,6 +49,23 @@ describe("loadConfig", () => {
     expect(config.database.poolSize).toBe(25);
   });
 
+  it("splits the default pool among the API processes and keeps a pool size that is set", () => {
+    const split = loadConfig({ LUNEDO_DATABASE_URL: databaseUrl, LUNEDO_API_PROCESSES: "4" });
+    expect(split.apiProcesses).toBe(4);
+    expect(split.database.apiPoolSize).toBe(Math.max(8, Math.ceil(split.database.poolSize / 4)));
+    const set = loadConfig({
+      LUNEDO_DATABASE_URL: databaseUrl,
+      LUNEDO_API_PROCESSES: "4",
+      LUNEDO_DATABASE_POOL_SIZE: "12",
+    });
+    expect(set.database.apiPoolSize).toBe(12);
+    const single = loadConfig({ LUNEDO_DATABASE_URL: databaseUrl, LUNEDO_API_PROCESSES: "1" });
+    expect(single.database.apiPoolSize).toBe(single.database.poolSize);
+    expect(() => loadConfig({ LUNEDO_DATABASE_URL: databaseUrl, LUNEDO_API_PROCESSES: "0" })).toThrow(
+      /LUNEDO_API_PROCESSES/,
+    );
+  });
+
   it("reads the jobs that a queue runs at once and leaves other queues to the CPU count", () => {
     expect(loadConfig({ LUNEDO_DATABASE_URL: databaseUrl }).jobConcurrency).toEqual({});
     expect(

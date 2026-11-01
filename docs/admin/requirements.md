@@ -25,12 +25,35 @@ What Lunedo needs to run. The [setup script](installation/script.md) checks the 
 | Rights | The user in `LUNEDO_DATABASE_URL` owns the database or may create tables, types and indexes in it. Lunedo applies its migrations at every start. |
 | Optional right | `CREATEDB` for the monthly test restore of backups, which restores into a temporary database on the same server, for example `ALTER ROLE "lunedo" CREATEDB;`. Without it, a test restore only verifies the backup. See [Backups](backups.md). |
 | Free space | Room for one more copy of the database while a test restore runs. |
+| Storage | An SSD for the database from size medium on; for large, an NVMe SSD is recommended. Saving a change waits until PostgreSQL has written it to disk, so the database storage should not be shared with write-heavy workloads such as CI runners, other databases or backups during working hours: on the reference machine, another workload writing to the same SSD made page opens take seconds and requests fail. On shared storage, use SSDs with power-loss protection, which confirm writes from their cache. |
 
 ### Database connections
 
-Each Lunedo process (the API, the worker and the collaboration server) has its own pool of database connections, set by `LUNEDO_DATABASE_POOL_SIZE`. Without it, a process uses twice the number of CPUs of its container plus 2, at least 6 and at most 24. Every process also holds one connection for notifications and up to four for the job queue.
+A container runs the worker, the collaboration server and one API process per CPU, at most 8 (`LUNEDO_API_PROCESSES` sets another number). Requests are spread over the API processes, so the API uses more than one CPU without a proxy in front of several containers.
 
-Add up `pool size + 5` for every process, in every container, that uses the same database. The sum, plus a few connections for backups and `psql`, must stay below `max_connections` of PostgreSQL. The PostgreSQL container of the setup script keeps the default of 100, which the three processes of one container stay below with any pool size up to 24. Raise `max_connections` before you raise the pool size or run more containers.
+Each process has its own pool of database connections. Without `LUNEDO_DATABASE_POOL_SIZE`, the worker and the collaboration server use twice the number of CPUs of the container plus 2, at least 6 and at most 24, and this number is divided among the API processes, at least 8 each. With `LUNEDO_DATABASE_POOL_SIZE`, every process, each API process included, uses that number. Every process also holds one connection for notifications; the worker holds up to four more for the job queue and every API process one.
+
+Add up for every container that uses the same database:
+
+- worker: pool size + 5
+- collaboration server: pool size + 1
+- every API process: pool size + 2 + search slots
+
+The sum, plus a few connections for backups and `psql`, must stay below `max_connections` of PostgreSQL. With the defaults, one container on up to 4 CPUs stays below the PostgreSQL default of 100, for example 78 connections on 4 CPUs; on 8 CPUs it needs 154. The PostgreSQL container of the setup script sets `max_connections` to 200. Raise `max_connections` before you raise the pool size or the number of API processes, or run more containers.
+
+### Searches at once
+
+Searches run in PostgreSQL in a lane of their own, so that many broad searches cannot slow down opening pages:
+
+- At most `LUNEDO_SEARCH_SLOTS` searches run at the same time, counted for all API processes and containers that use the same database: by default one less than the CPUs of the container, at least 1 and at most 4. When PostgreSQL runs on another machine, set it to one less than that machine's CPUs.
+- A search waits for a free slot for at most `LUNEDO_SEARCH_WAIT_SECONDS` (2 by default) without holding a database connection. After that the API answers `429` with `Retry-After`, and the app says that search is busy and tries once more.
+- Searches use connections of their own (`lunedo-search` in `pg_stat_activity`, one per slot in every API process), without parallel query, and each statement may run at most `LUNEDO_SEARCH_TIMEOUT_SECONDS` (5 by default).
+
+The metrics `lunedo_search_slot_wait_seconds`, `lunedo_search_slots_in_use` and `lunedo_search_rejected_total` show how full the lane is; see [Monitoring](monitoring.md).
+
+Every connection keeps the statements Lunedo uses repeatedly prepared, at most 150 per connection with their plans, so PostgreSQL does not plan them again on every call. Lunedo needs connections that keep their session: directly to PostgreSQL, or through a pooler in session mode such as PgBouncer with `pool_mode = session`. A pooler in transaction mode is not supported, because Lunedo uses notifications (`LISTEN`) and releases prepared statements with `DEALLOCATE`.
+
+Limits that protect the memory of a process count per API process: diagram sanitizing and uploads, Word and PDF files created at once and password checks.
 
 Migrations only go forward. When several processes start at the same time, a PostgreSQL advisory lock lets one of them migrate while the others wait. Readiness (`/health/ready`) answers `503` while the schema is behind the code. When migrations are pending, the first process takes a backup before it migrates; see [Backups before updates](updates.md#backups-before-updates).
 
@@ -75,7 +98,25 @@ Directories that you mount must belong to UID 1000, or the [system check](system
 
 This section is generated from `docs/data/requirements.json`, `packages/server/src/backup/configuration.ts` by `pnpm docs:generate`. Do not edit it by hand; change the sources and run the command again.
 
-Measured on 2026-10-29 with commit `8c70161e` on a reference machine with 4 vCPU (12th Gen Intel(R) Core(TM) i5-12500), 7.8 GiB of RAM and 272.5 GB of disk, running Ubuntu 24.04.5 LTS with kernel 6.8.0-147-generic, Docker 29.9.2, Docker Compose 5.6.1 and PostgreSQL 17.11. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. The load came from one computer, which sent the requests of each person from a client address of its own. Each size had 3 load runs of 15 minutes each, in which the people active at the same time open pages, search, edit and publish, and read notifications, and five of them edit the same page together.
+Measured on a reference machine with 4 vCPU (12th Gen Intel(R) Core(TM) i5-12500), 7.8 GiB of RAM and 272.5 GB of disk (ZFS on one consumer NVMe SSD without power-loss protection, shared with seven other virtual machines, which were kept quiet during the load runs of size large), running Ubuntu 24.04.5 LTS with kernel 6.8.0-147-generic, Docker 29.9.2, Docker Compose 5.6.1 and PostgreSQL 17.11. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. Size, backups and start times were measured on 2026-10-31 with commit `8c70161e`. The load came from one computer, which sent the requests of each person from a client address of its own, in load runs of 15 minutes.
+
+### Scenarios
+
+The load runs follow one of two scenarios. Both are assumptions about how people use a wiki, not measured use. In both, five of the people active at the same time edit the same page together.
+
+| Scenario | Wait between two actions | Open a page | Search | Edit and publish | Notifications and For you |
+|---|---|---|---|---|---|
+| typical | 30 to 90 seconds, 60 on average | 70 % | 15 % | 2 % | 13 % |
+| peak | 7 to 36 seconds, 18 on average | 70 % | 15 % | 10 % | 5 % |
+
+The targets apply to **typical**; **peak** shows how much room is left. A size measured only with peak is judged by peak, and its hardware comes from peak. Response times of the first minutes of a run, while the people start and the load generator opens its connections, are not counted where the table says so; errors always are.
+
+| Size | Scenario | Load runs | Measured on | Commit | Not counted at the start |
+|---|---|---|---|---|---|
+| small | peak | 3 | 2026-10-29 | `8c70161e` | nothing |
+| medium | peak | 3 | 2026-10-29 | `8c70161e` | nothing |
+| large | typical | 2 | 2026-10-31 | `21e978c3` | 4 min |
+| large | peak | 3 | 2026-10-31 | `21e978c3` | 4 min |
 
 ### Sizes
 
@@ -87,47 +128,53 @@ Measured on 2026-10-29 with commit `8c70161e` on a reference machine with 4 vCPU
 
 ### Hardware
 
-**Minimum** is what the reference machine used at the peak of the load runs, rounded up: CPU from the busy time of the whole machine, RAM from the Lunedo and PostgreSQL containers. Add what the operating system needs. **Recommended** RAM is the peak × 1.5, and recommended CPU keeps the response times below the targets with room for peaks. Disk is the image, the database, the file store and backups, with 30 % headroom; with backups on the same host, it counts the 20 backups that the default retention keeps.
+**Minimum** is what the reference machine used at the peak of the load runs, rounded up: CPU from the busy time of the whole machine, RAM from the Lunedo and PostgreSQL containers. Add what the operating system needs. **Recommended** RAM is the peak × 1.5, and recommended CPU keeps the response times below the targets with room for peaks: at least the peak × 1.5 and at least what the peak scenario used, never more than the reference machine has. Disk is the image, the database, the file store and backups, with 30 % headroom; with backups on the same host, it counts the 20 backups that the default retention keeps.
 
 | Size | Minimum CPU | Minimum RAM | Minimum disk | Recommended CPU | Recommended RAM | Recommended disk, backups elsewhere | Recommended disk, backups on this host |
 |---|---|---|---|---|---|---|---|
 | small | 2 vCPU | 2 GiB | 6 GB | 3 vCPU | 3 GiB | 7 GB | 56 GB |
 | medium | 4 vCPU | 2 GiB | 42 GB | more than 4 vCPU; the targets were missed on the reference machine | 3 GiB | 55 GB | 541 GB |
-| large | 4 vCPU | 4 GiB | 107 GB | more than 4 vCPU; the targets were missed on the reference machine | 6 GiB | 139 GB | 1,371 GB |
+| large | 2 vCPU | 5 GiB | 107 GB | 3 vCPU | 7 GiB | 139 GB | 1,371 GB |
 
-The minimum of medium and large is what the reference machine used while it missed the targets, not what keeps these sizes usable.
+The minimum of medium is what the reference machine used while it missed the targets, not what keeps this size usable.
 
 ### Response times under load
 
 Median of the load runs; p95 is the time within which 95 % of the requests finished. **Readable** is the time until the page is shown in the browser.
 
-| Size | Open a page, API | Open a page, readable | Search | Save | For you and notifications | Errors |
-|---|---|---|---|---|---|---|
-| small | 160 ms / 256 ms | 353 ms / 855 ms | 86 ms / 136 ms | 54 ms / 85 ms | 45 ms / 69 ms | 0 |
-| medium | 271 ms / 1.20 s | 829 ms / 1.84 s | 252 ms / 865 ms | 89 ms / 349 ms | 404 ms / 919 ms | 0 |
-| large | 23.7 s / 32.7 s | 11.4 s / 28.0 s | 9.04 s / 18.5 s | 8.14 s / 14.9 s | 9.71 s / 15.6 s | 58,616 |
+| Size | Scenario | Open a page, API | Open a page, readable | Search | Save | For you and notifications | Errors |
+|---|---|---|---|---|---|---|---|
+| small | peak | 160 ms / 256 ms | 353 ms / 855 ms | 86 ms / 136 ms | 54 ms / 85 ms | 45 ms / 69 ms | 0 |
+| medium | peak | 271 ms / 1.20 s | 829 ms / 1.84 s | 252 ms / 865 ms | 89 ms / 349 ms | 404 ms / 919 ms | 0 |
+| large | typical | 38 ms / 67 ms | 223 ms / 249 ms | 180 ms / 229 ms | 22 ms / 59 ms | 21 ms / 38 ms | 0 |
+| large | peak | 43 ms / 105 ms | 227 ms / 333 ms | 199 ms / 480 ms | 24 ms / 57 ms | 25 ms / 66 ms | 0 |
 
 Each cell shows p50 / p95.
 
 ### Targets
 
-| Size | Target | Limit | Measured (worst run) | Met |
-|---|---|---|---|---|
-| small | Open a page, API (p95) | below 500 ms | 263 ms | yes |
-| small | Open a page, readable (p95) | below 1.50 s | 879 ms | yes |
-| small | Search (p95) | below 800 ms | 148 ms | yes |
-| small | Save (p95) | below 500 ms | 101 ms | yes |
-| small | Errors | 0 | 0 | yes |
-| medium | Open a page, API (p95) | below 500 ms | 1.48 s | no |
-| medium | Open a page, readable (p95) | below 1.50 s | 1.93 s | no |
-| medium | Search (p95) | below 800 ms | 1.41 s | no |
-| medium | Save (p95) | below 500 ms | 375 ms | yes |
-| medium | Errors | 0 | 0 | yes |
-| large | Open a page, API (p95) | below 500 ms | 33.0 s | no |
-| large | Open a page, readable (p95) | below 1.50 s | 29.6 s | no |
-| large | Search (p95) | below 800 ms | 22.6 s | no |
-| large | Save (p95) | below 500 ms | 22.2 s | no |
-| large | Errors | 0 | 58,616 | no |
+| Size | Scenario | Target | Limit | Measured (worst run) | Met |
+|---|---|---|---|---|---|
+| small | peak | Open a page, API (p95) | below 500 ms | 263 ms | yes |
+| small | peak | Open a page, readable (p95) | below 1.50 s | 879 ms | yes |
+| small | peak | Search (p95) | below 800 ms | 148 ms | yes |
+| small | peak | Save (p95) | below 500 ms | 101 ms | yes |
+| small | peak | Errors | 0 | 0 | yes |
+| medium | peak | Open a page, API (p95) | below 500 ms | 1.48 s | no |
+| medium | peak | Open a page, readable (p95) | below 1.50 s | 1.93 s | no |
+| medium | peak | Search (p95) | below 800 ms | 1.41 s | no |
+| medium | peak | Save (p95) | below 500 ms | 375 ms | yes |
+| medium | peak | Errors | 0 | 0 | yes |
+| large | typical | Open a page, API (p95) | below 500 ms | 67 ms | yes |
+| large | typical | Open a page, readable (p95) | below 1.50 s | 257 ms | yes |
+| large | typical | Search (p95) | below 800 ms | 231 ms | yes |
+| large | typical | Save (p95) | below 500 ms | 81 ms | yes |
+| large | typical | Errors | 0 | 0 | yes |
+| large | peak | Open a page, API (p95) | below 500 ms | 106 ms | yes |
+| large | peak | Open a page, readable (p95) | below 1.50 s | 334 ms | yes |
+| large | peak | Search (p95) | below 800 ms | 538 ms | yes |
+| large | peak | Save (p95) | below 500 ms | 62 ms | yes |
+| large | peak | Errors | 0 | 0 | yes |
 
 ### Footprint and operations
 
@@ -135,7 +182,7 @@ Each cell shows p50 / p95.
 |---|---|---|---|---|---|---|---|---|---|---|
 | small | 150 MB | 2.0 GB | 1.1 GB | 2.0 GB | 45.5 s | 22.8 s | 9.30 s | 741 MiB | 700 ms | 16 |
 | medium | 1.3 GB | 19.6 GB | 1.1 GB | 19.7 GB | 7 min 25 s | 4 min 52 s | 9.30 s | 826 MiB | 3.50 s | 16 |
-| large | 6.4 GB | 49.2 GB | 1.1 GB | 49.9 GB | 20 min 8 s | 17 min 4 s | 10.0 s | 885 MiB | 8.90 s | 24 |
+| large | 6.4 GB | 49.2 GB | 1.1 GB | 49.9 GB | 20 min 8 s | 17 min 4 s | 10.0 s | 885 MiB | 2.40 s | 16 |
 
 ### Writing through the API
 

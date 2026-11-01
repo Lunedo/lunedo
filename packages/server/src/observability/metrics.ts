@@ -4,6 +4,8 @@ import type { DatabasePool, PoolAcquireEvent } from "../database/pool.js";
 import type { JobFinishedEvent, JobQueue } from "../jobs/job-queue.js";
 import type { LoggedError } from "../logging/logger.js";
 import type { InstanceMetricsSource } from "../operations/instance-metrics.js";
+import type { SearchLaneObserver } from "../search/lane.js";
+import { clusterMetricsOf } from "./cluster-metrics.js";
 
 const DURATION_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
 const JOB_DURATION_BUCKETS = [0.1, 0.5, 1, 5, 15, 60, 300, 900, 3600];
@@ -17,6 +19,7 @@ export class Metrics {
   readonly #loggedErrors: Counter<"type">;
   readonly #poolAcquire: Histogram;
   readonly #poolTimeouts: Counter;
+  #clusterMetrics: (() => Promise<string>) | undefined;
 
   constructor(service: string) {
     this.registry.setDefaultLabels({ service });
@@ -71,6 +74,7 @@ export class Metrics {
       help: "Always 1; the version label is the running Lunedo version.",
       labelNames: ["version"],
       registers: [this.registry],
+      aggregator: "first",
     }).set({ version }, 1);
   }
 
@@ -108,6 +112,7 @@ export class Metrics {
         name,
         help,
         registers,
+        aggregator: "first",
         async collect() {
           this.reset();
           const value = read(await source());
@@ -124,6 +129,7 @@ export class Metrics {
         name,
         help,
         registers,
+        aggregator: "first",
         async collect() {
           this.reset();
           const value = read(await source());
@@ -204,6 +210,31 @@ export class Metrics {
     this.#jobDuration.observe({ queue: event.name, state: event.state }, event.durationSeconds);
   };
 
+  observeSearchLane(): SearchLaneObserver {
+    const registers = [this.registry];
+    const waits = new Histogram({
+      name: "lunedo_search_slot_wait_seconds",
+      help: "Time a search waited for a free search slot.",
+      buckets: DURATION_BUCKETS,
+      registers,
+    });
+    const rejected = new Counter({
+      name: "lunedo_search_rejected_total",
+      help: "Searches answered with 429 because no search slot became free in time.",
+      registers,
+    });
+    const using = new Gauge({
+      name: "lunedo_search_slots_in_use",
+      help: "Search slots held by searches of this process.",
+      registers,
+    });
+    return {
+      waited: (seconds) => waits.observe(seconds),
+      rejected: () => rejected.inc(),
+      using: (change) => using.inc(change),
+    };
+  }
+
   observeDatabasePool(pool: DatabasePool): void {
     new Gauge({
       name: "lunedo_db_pool_connections",
@@ -224,6 +255,7 @@ export class Metrics {
       help: "Jobs per queue and state.",
       labelNames: ["queue", "state"],
       registers: [this.registry],
+      aggregator: "first",
       async collect() {
         this.reset();
         for (const [name, counts] of Object.entries(await queue.counts())) {
@@ -239,8 +271,12 @@ export class Metrics {
     return this.registry.contentType;
   }
 
+  shareWithCluster(): void {
+    this.#clusterMetrics = clusterMetricsOf(this.registry);
+  }
+
   async render(): Promise<string> {
-    return this.registry.metrics();
+    return this.#clusterMetrics ? this.#clusterMetrics() : this.registry.metrics();
   }
 }
 

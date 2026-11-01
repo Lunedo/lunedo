@@ -733,6 +733,7 @@ export {
   type WatchStatus,
   type WatchTarget,
 } from "./notifications/watches.js";
+export { aggregateClusterMetrics } from "./observability/cluster-metrics.js";
 export { isAuthorizedMetricsRequest, Metrics } from "./observability/metrics.js";
 export {
   currentRequestContext,
@@ -882,6 +883,7 @@ export {
   type TermCount,
 } from "./portal/statistics.js";
 export { type PushDevice, PushService, PushSubscriptionError } from "./push/push-service.js";
+export { type ClusterProcess, runApiCluster, waitForTurnToListen } from "./runtime/api-cluster.js";
 export {
   availableMasterKeys,
   createServerRuntime,
@@ -904,6 +906,7 @@ export {
 } from "./search/adapter.js";
 export { type IndexState, SearchIndexer } from "./search/indexer.js";
 export { searchIndexJob } from "./search/jobs.js";
+export { SearchBusyError, SearchLane, SearchTimeoutError } from "./search/lane.js";
 export { contentLanguageSetting } from "./search/languages.js";
 export { PostgresSearchAdapter } from "./search/postgres-adapter.js";
 export { MAX_QUERY_LENGTH, searchOperators } from "./search/query.js";

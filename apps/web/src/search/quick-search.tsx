@@ -35,6 +35,7 @@ import {
   recentlyViewedQuery,
   recentSearchesQuery,
   type SearchHit,
+  searchBusy,
   spacesQuery,
   useRememberSearch,
   useSavedSearches,
@@ -332,25 +333,30 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
   })();
 
   const nothingFound = typed.length > 0 && current !== null && current.results.length === 0;
-  const status = results.isError ? (
-    <div role="alert" className="flex flex-wrap items-center gap-2 text-sm">
-      <span className="flex-1 text-danger">
-        {t("search.quick.failed")} {problemMessage(t, results.error)}
-      </span>
-      <Button size="sm" onClick={() => void results.refetch()}>
-        {t("ui.retry")}
-      </Button>
-    </div>
-  ) : organizationId === null ? (
-    <p className="text-sm text-text-muted">{t("search.noOrganization")}</p>
-  ) : nothingFound ? (
-    <p className="flex items-center gap-2 text-sm text-text-muted">
-      <SearchX aria-hidden="true" className="size-icon-md shrink-0" />
-      {inSpace
-        ? t("search.quick.nothingInSpace", { query: typed, space: spaceName(space) })
-        : t("search.quick.nothing", { query: typed })}
-    </p>
-  ) : null;
+  const status =
+    results.isFetching && searchBusy(results.failureReason) ? (
+      <p role="status" className="text-sm text-text-muted">
+        {t("search.busy")}
+      </p>
+    ) : results.isError ? (
+      <div role="alert" className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="flex-1 text-danger">
+          {t("search.quick.failed")} {problemMessage(t, results.error)}
+        </span>
+        <Button size="sm" onClick={() => void results.refetch()}>
+          {t("ui.retry")}
+        </Button>
+      </div>
+    ) : organizationId === null ? (
+      <p className="text-sm text-text-muted">{t("search.noOrganization")}</p>
+    ) : nothingFound ? (
+      <p className="flex items-center gap-2 text-sm text-text-muted">
+        <SearchX aria-hidden="true" className="size-icon-md shrink-0" />
+        {inSpace
+          ? t("search.quick.nothingInSpace", { query: typed, space: spaceName(space) })
+          : t("search.quick.nothing", { query: typed })}
+      </p>
+    ) : null;
 
   const mod = isApplePlatform() ? "⌘" : "Ctrl";
   return (

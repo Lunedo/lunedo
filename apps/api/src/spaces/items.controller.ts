@@ -1,4 +1,10 @@
-import { containsBlock, MAX_TREE_PAGE, renderPageMarkdown, treeItemKinds } from "@lunedo/server";
+import {
+  containsBlock,
+  MAX_TREE_PAGE,
+  type Principal,
+  renderPageMarkdown,
+  treeItemKinds,
+} from "@lunedo/server";
 import {
   Body,
   Controller,
@@ -17,13 +23,17 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
+import { commentListSchema, reactionsSchema, taskStatusSchema } from "../collaboration/schemas.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
+import { attachmentListSchema } from "../files/schemas.js";
 import { ApiRoute } from "../http/api-route.js";
 import { answerConditionally } from "../http/conditional.js";
 import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { itemNumber, itemNumberParam, uuid } from "../http/schemas.js";
+import { watchStatusSchema } from "../notifications/watches.controller.js";
+import { accessExplanationSchema, exampleExplanation } from "../sharing/schemas.js";
 import { parentEntriesSchema, restorableInSpace, withParentsQuery } from "./restore-parents.js";
 import {
   archivedItemSchema,
@@ -45,8 +55,25 @@ import {
   treeItemSchema,
   updateItemSchema,
 } from "./schemas.js";
+import { versionSchema } from "./versions.controller.js";
 
 const TAG = "Pages";
+
+const pageViewSchema = z
+  .object({
+    item: itemDetailsSchema,
+    content: pageContentSchema
+      .nullable()
+      .describe(
+        "The content readers see, or null for an item that is not a page or has no readable content.",
+      ),
+    tasks: z
+      .array(taskStatusSchema)
+      .nullable()
+      .describe("Statuses of the tasks in the order of the page, or null for an item that is not a page."),
+    access: accessExplanationSchema,
+  })
+  .describe("What the app needs to show a page.");
 const space = { type: "space", param: "spaceId" } as const;
 const item = { type: "item", param: "itemId" } as const;
 const numberedItem = { type: "item", param: "number", by: "number" } as const;
@@ -198,6 +225,19 @@ const editorsSchema = z
       .describe("People with the page open in the editor."),
   })
   .describe("Who is editing the page now.");
+
+const pagePanelsSchema = z
+  .object({
+    labels: labelsSchema,
+    reactions: reactionsSchema,
+    watch: watchStatusSchema,
+    editors: editorsSchema,
+    versions: z.array(versionSchema).describe("Versions, newest first."),
+    backlinks: z.array(backlinkSchema).describe("Pages that link here, ordered by title."),
+    attachments: attachmentListSchema,
+    comments: commentListSchema,
+  })
+  .describe("What the app shows around a page.");
 
 const followResultSchema = z
   .object({
@@ -512,14 +552,96 @@ export class ItemsController {
     response: { description: "The content.", schema: pageContentSchema, example: examplePageContent },
   })
   async content(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
+    const content = await this.#readableContent(actorOf(request), pageId);
+    if (!content) throw notFound();
+    return content;
+  }
+
+  async #readableContent(actor: Principal, pageId: string) {
     const readable = await this.#services.documents.readable(pageId);
-    if (!readable) throw notFound();
+    if (!readable) return null;
     const document = await this.#services.comments.markOpenThreads(pageId, readable.document);
-    return {
-      ...readable,
-      document,
-      references: await this.#services.documents.references(actorOf(request), document),
-    };
+    return { ...readable, document, references: await this.#services.documents.references(actor, document) };
+  }
+
+  @Get("pages/by-number/:number/view")
+  @Permission("item.view", numberedItem)
+  @ApiRoute({
+    summary: "Get a page to read",
+    description:
+      "Returns in one answer what the app needs to show a page found by the number in its address: the item as `GET /items/by-number/{number}` returns it, the content readers see as `GET /pages/{pageId}/content` returns it, the statuses of its tasks and the caller's own access. `content` and `tasks` are null for an item that is not a page, and `content` also when the page has nothing readers may see yet. A number that does not exist and a number of an item the caller cannot see give the same `notFound` answer.",
+    tags: [TAG],
+    params: numberParams,
+    response: {
+      description: "The page.",
+      schema: pageViewSchema,
+      example: {
+        item: {
+          ...exampleItem,
+          spaceKey: "ITOPS",
+          spaceName: "IT Operations",
+          spaceAccess: true,
+          spaceContentLanguage: "en",
+          ancestors: [],
+          owner: null,
+          ownershipTransferable: false,
+        },
+        content: examplePageContent,
+        tasks: [],
+        access: exampleExplanation,
+      },
+    },
+  })
+  async view(@Param("number") number: string, @Req() request: FastifyRequest) {
+    const actor = actorOf(request);
+    const itemId = await this.#services.tree.idOfNumber(Number(number));
+    const item = itemId ? await this.#services.tree.details(actor, itemId) : null;
+    if (!item) throw notFound();
+    const page = item.kind === "page";
+    const [content, tasks, access] = await Promise.all([
+      page ? this.#readableContent(actor, item.id) : null,
+      page ? this.#services.tasks.statuses(actor, item.id) : null,
+      this.#services.accessExplanations.explainAccess(actor, { type: "item", id: item.id }, actor.id),
+    ]);
+    return { item, content, tasks, access };
+  }
+
+  @Get("pages/:pageId/panels")
+  @Permission("item.view", page)
+  @ApiRoute({
+    summary: "Get the side information of a page",
+    description:
+      "Returns in one answer what the app shows around a page after its content: labels, reactions, the caller's watch state, the people editing it, versions, pages that link here, attachments and comments, each as its own endpoint returns it.",
+    tags: [TAG],
+    params: pageParams,
+    response: {
+      description: "The side information.",
+      schema: pagePanelsSchema,
+      example: {
+        labels: ["runbook", "vpn"],
+        reactions: { enabled: true, reactions: [] },
+        watch: { own: null, effective: { state: "watching", keepActionable: true, source: "space" } },
+        editors: { editors: [] },
+        versions: [],
+        backlinks: [],
+        attachments: [],
+        comments: { threads: [], people: {} },
+      },
+    },
+  })
+  async panels(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
+    const actor = actorOf(request);
+    const services = this.#services;
+    const labels = await services.documents.labels(pageId);
+    const reactions = await services.reactions.forItem(actor, pageId);
+    const watch = await services.watches.status(actor.id, { type: "item", id: pageId });
+    const editors = await services.versions.editors(actor, pageId);
+    const versions = await services.copies.sources(actor, await services.versions.list(pageId));
+    const backlinks = await services.documents.backlinks(actor, pageId);
+    const editable = await services.authorization.authorize(actor, "item.edit", { type: "item", id: pageId });
+    const attachments = await services.attachments.list(actor, pageId, editable ? "draft" : "published");
+    const comments = await services.comments.list(actor, pageId);
+    return { labels, reactions, watch, editors: { editors }, versions, backlinks, attachments, comments };
   }
 
   @Get("pages/:pageId/editors")

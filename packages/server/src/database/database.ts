@@ -9,7 +9,12 @@ export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 export type Executor = Database | Transaction;
 
-const READ_ONLY = /^\s*select\b/i;
+const READ_ONLY = /^\s*(select|with)\b/i;
+const WRITES = /\b(insert\s+into|update|delete\s+from|merge\s+into|truncate)\b/i;
+
+export function isReadOnlyQuery(query: string): boolean {
+  return READ_ONLY.test(query) && !WRITES.test(query);
+}
 
 /** Drizzle client with the snake_case naming convention used by every table. */
 export function createDatabase(pool: DatabasePool): Database {
@@ -19,7 +24,7 @@ export function createDatabase(pool: DatabasePool): Database {
     casing: "snake_case",
     logger: {
       logQuery: (query) => {
-        if (!READ_ONLY.test(query)) clearRequestCache();
+        if (!isReadOnlyQuery(query)) clearRequestCache();
       },
     },
   });

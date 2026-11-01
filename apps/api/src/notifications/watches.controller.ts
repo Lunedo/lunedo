@@ -37,7 +37,7 @@ const watchUpdateSchema = z
   .strict()
   .describe("The new state.");
 
-const watchStatusSchema = z
+export const watchStatusSchema = z
   .object({
     own: z
       .object({

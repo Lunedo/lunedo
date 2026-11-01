@@ -51,12 +51,21 @@ export interface RestrictionResult {
   unless?: SpaceRole;
 }
 
+export interface LookupOptions {
+  fresh?: boolean;
+}
+
 export type Restriction = (
   executor: Executor,
   ids: readonly string[],
+  options?: LookupOptions,
 ) => Promise<Map<string, RestrictionResult>>;
 
-export type Lookup = (executor: Executor, ids: readonly string[]) => Promise<Map<string, string>>;
+export type Lookup = (
+  executor: Executor,
+  ids: readonly string[],
+  options?: LookupOptions,
+) => Promise<Map<string, string>>;
 
 export interface ResourceType {
   type: string;

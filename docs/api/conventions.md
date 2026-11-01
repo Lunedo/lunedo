@@ -56,8 +56,10 @@ Common problems:
 | `payloadTooLarge` | 413 | The body is too large. |
 | `unsupportedMediaType` | 415 | The body has the wrong type. |
 | `rateLimited` | 429 | Too many requests; wait for `Retry-After` seconds. |
+| `searchBusy` | 429 | All search slots of the instance stayed busy; search again after `Retry-After` seconds. |
 | `internalError` | 500 | Unexpected error; the log of the instance has the details. |
 | `busy` | 503 | The server is busy; try again after `Retry-After` seconds. |
+| `searchTimedOut` | 503 | The search ran longer than the instance allows; narrow it. |
 | `maintenanceMode` | 503 | The instance is in maintenance mode and saves no changes; `maintenanceMessage` holds the administrators' note. |
 | `storageFull` | 507 | The file store is almost full; uploads or large writes are refused. |
 

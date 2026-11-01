@@ -257,6 +257,18 @@ describe("SettingsList", () => {
     await waitFor(() => expect(onChange).toHaveBeenCalledWith("files.keepVersions", { value: "unlimited" }));
   });
 
+  it("shows the send rate of each sending method while no rate is set", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderList(
+      [entry({ key: "mail.sendRatePerMinute", value: null, defaultValue: null, lockable: false })],
+      onChange,
+    );
+    const input = screen.getByRole("textbox", { name: "E-mails per minute" });
+    expect(input.getAttribute("placeholder")).toBe("30 for Microsoft Graph, no limit for SMTP");
+    await userEvent.type(input, "30{Enter}");
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith("mail.sendRatePerMinute", { value: 30 }));
+  });
+
   it("confirms a change with a toast whose undo restores the previous state", async () => {
     const onChange = vi.fn(async () => undefined);
     await renderList(

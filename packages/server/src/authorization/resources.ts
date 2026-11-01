@@ -1,5 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
+import { currentRequestContext } from "../observability/request-context.js";
 import {
   membersCreateGroupsSetting,
   organizationSettingsChain,
@@ -18,6 +19,7 @@ import {
 import { grantsLevel } from "./areas.js";
 import type {
   ActionDefinition,
+  LookupOptions,
   ResourceType,
   Restriction,
   RestrictionResult,
@@ -369,8 +371,13 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
 
   const item: ResourceType = {
     type: "item",
-    spaceOf: (executor, ids) =>
-      lookup(executor, sql`select id, space_id as value from tree_items where id = any(${uuids(ids)})`),
+    spaceOf: async (executor, ids, options) =>
+      new Map(
+        [...(await itemStates(executor, ids, options))].map(([id, state]): [string, string] => [
+          id,
+          state.spaceId,
+        ]),
+      ),
     itemOf: async (_executor, ids) => new Map(ids.map((id) => [id, id])),
     actions: {
       "item.view": { scope: "space", spaceRole: "reader", restriction: "readable" },
@@ -773,8 +780,8 @@ function interactiveItem(state: ItemState | undefined): Decided {
 function byItemState(
   decide: (state: ItemState | undefined, executor: Executor) => Decided | Promise<Decided>,
 ): Restriction {
-  return async (executor, ids) => {
-    const states = await itemStates(executor, ids);
+  return async (executor, ids, options) => {
+    const states = await itemStates(executor, ids, options);
     return each(ids, (id) => decide(states.get(id), executor));
   };
 }
@@ -793,11 +800,13 @@ function byParentState(
   load: (executor: Executor, ids: readonly string[]) => Promise<Map<string, Parent>>,
   decide: (state: ItemState | undefined, parent: Parent | undefined) => Decided,
 ): Restriction {
-  return async (executor, ids) => {
+  return async (executor, ids, options) => {
     const found = await load(executor, ids);
-    const states = await itemStates(executor, [
-      ...new Set([...found.values()].map((parent) => parent.item_id)),
-    ]);
+    const states = await itemStates(
+      executor,
+      [...new Set([...found.values()].map((parent) => parent.item_id))],
+      options,
+    );
     return each(ids, (id) => {
       const parent = found.get(id);
       return decide(parent ? states.get(parent.item_id) : undefined, parent);
@@ -855,7 +864,40 @@ async function spaceStates(
   return new Map(result.rows.map((row) => [row.id, row]));
 }
 
-async function itemStates(executor: Executor, ids: readonly string[]): Promise<Map<string, ItemState>> {
+async function itemStates(
+  executor: Executor,
+  ids: readonly string[],
+  options: LookupOptions = {},
+): Promise<Map<string, ItemState>> {
+  const cache = options.fresh ? undefined : currentRequestContext()?.cache;
+  const key = (id: string) => `authorization:item-state:${id}`;
+  const found = new Map<string, ItemState>();
+  const missing: string[] = [];
+  const pending: Promise<void>[] = [];
+  const keep = (id: string, state: ItemState | null) => {
+    if (state) found.set(id, state);
+  };
+  for (const id of new Set(ids)) {
+    const known = cache?.get(key(id)) as Promise<ItemState | null> | undefined;
+    if (known) pending.push(known.then((state) => keep(id, state)));
+    else missing.push(id);
+  }
+  if (missing.length > 0) {
+    const loading = loadItemStates(executor, missing);
+    for (const id of missing) {
+      const one = loading.then((loaded) => loaded.get(id) ?? null);
+      if (cache) {
+        cache.set(key(id), one);
+        one.catch(() => cache.delete(key(id)));
+      }
+      pending.push(one.then((state) => keep(id, state)));
+    }
+  }
+  await Promise.all(pending);
+  return found;
+}
+
+async function loadItemStates(executor: Executor, ids: readonly string[]): Promise<Map<string, ItemState>> {
   if (ids.length === 0) return new Map();
   const result = await executor.execute<{
     id: string;

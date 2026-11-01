@@ -28,6 +28,7 @@ import {
   filtersOf,
   type RecentSearch,
   recentSearchesQuery,
+  searchBusy,
   searchResultsQuery,
   useForgetSearch,
   useRememberSearch,
@@ -231,6 +232,10 @@ export function SearchScreen() {
             organizationId={organizationId}
             onSearch={(entry) => show(entry.query, filtersOf(entry.filters))}
           />
+        ) : results.isFetching && searchBusy(results.failureReason) ? (
+          <p role="status" className="pt-4 text-sm text-text-muted">
+            {t("search.busy")}
+          </p>
         ) : results.isError && !results.data ? (
           <div className="pt-4">
             <LoadError what={t("search.failed")} error={results.error} onRetry={() => results.refetch()} />

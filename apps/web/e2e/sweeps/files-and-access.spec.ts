@@ -60,7 +60,7 @@ test("sharing screens pass the accessibility check in English and German, light 
   await sweepAppearances(page, "share-links", async () => {
     await page.goto(pagePath);
     await page.getByRole("button", { name: /^(Share|Teilen)$/ }).click();
-    await page.getByRole("tab", { name: /^(Share links|Links)$/ }).click();
+    await page.getByRole("tab", { name: /^(Share links|Links)( \d+)?$/ }).click();
     await expect(
       page
         .getByRole("dialog")

@@ -29,6 +29,8 @@ The previews return who gains or loses access or gets another role. People the c
 | `POST /api/v1/spaces/{spaceId}/items` | Creates a page, folder, link or whiteboard, optionally from a template | `space.edit` |
 | `GET /api/v1/items/{itemId}` | One item with its space and ancestors | `item.view` |
 | `GET /api/v1/items/by-number/{number}` | The same, by the item's number | `item.view` |
+| `GET /api/v1/pages/by-number/{number}/view` | The item by its number together with the content readers see, the task statuses and the caller's own access, in one answer | `item.view` |
+| `GET /api/v1/pages/{pageId}/panels` | Labels, reactions, own watch state, editors, versions, backlinks, attachments and comments of a page in one answer, each as its own route returns it | `item.view` |
 | `GET /api/v1/items?q=` | Finds pages and folders by title | signed in or token |
 | `PATCH /api/v1/items/{itemId}` | Changes title, folder description, page width or heading numbers | `item.edit` |
 | `POST /api/v1/items/{itemId}/move/preview`, `…/move` | Previews and moves an item with its children, also to another space | `item.edit` |
@@ -42,7 +44,7 @@ Blog posts are created with `POST /api/v1/spaces/{spaceId}/blog`, not in the tre
 
 ### Numbers
 
-Every item has a `number` from one sequence per instance that starts at 1000. It never changes and is never reused; a copy gets a new number. Addresses in the app use it, for example `/spaces/OPS/pages/1042/vpn-access`. `GET /api/v1/items/by-number/{number}` answers like `GET /api/v1/items/{itemId}`; an unknown number and a number the caller cannot read give the same `404`. The ID stays the key in the API, in links inside content and in exports. See [Content addresses](../user/spaces-and-pages/content-addresses.md#content-numbers-and-addresses).
+Every item has a `number` from one sequence per instance that starts at 1000. It never changes and is never reused; a copy gets a new number. Addresses in the app use it, for example `/spaces/OPS/pages/1042/vpn-access`. `GET /api/v1/items/by-number/{number}` answers like `GET /api/v1/items/{itemId}`; an unknown number and a number the caller cannot read give the same `404`. `GET /api/v1/pages/by-number/{number}/view` returns the same item together with what `GET /api/v1/pages/{pageId}/content`, `…/tasks` and `…/access/mine` return, so a page can be shown with one request; `content` and `tasks` are `null` for an item that is not a page. The ID stays the key in the API, in links inside content and in exports. See [Content addresses](../user/spaces-and-pages/content-addresses.md#content-numbers-and-addresses).
 
 ### Moving and copying
 

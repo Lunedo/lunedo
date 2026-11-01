@@ -376,7 +376,7 @@ describe("the e-mail settings", () => {
     });
     await renderMail();
     const field = await screen.findByRole("textbox", { name: "E-mails per minute" });
-    expect(screen.getByText("Further e-mails wait for the next minute.")).toBeTruthy();
+    expect(screen.getByText("Unset: 30 for Graph, no limit for SMTP.")).toBeTruthy();
     await userEvent.clear(field);
     await userEvent.type(field, "12{Enter}");
     await waitFor(() =>

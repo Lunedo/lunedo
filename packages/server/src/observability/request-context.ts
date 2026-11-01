@@ -27,3 +27,9 @@ export function currentRequestContext(): RequestContext | undefined {
 export function clearRequestCache(): void {
   storage.getStore()?.cache?.clear();
 }
+
+export function withFreshRequestCache<T>(fn: () => T): T {
+  const current = storage.getStore();
+  if (!current) return fn();
+  return storage.run({ ...current, cache: new Map() }, fn);
+}

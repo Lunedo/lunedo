@@ -34,7 +34,7 @@ const personSchema = z
   })
   .describe("A person.");
 
-const versionSchema = z
+export const versionSchema = z
   .object({
     number: z.number().int().describe("Number of the version, counting from 1."),
     title: z.string().describe("Title of the page in this version."),

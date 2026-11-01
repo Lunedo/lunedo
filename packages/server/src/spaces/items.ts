@@ -14,6 +14,7 @@ import {
   knowledgeBasePlacementError,
   rethrowKnowledgeBaseViolation,
 } from "../knowledge-bases/rules.js";
+import { currentRequestContext } from "../observability/request-context.js";
 import { contentLanguageOf, spaceContentLanguage } from "../search/languages.js";
 import type { SettingsService } from "../settings/service.js";
 import { guestAccounts, requireConfidentialGuestInviter } from "../sharing/confidential-guests.js";
@@ -627,11 +628,17 @@ export class TreeService {
     return row ? toItem(row) : null;
   }
 
-  async idOfNumber(number: number): Promise<string | null> {
-    const result = await this.#database.execute<{ id: string }>(
-      sql`select id from tree_items where number = ${number}`,
-    );
-    return result.rows[0]?.id ?? null;
+  idOfNumber(number: number): Promise<string | null> {
+    const cache = currentRequestContext()?.cache;
+    const key = `item-number:${number}`;
+    const known = cache?.get(key) as Promise<string | null> | undefined;
+    if (known) return known;
+    const loading = this.#database
+      .execute<{ id: string }>(sql`select id from tree_items where number = ${number}`)
+      .then((result) => result.rows[0]?.id ?? null);
+    cache?.set(key, loading);
+    loading.catch(() => cache?.delete(key));
+    return loading;
   }
 
   async details(viewer: Principal, itemId: string): Promise<ItemDetails | null> {

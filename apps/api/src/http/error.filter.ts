@@ -30,6 +30,8 @@ import {
   SavedSearchNameError,
   SceneInvalidError,
   type SceneProblemCode,
+  SearchBusyError,
+  SearchTimeoutError,
   SessionGoneError,
   SettingAboveMaximumError,
   SettingBelowMinimumError,
@@ -246,6 +248,19 @@ function map(error: unknown): Mapped | null {
   }
   if (error instanceof MissingTargetSecretError) {
     return { code: "backupTargetFailed", detail: error.message, extensions: { problem: "missingSecret" } };
+  }
+  if (error instanceof SearchBusyError) {
+    return {
+      code: "searchBusy",
+      detail: "Many searches are running at the moment; the search is tried again shortly",
+      extensions: { retryAfterSeconds: error.retryAfterSeconds },
+    };
+  }
+  if (error instanceof SearchTimeoutError) {
+    return {
+      code: "searchTimedOut",
+      detail: "The search took too long; narrow it with more words or a filter",
+    };
   }
   if (error instanceof ExportBusyError) {
     return {

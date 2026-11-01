@@ -12,6 +12,9 @@ export const DISK_HEADROOM = 1.3;
 export const ACTIONS = ["pageOpen", "pageReadable", "search", "save", "forYou"] as const;
 export type Action = (typeof ACTIONS)[number];
 
+export const SCENARIOS = ["typical", "peak"] as const;
+export type Scenario = (typeof SCENARIOS)[number];
+
 export interface Timing {
   readonly count: number;
   readonly p50Ms: number;
@@ -27,8 +30,11 @@ export interface ContainerUsage {
 }
 
 export interface LoadRun {
+  readonly scenario: Scenario;
+  readonly commit: string;
   readonly startedAt: string;
   readonly durationSeconds: number;
+  readonly warmupSeconds: number;
   readonly disturbed: boolean;
   readonly actions: Readonly<Record<Action, Timing>>;
   readonly errors: { readonly count: number; readonly kinds: Readonly<Record<string, number>> };
@@ -82,6 +88,7 @@ export interface Requirements {
     readonly vcpus: number;
     readonly memoryBytes: number;
     readonly diskBytes: number;
+    readonly storage: string;
     readonly operatingSystem: string;
     readonly kernel: string;
     readonly docker: string;
@@ -166,9 +173,17 @@ function loadRun(value: unknown, where: string): LoadRun {
   const actions = object(source.actions, `${where}.actions`);
   const errors = object(source.errors, `${where}.errors`);
   const kinds = object(errors.kinds, `${where}.errors.kinds`);
+  const scenario = text(source.scenario, `${where}.scenario`);
+  if (!(SCENARIOS as readonly string[]).includes(scenario)) fail(`${where}.scenario`, "typical or peak");
+  const commit = text(source.commit, `${where}.commit`);
+  if (!/^[0-9a-f]{7,40}$/.test(commit)) fail(`${where}.commit`, "a commit hash");
   return {
+    scenario: scenario as Scenario,
+    commit,
     startedAt: text(source.startedAt, `${where}.startedAt`),
     durationSeconds: number(source.durationSeconds, `${where}.durationSeconds`),
+    warmupSeconds:
+      source.warmupSeconds === undefined ? 0 : number(source.warmupSeconds, `${where}.warmupSeconds`),
     disturbed: flag(source.disturbed, `${where}.disturbed`),
     actions: Object.fromEntries(
       ACTIONS.map((action) => [action, timing(actions[action], `${where}.actions.${action}`)]),
@@ -245,7 +260,7 @@ export function parseRequirements(value: unknown): Requirements {
   if (!/^[0-9a-f]{7,40}$/.test(commit)) fail("commit", "a commit hash");
   const sizes = array(source.sizes, "sizes").map((entry, index) => size(entry, `sizes[${index}]`));
   for (const entry of sizes) {
-    if (entry.loadRuns.filter((run) => !run.disturbed).length < 2) {
+    if (counted(runsOf(entry, primaryScenario(entry))).length < 2) {
       fail(`size ${entry.name}`, "measured with at least two undisturbed load runs");
     }
   }
@@ -254,6 +269,7 @@ export function parseRequirements(value: unknown): Requirements {
     commit,
     referenceMachine: {
       cpu: text(machine.cpu, "referenceMachine.cpu"),
+      storage: text(machine.storage, "referenceMachine.storage"),
       operatingSystem: text(machine.operatingSystem, "referenceMachine.operatingSystem"),
       kernel: text(machine.kernel, "referenceMachine.kernel"),
       docker: text(machine.docker, "referenceMachine.docker"),
@@ -274,6 +290,18 @@ export function parseRequirements(value: unknown): Requirements {
 
 function counted(runs: readonly LoadRun[]): readonly LoadRun[] {
   return runs.filter((run) => !run.disturbed);
+}
+
+export function runsOf(size: SizeResult, scenario: Scenario): readonly LoadRun[] {
+  return size.loadRuns.filter((run) => run.scenario === scenario);
+}
+
+export function primaryScenario(size: SizeResult): Scenario {
+  return counted(runsOf(size, "typical")).length >= 2 ? "typical" : "peak";
+}
+
+function scenariosOf(size: SizeResult): Scenario[] {
+  return SCENARIOS.filter((scenario) => counted(runsOf(size, scenario)).length > 0);
 }
 
 function worst(runs: readonly LoadRun[], action: Action): number {
@@ -297,10 +325,15 @@ export interface TargetResult {
   readonly met: boolean;
 }
 
-export function targetResults(size: SizeResult, targets: Requirements["targets"]): TargetResult[] {
-  const errors = counted(size.loadRuns).reduce((sum, run) => sum + run.errors.count, 0);
+export function targetResults(
+  size: SizeResult,
+  targets: Requirements["targets"],
+  scenario: Scenario = primaryScenario(size),
+): TargetResult[] {
+  const runs = runsOf(size, scenario);
+  const errors = counted(runs).reduce((sum, run) => sum + run.errors.count, 0);
   const timed = (name: string, action: Action, limit: number): TargetResult => {
-    const measured = worst(size.loadRuns, action);
+    const measured = worst(runs, action);
     return { name, limit: `below ${duration(limit)}`, measured: duration(measured), met: measured < limit };
   };
   return [
@@ -332,7 +365,7 @@ export function retainedBackups(retention: Readonly<Record<string, number>>): nu
 }
 
 export function derive(size: SizeResult, data: Requirements, backups: number): Derived {
-  const runs = counted(size.loadRuns);
+  const runs = counted(runsOf(size, primaryScenario(size)));
   const peakMemory = Math.max(...runs.map((run) => run.totals.peakMemoryBytes));
   const peakCores =
     (Math.max(...runs.map((run) => run.machinePeakCpuPercent)) / 100) * data.referenceMachine.vcpus;
@@ -340,12 +373,19 @@ export function derive(size: SizeResult, data: Requirements, backups: number): D
   const stored = footprint.imageBytes + footprint.databaseBytes + footprint.fileStorageBytes;
   const met = targetResults(size, data.targets).every((target) => target.met);
   const minimumCpus = Math.max(1, Math.ceil(peakCores));
+  const busiestRuns = counted(runsOf(size, "peak"));
+  const busiestCores = busiestRuns.length
+    ? (Math.max(...busiestRuns.map((run) => run.machinePeakCpuPercent)) / 100) * data.referenceMachine.vcpus
+    : 0;
   return {
     minimumCpus,
     minimumMemoryGiB: Math.max(1, Math.ceil(peakMemory / GIB)),
     minimumDiskGB: Math.ceil((stored + footprint.backupBytes) / GB),
     recommendedCpus: met
-      ? Math.min(data.referenceMachine.vcpus, Math.max(2, minimumCpus, Math.ceil(peakCores * CPU_FACTOR)))
+      ? Math.min(
+          data.referenceMachine.vcpus,
+          Math.max(2, minimumCpus, Math.ceil(peakCores * CPU_FACTOR), Math.ceil(busiestCores)),
+        )
       : null,
     recommendedMemoryGiB: Math.ceil((peakMemory * RAM_FACTOR) / GIB),
     diskBackupsElsewhereGB: Math.ceil(((stored + footprint.backupBytes) * DISK_HEADROOM) / GB),
@@ -392,9 +432,47 @@ export function renderRequirements(source: RequirementsSource): string {
   const machine = data.referenceMachine;
   const backups = retainedBackups(source.retention);
   const derived = data.sizes.map((entry) => ({ size: entry, values: derive(entry, data, backups) }));
-  const runs = data.sizes.map((entry) => counted(entry.loadRuns).length);
+  const minutes = Math.round(
+    Math.max(...data.sizes.flatMap((entry) => entry.loadRuns.map((run) => run.durationSeconds))) / 60,
+  );
   return [
-    `Measured on ${data.measuredAt} with commit \`${data.commit.slice(0, 8)}\` on a reference machine with ${machine.vcpus} vCPU (${machine.cpu}), ${memory(machine.memoryBytes)} of RAM and ${bytes(machine.diskBytes)} of disk, running ${machine.operatingSystem} with kernel ${machine.kernel}, Docker ${machine.docker}, Docker Compose ${machine.compose} and PostgreSQL ${machine.postgres}. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. The load came from one computer, which sent the requests of each person from a client address of its own. Each size had ${Math.min(...runs) === Math.max(...runs) ? Math.min(...runs) : `${Math.min(...runs)} to ${Math.max(...runs)}`} load runs of ${Math.round(Math.max(...data.sizes.flatMap((entry) => entry.loadRuns.map((run) => run.durationSeconds))) / 60)} minutes each, in which the people active at the same time open pages, search, edit and publish, and read notifications, and five of them edit the same page together.`,
+    `Measured on a reference machine with ${machine.vcpus} vCPU (${machine.cpu}), ${memory(machine.memoryBytes)} of RAM and ${bytes(machine.diskBytes)} of disk (${machine.storage}), running ${machine.operatingSystem} with kernel ${machine.kernel}, Docker ${machine.docker}, Docker Compose ${machine.compose} and PostgreSQL ${machine.postgres}. Each size ran on a fresh installation from the setup script, without TLS and without a reverse proxy, with synthetic content and the default limits. Size, backups and start times were measured on ${data.measuredAt} with commit \`${data.commit.slice(0, 8)}\`. The load came from one computer, which sent the requests of each person from a client address of its own, in load runs of ${minutes} minutes.`,
+    "### Scenarios",
+    "The load runs follow one of two scenarios. Both are assumptions about how people use a wiki, not measured use. In both, five of the people active at the same time edit the same page together.",
+    table(
+      [
+        "Scenario",
+        "Wait between two actions",
+        "Open a page",
+        "Search",
+        "Edit and publish",
+        "Notifications and For you",
+      ],
+      [
+        ["typical", "30 to 90 seconds, 60 on average", "70 %", "15 %", "2 %", "13 %"],
+        ["peak", "7 to 36 seconds, 18 on average", "70 %", "15 %", "10 %", "5 %"],
+      ],
+    ),
+    "The targets apply to **typical**; **peak** shows how much room is left. A size measured only with peak is judged by peak, and its hardware comes from peak. Response times of the first minutes of a run, while the people start and the load generator opens its connections, are not counted where the table says so; errors always are.",
+    table(
+      ["Size", "Scenario", "Load runs", "Measured on", "Commit", "Not counted at the start"],
+      data.sizes.flatMap((entry) =>
+        scenariosOf(entry).map((scenario) => {
+          const runs = counted(runsOf(entry, scenario));
+          const dates = [...new Set(runs.map((run) => run.startedAt.slice(0, 10)))].sort();
+          const commits = [...new Set(runs.map((run) => `\`${run.commit.slice(0, 8)}\``))];
+          const warmup = Math.max(...runs.map((run) => run.warmupSeconds));
+          return [
+            entry.name,
+            scenario,
+            integer(runs.length),
+            dates.join(", "),
+            commits.join(", "),
+            warmup > 0 ? `${Math.round(warmup / 60)} min` : "nothing",
+          ];
+        }),
+      ),
+    ),
     "### Sizes",
     table(
       ["Size", "People", "Pages", "Spaces", "Attachments", "Active at the same time"],
@@ -408,7 +486,7 @@ export function renderRequirements(source: RequirementsSource): string {
       ]),
     ),
     "### Hardware",
-    `**Minimum** is what the reference machine used at the peak of the load runs, rounded up: CPU from the busy time of the whole machine, RAM from the Lunedo and PostgreSQL containers. Add what the operating system needs. **Recommended** RAM is the peak × ${RAM_FACTOR}, and recommended CPU keeps the response times below the targets with room for peaks. Disk is the image, the database, the file store and backups, with ${Math.round((DISK_HEADROOM - 1) * 100)} % headroom; with backups on the same host, it counts the ${backups} backups that the default retention keeps.`,
+    `**Minimum** is what the reference machine used at the peak of the load runs, rounded up: CPU from the busy time of the whole machine, RAM from the Lunedo and PostgreSQL containers. Add what the operating system needs. **Recommended** RAM is the peak × ${RAM_FACTOR}, and recommended CPU keeps the response times below the targets with room for peaks: at least the peak × ${CPU_FACTOR} and at least what the peak scenario used, never more than the reference machine has. Disk is the image, the database, the file store and backups, with ${Math.round((DISK_HEADROOM - 1) * 100)} % headroom; with backups on the same host, it counts the ${backups} backups that the default retention keeps.`,
     table(
       [
         "Size",
@@ -437,28 +515,37 @@ export function renderRequirements(source: RequirementsSource): string {
     "### Response times under load",
     "Median of the load runs; p95 is the time within which 95 % of the requests finished. **Readable** is the time until the page is shown in the browser.",
     table(
-      ["Size", ...ACTIONS.map(actionName), "Errors"],
-      data.sizes.map((entry) => [
-        entry.name,
-        ...ACTIONS.map(
-          (action) =>
-            `${duration(median(entry.loadRuns, action, "p50Ms"))} / ${duration(median(entry.loadRuns, action, "p95Ms"))}`,
-        ),
-        integer(counted(entry.loadRuns).reduce((sum, run) => sum + run.errors.count, 0)),
-      ]),
+      ["Size", "Scenario", ...ACTIONS.map(actionName), "Errors"],
+      data.sizes.flatMap((entry) =>
+        scenariosOf(entry).map((scenario) => {
+          const runs = runsOf(entry, scenario);
+          return [
+            entry.name,
+            scenario,
+            ...ACTIONS.map(
+              (action) =>
+                `${duration(median(runs, action, "p50Ms"))} / ${duration(median(runs, action, "p95Ms"))}`,
+            ),
+            integer(counted(runs).reduce((sum, run) => sum + run.errors.count, 0)),
+          ];
+        }),
+      ),
     ),
     "Each cell shows p50 / p95.",
     "### Targets",
     table(
-      ["Size", "Target", "Limit", "Measured (worst run)", "Met"],
+      ["Size", "Scenario", "Target", "Limit", "Measured (worst run)", "Met"],
       data.sizes.flatMap((entry) =>
-        targetResults(entry, data.targets).map((target) => [
-          entry.name,
-          target.name,
-          target.limit,
-          target.measured,
-          target.met ? "yes" : "no",
-        ]),
+        scenariosOf(entry).flatMap((scenario) =>
+          targetResults(entry, data.targets, scenario).map((target) => [
+            entry.name,
+            scenario,
+            target.name,
+            target.limit,
+            target.measured,
+            target.met ? "yes" : "no",
+          ]),
+        ),
       ),
     ),
     "### Footprint and operations",

@@ -1356,6 +1356,8 @@
     "rateLimitedRetry": "Too many requests. Try again in {seconds, plural, one {# second} other {# seconds}}.",
     "internalError": "The server could not complete the request. Try again; if it keeps failing, ask your administrator to check the server log.",
     "busy": "The server is busy. Try again in a moment.",
+    "searchBusy": "Search is busy because many searches are running. Try again in a moment.",
+    "searchTimedOut": "The search took too long. Narrow it with more words or a filter and try again.",
     "uploadTimeout": "The upload did not finish in time, probably because the connection is slow. Try again on a faster connection or with a smaller file.",
     "passwordExpired": "Your directory password has expired. Change it the way your organization usually does, for example when signing in to your computer, or contact the administrators of {organization}. Lunedo never changes directory passwords.",
     "passwordMustChange": "Your directory password must be changed before you can sign in. Change it the way your organization usually does, for example when signing in to your computer, or contact the administrators of {organization}. Lunedo never changes directory passwords.",
@@ -2954,8 +2956,8 @@
       },
       "mail_sendRatePerMinute": {
         "label": "E-mails per minute",
-        "description": "Further e-mails wait for the next minute.",
-        "help": "Mail services limit how many e-mails one mailbox may send. Microsoft 365 allows 30 per minute over SMTP; the limit applies to SMTP and Microsoft Graph alike."
+        "description": "Unset: 30 for Graph, no limit for SMTP.",
+        "help": "Microsoft 365 allows one mailbox 30 e-mails per minute and 10,000 recipients a day, for Microsoft Graph and SMTP alike. Set 30 here when you send through Microsoft 365 over SMTP. For large organizations, use digests or an SMTP relay."
       }
     },
     "disabled": {
@@ -2964,6 +2966,7 @@
       "noPermission": "Your roles do not allow you to change this setting."
     },
     "noLimit": "No limit",
+    "mailRateByMethod": "30 for Microsoft Graph, no limit for SMTP",
     "limitDuration": "Set a limit",
     "lockTitle": "Lock {name}?",
     "lockImpactInstance": "Every organization and all its members will use {value} for {name} and can no longer change it.",
@@ -10305,6 +10308,7 @@
     }
   },
   "search": {
+    "busy": "Search is busy. Trying again …",
     "title": "Search",
     "titleWithQuery": "Search: {query}",
     "field": "Search",

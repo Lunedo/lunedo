@@ -50,6 +50,8 @@ export function useSettingValueFormatter() {
       return t("settings.noLimit");
     if (field?.type.kind === "number" && field.type.unlimited && value === "unlimited")
       return t("settings.noLimit");
+    if (field?.type.kind === "number" && field.type.unsetLabel && value === null)
+      return translateKey(t, field.type.unsetLabel);
     if (field?.type.kind === "contentLanguage") {
       return value === null || value === undefined
         ? t("contentLanguage.organization")
