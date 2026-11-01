@@ -1,4 +1,4 @@
-import { commentText, type DocumentJson } from "@lunedo/editor-schema";
+import type { DocumentJson } from "@lunedo/editor-schema";
 import { type DateFormat, formatDate, notificationEventOf, notificationEvents } from "@lunedo/shared";
 import { sql } from "drizzle-orm";
 import { Temporal } from "temporal-polyfill";
@@ -387,7 +387,7 @@ export class NotificationMailer {
     );
     const body = comment.rows[0]?.body;
     if (!body) return null;
-    const plain = commentText(body);
+    const plain = await this.#notifications.commentText(recipient.id, body);
     return plain.trim() ? excerptOf(plain, EXCERPT_LENGTH) : null;
   }
 

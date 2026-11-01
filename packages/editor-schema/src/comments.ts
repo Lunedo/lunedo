@@ -1,5 +1,5 @@
 import { documentSize } from "./extract.js";
-import type { DocumentJson } from "./json.js";
+import type { DocumentJson, NodeJson } from "./json.js";
 import { createEditorKit } from "./kit.js";
 import { defineModule, ModuleRegistry } from "./module.js";
 import { codeBlockModule } from "./modules/code.js";
@@ -65,6 +65,17 @@ function hasMention(node: { type: string; content?: unknown[] }): boolean {
   );
 }
 
-export function commentText(document: DocumentJson): string {
-  return commentKit.plainText(document);
+export function commentText(document: DocumentJson, mentionName?: (id: string) => string | null): string {
+  return commentKit.plainText(mentionName ? namedMentions(document, mentionName) : document);
+}
+
+function namedMentions<T extends NodeJson>(node: T, mentionName: (id: string) => string | null): T {
+  if (!node.content) return node;
+  const content = node.content.flatMap((child): NodeJson[] => {
+    if (child.type !== "mention") return [namedMentions(child, mentionName)];
+    const id = child.attrs?.id;
+    const name = typeof id === "string" ? mentionName(id) : null;
+    return name ? [{ type: "text", text: `@${name}` }] : [];
+  });
+  return { ...node, content };
 }

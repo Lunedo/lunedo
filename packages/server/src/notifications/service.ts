@@ -1,4 +1,4 @@
-import { commentText, type DocumentJson } from "@lunedo/editor-schema";
+import { commentText, type DocumentJson, extractMentions } from "@lunedo/editor-schema";
 import { type NotificationEvent, notificationEventOf, UNREAD_COUNT_CAP } from "@lunedo/shared";
 import { and, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
@@ -10,6 +10,7 @@ import type { MailService } from "../mail/mail-service.js";
 import { hasPushDevice, queuePush } from "../push/outbox.js";
 import { timeZoneSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
+import { PeopleService } from "../spaces/people.js";
 import { mailWording } from "./mail-texts.js";
 import type { NotificationRegistry, NotificationSubject, NotificationTypeDefinition } from "./registry.js";
 import { notifications } from "./schema.js";
@@ -203,6 +204,7 @@ export class NotificationService {
   readonly #authorization: AuthorizationService;
   readonly #registry: NotificationRegistry;
   readonly #unsubscribe: UnsubscribeService;
+  readonly #people: PeopleService;
 
   constructor(options: {
     database: Database;
@@ -212,6 +214,7 @@ export class NotificationService {
     registry: NotificationRegistry;
     unsubscribe: UnsubscribeService;
   }) {
+    this.#people = new PeopleService({ database: options.database, authorization: options.authorization });
     this.#database = options.database;
     this.#settings = options.settings;
     this.#mail = options.mail;
@@ -483,7 +486,7 @@ export class NotificationService {
       const decide = this.#authorization.batch(accountPrincipal(recipientId), { fresh: true });
       await Promise.all(
         [...previews].map(async ([item, row]) => {
-          item.preview = await this.#preview(row, decide);
+          item.preview = await this.#preview(recipientId, row, decide);
         }),
       );
       return { items, next };
@@ -642,6 +645,7 @@ export class NotificationService {
   }
 
   async #preview(
+    recipientId: string,
     row: ListRow,
     decide: (action: string, resource: { type: string; id: string }) => Promise<{ allowed: boolean }>,
   ): Promise<string | null> {
@@ -659,8 +663,13 @@ export class NotificationService {
     );
     const body = comment.rows[0]?.body;
     if (!body) return null;
-    const plain = commentText(body);
+    const plain = await this.commentText(recipientId, body);
     return plain.trim() ? shortText(plain) : null;
+  }
+
+  async commentText(recipientId: string, body: DocumentJson): Promise<string> {
+    const names = await this.#people.visiblePeople(accountPrincipal(recipientId), extractMentions(body));
+    return commentText(body, (id) => names.get(id)?.name ?? null);
   }
 
   async get(recipientId: string, id: string): Promise<NotificationItem | null> {
