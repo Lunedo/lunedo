@@ -83,6 +83,7 @@ export {
   internalItemLink,
   itemAddressOf,
   linkedItemId,
+  linkedItemReference,
 } from "./internal-links.js";
 export type { DocumentJson, MarkJson, NodeJson, ValidMark, ValidNode } from "./json.js";
 export { buildSchema, createEditorKit, type EditorKit, type Section } from "./kit.js";

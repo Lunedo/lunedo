@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { generateToken } from "../auth/tokens.js";
 import { itemLevel } from "../authorization/item-access.js";
@@ -683,6 +684,63 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
         where t.id = ${source.id}`,
     );
     expect(cached.rows).toEqual([]);
+  });
+
+  it("resolves or removes links to the instance that address pages by their number", async () => {
+    await test.settings.set(instanceUrlSetting, {}, "instance", "https://wiki.example.org");
+    const org = await organization();
+    const kb = await knowledgeBase(org.id, org.owner, "public");
+    const actor = accountPrincipal(org.owner);
+    const restricted = await publishedPage(org.owner, kb.id, "Gehaltsbänder", "Geheim");
+    await test.services.pageAccess.change(actor, restricted, [{ action: "restrict", kind: "view" }]);
+    const open = await publishedPage(org.owner, kb.id, "Offene Anleitung", "Offen");
+    const numbers = await test.database.execute<{ item_id: string; number: string }>(
+      sql`select id as item_id, number from tree_items where space_id = ${kb.id}`,
+    );
+    const numberOf = (id: string) => Number(numbers.rows.find((row) => row.item_id === id)?.number);
+    const linked = (text: string, href: string) => ({
+      type: "text",
+      text,
+      marks: [{ type: "link", attrs: { href } }],
+    });
+    const source = await test.services.tree.create(actor, kb.id, {
+      kind: "page",
+      title: "Quelle",
+      placement: { parentId: null },
+    });
+    await test.services.documents.replace(actor, source.id, {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            linked(
+              "Bänder",
+              `https://wiki.example.org/spaces/HR/pages/${numberOf(restricted)}/gehaltsbaender`,
+            ),
+            linked("Unbekannt", "https://wiki.example.org/spaces/HR/pages/99999999/unbekannt"),
+            linked(
+              "Anleitung",
+              `https://wiki.example.org/spaces/KB/pages/${numberOf(open)}/anleitung#schritt`,
+            ),
+            linked("Fremd", `https://other.example/spaces/HR/pages/${numberOf(restricted)}/fremd`),
+          ],
+        },
+      ],
+    });
+    await test.services.versions.publish(actor, source.id);
+    await test.services.articleRenderer.renderPublished(source.id);
+    const config = await test.services.portals.config(kb.id);
+    if (!config) throw new Error("missing config");
+    const found = await test.services.portalReader.article(ANONYMOUS, config, source.number);
+    if (found?.type !== "found") throw new Error("missing article");
+    const html = found.article.html;
+    expect(html).not.toContain("gehaltsbaender");
+    expect(html).not.toContain("unbekannt");
+    expect(html).not.toContain(`/pages/${numberOf(restricted)}/gehalts`);
+    expect(html).toContain("Bänder");
+    expect(html).toContain(`href="/__portal__/${numberOf(open)}#schritt"`);
+    expect(html).toContain(`href="https://other.example/spaces/HR/pages/${numberOf(restricted)}/fremd"`);
   });
 
   it("counts zero-result searches and offers only repeated terms with results as frequent searches", async () => {

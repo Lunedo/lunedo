@@ -48,6 +48,10 @@ export function linkedItemId(href: string): string | null {
   return itemLinkIn(href.startsWith("/") ? href : (ABSOLUTE.exec(href)?.[1] ?? null))?.itemId ?? null;
 }
 
+export function linkedItemReference(href: string): ItemReference | null {
+  return itemAddressOf(href.startsWith("/") ? href : (ABSOLUTE.exec(href)?.[1] ?? ""))?.reference ?? null;
+}
+
 export function itemAddressOf(href: string, instanceUrl?: string): ItemAddress | null {
   const match = ADDRESSED_ITEM.exec(pathOf(href, instanceUrl) ?? "");
   if (!match?.[1]) return null;

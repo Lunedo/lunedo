@@ -4,6 +4,7 @@ import {
   extractPageLinks,
   internalItemLink,
   itemAddressOf,
+  linkedItemReference,
   type RenderContext,
   renderHtml,
   renderMarkdown,
@@ -137,5 +138,13 @@ describe("itemAddressOf", () => {
   it("reads only relative addresses without an instance address", () => {
     expect(itemAddressOf(`${base}/spaces/OPS/pages/4711`)).toBeNull();
     expect(itemAddressOf("/spaces/OPS/pages/4711")).not.toBeNull();
+  });
+
+  it("finds the item an address names by number or ID on any host", () => {
+    expect(linkedItemReference("https://elsewhere.example/spaces/HR/pages/1050/salary-bands")).toEqual({
+      number: 1050,
+    });
+    expect(linkedItemReference(`/spaces/OPS/pages/${VISIBLE}`)).toEqual({ id: VISIBLE });
+    expect(linkedItemReference("https://elsewhere.example/spaces/HR")).toBeNull();
   });
 });

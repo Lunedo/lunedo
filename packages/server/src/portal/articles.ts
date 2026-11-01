@@ -6,7 +6,9 @@ import {
   type IncludedContent,
   type IncludeRequest,
   includeRequest,
+  itemAddressOf,
   linkedItemId,
+  linkedItemReference,
   MAX_INCLUDE_DEPTH,
   type NodeJson,
   type RenderContext,
@@ -27,7 +29,7 @@ import { includeKey } from "../spaces/includes.js";
 import { interfaceLanguage } from "./portals.js";
 import type { RenderedHeading } from "./schema.js";
 
-export const ARTICLE_RENDERER = 3;
+export const ARTICLE_RENDERER = 4;
 export const PORTAL_BASE_PLACEHOLDER = "/__portal__";
 const TOC_LEVEL = 2;
 const MAX_INCLUDES = 50;
@@ -107,6 +109,7 @@ function references(document: DocumentJson): {
   images: Set<string>;
   attachments: Set<string>;
   pages: Set<string>;
+  numbers: Set<number>;
   people: Set<string>;
   includes: IncludeRequest[];
   embeds: boolean;
@@ -114,6 +117,7 @@ function references(document: DocumentJson): {
   const images = new Set<string>();
   const attachments = new Set<string>();
   const pages = new Set<string>();
+  const numbers = new Set<number>();
   const people = new Set<string>();
   const includes: IncludeRequest[] = [];
   let embeds = false;
@@ -130,15 +134,26 @@ function references(document: DocumentJson): {
       const linked =
         mark.type === "link" && typeof markAttrs.href === "string" ? linkedItemId(markAttrs.href) : null;
       if (linked) pages.add(linked);
+      const addressed =
+        mark.type === "link" && typeof markAttrs.href === "string"
+          ? linkedItemReference(markAttrs.href)
+          : null;
+      if (addressed && "number" in addressed) numbers.add(addressed.number);
     }
     if (typeof attrs.pageId === "string" && !INCLUDES.has(node.type)) pages.add(attrs.pageId);
   });
-  return { images, attachments, pages, people, includes, embeds };
+  return { images, attachments, pages, numbers, people, includes, embeds };
 }
 
 export function hasLiveParts(document: DocumentJson): boolean {
   const found = references(document);
-  return found.includes.length > 0 || found.embeds || found.pages.size > 0 || found.people.size > 0;
+  return (
+    found.includes.length > 0 ||
+    found.embeds ||
+    found.pages.size > 0 ||
+    found.numbers.size > 0 ||
+    found.people.size > 0
+  );
 }
 
 export class ArticleRenderer {
@@ -371,18 +386,22 @@ export class ArticleRenderer {
     budget: { remaining: number },
   ): Promise<RenderContext> {
     const { spaceId, document } = source;
-    const { images, attachments, pages, people } = references(document);
+    const { images, attachments, pages, numbers, people } = references(document);
     const targets = new Map<string, { number: number; title: string }>();
-    if (pages.size > 0) {
+    const numbered = new Set<number>();
+    if (pages.size > 0 || numbers.size > 0) {
       const result = await this.#database.execute<{ item_id: string; number: number; title: string }>(sql`
         select t.id as item_id, t.number, v.title
         from tree_items t join spaces s on s.id = t.space_id
         join page_versions v on v.id = t.published_version_id
-        where t.id = any(${sql.param([...pages])}::uuid[]) and t.space_id = ${spaceId}
+        where (t.id = any(${sql.param([...pages])}::uuid[]) or t.number = any(${sql.param([...numbers])}::bigint[]))
+          and t.space_id = ${spaceId}
           and t.kind = 'page' and t.translation_of is null and t.reader_visible
           and ${this.#authorization.portalFilter(reader, sql`t`, sql`s`)}`);
       for (const entry of result.rows) {
-        targets.set(entry.item_id, { number: Number(entry.number), title: entry.title });
+        const number = Number(entry.number);
+        if (pages.has(entry.item_id)) targets.set(entry.item_id, { number, title: entry.title });
+        if (numbers.has(number)) numbered.add(number);
       }
     }
     const files = new Set<string>();
@@ -432,7 +451,13 @@ export class ArticleRenderer {
       embed: (url) => resolveEmbed(url, embeds),
       whiteboard: () => null,
       diagramReference: () => null,
-      href: (href) => (href.startsWith("/") && !href.startsWith(`${PORTAL_BASE_PLACEHOLDER}/`) ? "" : href),
+      href: (href) => {
+        if (href.startsWith("/") && !href.startsWith(`${PORTAL_BASE_PLACEHOLDER}/`)) return "";
+        const address = instanceUrl ? itemAddressOf(href, instanceUrl) : null;
+        if (!address) return href;
+        const number = "number" in address.reference ? address.reference.number : null;
+        return number !== null && numbered.has(number) ? `${addresses.page(number)}${address.fragment}` : "";
+      },
     };
   }
 }
