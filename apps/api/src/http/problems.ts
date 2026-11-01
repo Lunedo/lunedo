@@ -357,7 +357,10 @@ export const problems = {
   notCopyable: { status: 409, title: "Only pages, folders and whiteboards can be copied" },
   neverPublished: { status: 409, title: "The page has never been published" },
   otherOrganization: { status: 409, title: "Content stays within its organization" },
-  hiddenContent: { status: 409, title: "Pages below are restricted so that the caller cannot open or edit them" },
+  hiddenContent: {
+    status: 409,
+    title: "Pages below are restricted so that the caller cannot open or edit them",
+  },
   restrictedParentInTrash: {
     status: 409,
     title: "The content was below a restricted page that is in the trash",
