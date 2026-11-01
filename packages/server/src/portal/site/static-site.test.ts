@@ -665,6 +665,7 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
       "handout.html",
       "<html><body><script>alert(document.cookie)</script></body></html>",
     );
+    const bare = await upload("handout", "<html><body><script>alert(3)</script></body></html>");
     const drawing = await upload(
       "diagram.svg",
       '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><script>alert(1)</script><rect width="10" height="10" onclick="alert(2)"/></svg>',
@@ -673,6 +674,7 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
       type: "doc",
       content: [
         { type: "file", attrs: { attachmentId: page.id, name: "handout.html" } },
+        { type: "file", attrs: { attachmentId: bare.id, name: "handout" } },
         { type: "image", attrs: { attachmentId: drawing.id, alt: "Diagram" } },
         { type: "file", attrs: { attachmentId: drawing.id, name: "diagram.svg" } },
       ],
@@ -684,6 +686,9 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     const handout = written.filter((path) => path.includes(page.id));
     expect(handout).not.toHaveLength(0);
     for (const path of handout) expect(path).toMatch(/\.html\.txt$/);
+    const plain = written.filter((path) => path.includes(bare.id));
+    expect(plain).not.toHaveLength(0);
+    for (const path of plain) expect(path).toMatch(/\.txt$/);
     const svgs = written.filter((path) => path.includes(drawing.id));
     expect(svgs).not.toHaveLength(0);
     for (const path of svgs) {

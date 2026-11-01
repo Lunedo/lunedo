@@ -25,7 +25,7 @@ The website is built in the background like other exports, with the same notific
 | `contact.html`, `search.html` | the contact page and the search page |
 | `search-index.json` | the search index |
 | `de/…` | start, area, contact and search pages and the search index of each further language |
-| `files/` | images and files in their display versions. Files a browser would run as a page, such as HTML, XML or JavaScript, end in `.txt` so that web servers send them as text; scripts and event handlers are removed from SVG images |
+| `files/` | images and files in their display versions. Files of other types than images, audio, video, PDF, office documents, archives and plain text, such as HTML, XML or JavaScript, get an added `.txt` so that web servers send them as text; scripts and event handlers are removed from SVG images |
 | `_assets/` | fonts, styles, scripts and the logo |
 | `1040.html`, `1040-<earlier short form>.html` | small pages that redirect the bare number and earlier addresses of an article |
 | `_redirects` | the same redirects for Cloudflare Pages and Netlify |

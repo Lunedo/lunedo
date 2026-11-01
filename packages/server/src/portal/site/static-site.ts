@@ -14,7 +14,7 @@ import type { FileService } from "../../files/files.js";
 import type { OrganizationService } from "../../organizations/organizations.js";
 import { SpaceError } from "../../spaces/common.js";
 import { migrated } from "../../spaces/documents.js";
-import { SvgRejectedError, sanitizeSvg } from "../../whiteboards/svg.js";
+import { MAX_PREVIEW_BYTES, SvgRejectedError, sanitizeSvg } from "../../whiteboards/svg.js";
 import type { ArticleAddresses, ArticleRenderer } from "../articles.js";
 import { brandValues, interfaceLanguage, type PortalConfig, type PortalService } from "../portals.js";
 import type { PortalArticle, PortalArticleSummary, PortalCategory, PortalReader } from "../reader.js";
@@ -73,29 +73,69 @@ interface SiteFile {
   display: boolean;
 }
 
-const ACTIVE_EXTENSIONS = new Set([
-  ".htm",
-  ".html",
-  ".shtml",
-  ".xht",
-  ".xhtml",
-  ".mht",
-  ".mhtml",
-  ".xml",
-  ".xsl",
-  ".xslt",
-  ".js",
-  ".mjs",
-  ".svgz",
+const PASSIVE_EXTENSIONS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".avif",
+  ".bmp",
+  ".ico",
+  ".tif",
+  ".tiff",
+  ".heic",
+  ".heif",
+  ".svg",
+  ".pdf",
+  ".txt",
+  ".csv",
+  ".md",
+  ".json",
+  ".zip",
+  ".gz",
+  ".tgz",
+  ".tar",
+  ".7z",
+  ".rar",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+  ".odt",
+  ".ods",
+  ".odp",
+  ".rtf",
+  ".mp3",
+  ".mp4",
+  ".m4a",
+  ".mov",
+  ".webm",
+  ".ogg",
+  ".wav",
+  ".flac",
+  ".drawio",
+  ".excalidraw",
 ]);
 
 function passiveExtension(extension: string): string {
-  return ACTIVE_EXTENSIONS.has(extension) ? `${extension}.txt` : extension;
+  return PASSIVE_EXTENSIONS.has(extension) ? extension : `${extension}.txt`;
 }
 
 async function passiveSvg(content: Readable): Promise<Buffer> {
   const chunks: Buffer[] = [];
-  for await (const chunk of content) chunks.push(Buffer.from(chunk));
+  let size = 0;
+  for await (const chunk of content) {
+    const part = Buffer.from(chunk);
+    size += part.length;
+    if (size > MAX_PREVIEW_BYTES) {
+      content.destroy();
+      return Buffer.alloc(0);
+    }
+    chunks.push(part);
+  }
   try {
     return Buffer.from(sanitizeSvg(Buffer.concat(chunks).toString("utf8")), "utf8");
   } catch (error) {
