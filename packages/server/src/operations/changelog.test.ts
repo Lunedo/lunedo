@@ -92,7 +92,9 @@ describe("the changelog of the repository", () => {
     expect(sections.every((section) => Object.values(section.notes).some((notes) => notes.length > 0))).toBe(
       true,
     );
-    const manifest = JSON.parse(readFileSync(new URL("../../../../package.json", import.meta.url), "utf8")) as {
+    const manifest = JSON.parse(
+      readFileSync(new URL("../../../../package.json", import.meta.url), "utf8"),
+    ) as {
       version: string;
     };
     expect(sections.find((section) => section.version !== UNRELEASED)?.version).toBe(manifest.version);
