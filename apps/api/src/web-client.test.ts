@@ -121,6 +121,15 @@ describe("web client", () => {
     expect(policy).toContain("frame-src 'self'");
   });
 
+  it("lets only its own origin frame the application, the API and shared pages", async () => {
+    const page = await app.inject({ method: "GET", url: "/spaces/docs" });
+    expect(String(page.headers["content-security-policy"])).toContain("frame-ancestors 'self'");
+    for (const url of ["/spaces/docs", "/s/abcdef", "/api/v1/instance/info", "/health/live"]) {
+      const response = await app.inject({ method: "GET", url });
+      expect(response.headers["x-frame-options"], url).toBe("SAMEORIGIN");
+    }
+  });
+
   it("does not answer unknown API or health paths with the application", async () => {
     for (const url of ["/api/unknown", "/api", "/health/unknown"]) {
       const response = await app.inject({ method: "GET", url });
