@@ -751,6 +751,10 @@ export class SignInService {
         return new InvalidSecondFactorError();
       };
       if (factorNeeded) {
+        if (subjects.email === undefined) {
+          const { rate } = await this.#throttle.reserve({ email: account.email });
+          if (!rate.allowed) throw new RateLimitedError(rate.retryAfterSeconds);
+        }
         const lockout = await this.#throttle.lockout(factorSubjects);
         if (lockout) {
           await this.#audit.recordAlone({

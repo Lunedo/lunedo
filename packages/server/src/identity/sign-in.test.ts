@@ -10,7 +10,7 @@ import {
   LockedError,
   RateLimitedError,
 } from "../auth/errors.js";
-import { twoFactorRequiredSetting } from "../auth/settings.js";
+import { accountLockoutFailuresSetting, twoFactorRequiredSetting } from "../auth/settings.js";
 import { ForbiddenError } from "../authorization/service.js";
 import { runWithRequestContext } from "../observability/request-context.js";
 import { testDatabaseBaseUrl, waitForLockWait } from "../testing/database.js";
@@ -501,6 +501,38 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
       }),
     ).rejects.toThrow(LockedError);
     expect(await localCredentials(existing.id)).toMatchObject({ sessions: 0 });
+  });
+
+  it("limits the second factors tried for the owner's account per minute when linking, from any address", async () => {
+    await test.settings.set(accountLockoutFailuresSetting, {}, "instance", 1000);
+    try {
+      const existing = await account(null);
+      await asOwner(existing.id);
+      await enableTotp(existing.id);
+      const id = await provider({});
+      const subject = randomUUID();
+      const outcomes: unknown[] = [];
+      for (let round = 0; round < 3; round += 1) {
+        const pending = await signIn(id, { sub: subject, email: existing.email });
+        if (pending.kind !== "linkRequired") throw new Error(`Linking expected, got ${pending.kind}`);
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+          outcomes.push(
+            await test.services.signIn
+              .confirmIdentityLink({
+                pendingToken: pending.pendingToken,
+                password: PASSWORD,
+                factor: { type: "totp", code: "000000" },
+                client: { ip: `198.51.100.${round * 10 + attempt + 120}` },
+              })
+              .catch((error: unknown) => error),
+          );
+        }
+      }
+      expect(outcomes.filter((outcome) => outcome instanceof InvalidSecondFactorError)).toHaveLength(10);
+      expect(outcomes.slice(10).every((outcome) => outcome instanceof RateLimitedError)).toBe(true);
+    } finally {
+      await test.settings.clear(accountLockoutFailuresSetting, {}, "instance");
+    }
   });
 
   async function localCredentials(accountId: string) {
