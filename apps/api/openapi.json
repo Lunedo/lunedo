@@ -156822,7 +156822,7 @@
       "post": {
         "operationId": "meetings.createTopic",
         "summary": "Add a running topic",
-        "description": "Creates a topic and adds it to the upcoming meeting.\n\nRequires the permission `item.edit` on the item in `seriesId`.",
+        "description": "Creates a topic and adds it to the upcoming meeting. Naming a meeting needs read access to it; a description, which goes into the notes of that meeting, and a topic for one meeting only need edit permission on it.\n\nRequires the permission `item.edit` on the item in `seriesId`.",
         "tags": [
           "Meetings"
         ],
@@ -157402,7 +157402,7 @@
             }
           },
           "403": {
-            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `meetingNotEditable`: The meeting notes cannot be edited.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -157423,6 +157423,14 @@
                       "title": "Not allowed",
                       "status": 403,
                       "code": "forbidden"
+                    }
+                  },
+                  "meetingNotEditable": {
+                    "value": {
+                      "type": "urn:lunedo:problem:meetingNotEditable",
+                      "title": "The meeting notes cannot be edited",
+                      "status": 403,
+                      "code": "meetingNotEditable"
                     }
                   }
                 }
