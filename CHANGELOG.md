@@ -3,7 +3,7 @@
 What changed for the people who run and use Lunedo. Each release lists its changes in the groups New, Improved, Fixed, Breaking changes and Manual steps. A release that cannot be reached from every earlier version says from which version to update. The admin area and the update command read this file; [docs/development/changelog.md](docs/development/changelog.md) describes the format.
 
 
-## 0.1.0 · 2026-11-02
+## 0.1.0 · 2026-11-01
 
 The first release of Lunedo.
 
